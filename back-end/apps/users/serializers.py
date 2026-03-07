@@ -35,3 +35,24 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'role', 'phone',
                   'address', 'reputation_score', 'is_verified', 'avatar', 'created_at']
+        
+class AdminCreateUserSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=True)
+    phone = serializers.CharField(required=True)
+    address = serializers.CharField(required=True)
+    role = serializers.ChoiceField(choices=['food_saver', 'collectivite'])
+
+    class Meta:
+        model = User
+        fields = ['username', 'first_name', 'last_name', 'email', 'phone', 'address', 'role']
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("This email is already registered.")
+        return value
+
+    def create(self, validated_data):
+        user = User(**validated_data)
+        user.set_unusable_password()
+        user.save()
+        return user

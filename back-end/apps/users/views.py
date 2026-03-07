@@ -11,8 +11,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import OTPCode
-from .permissions import IsFoodSaver
-from .serializers import RegisterSerializer, UserSerializer
+from .permissions import IsFoodSaver,IsAdmin
+from .serializers import RegisterSerializer, UserSerializer, AdminCreateUserSerializer
 
 User = get_user_model()
 
@@ -234,3 +234,22 @@ class VerifyEmailView(APIView):
 
         except User.DoesNotExist:
             return Response({'error': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
+
+class AdminCreateUserView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def post(self, request):
+        serializer = AdminCreateUserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            otp = OTPCode.objects.create(user=user)
+            otp.send_to_email(
+                subject="ZeroWaste - Set Your Password",
+                message_prefix=f"Your account has been created by the admin.\nUse this code to set your password."
+            )
+
+            return Response({
+                'user': UserSerializer(user).data,
+                'message': f'Account created for {user.username}. An email was sent to set their password.'
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
