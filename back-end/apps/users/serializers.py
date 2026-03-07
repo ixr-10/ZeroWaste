@@ -6,33 +6,13 @@ User = get_user_model()
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     password2 = serializers.CharField(write_only=True)
-    role = serializers.ChoiceField(choices=[
-        ('donateur', 'Donateur'),
-        ('beneficiaire', 'Bénéficiaire'),
-        ('collectivite', 'Collectivité Locale'),
-        ('food_saver', 'Food Saver'),
-    ], required=True)
-    first_name = serializers.CharField(required=True)
-    last_name = serializers.CharField(required=True)
     email = serializers.EmailField(required=True)
     phone = serializers.CharField(required=True)
     address = serializers.CharField(required=True)
-    avatar = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = User
-        fields = [
-            'first_name',    # required
-            'last_name',     # required
-            'username',      # required
-            'email',         # required
-            'phone',         # required
-            'password',      # required
-            'password2',     # required
-            'role',          # required
-            'address',       # required
-            'avatar',        # optional
-        ]
+        fields = ['username', 'email', 'phone', 'password', 'password2', 'address']
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
@@ -53,17 +33,5 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = [
-            'id',
-            'first_name',
-            'last_name',
-            'username',
-            'email',
-            'phone',
-            'role',
-            'address',
-            'avatar',
-            'reputation_score',
-            'is_verified',
-            'created_at',
-        ]
+        fields = ['id', 'username', 'email', 'role', 'phone',
+                  'address', 'reputation_score', 'is_verified', 'avatar', 'created_at']
