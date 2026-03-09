@@ -9,10 +9,22 @@ class RegisterSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True)
     phone = serializers.CharField(required=True)
     address = serializers.CharField(required=True)
+    avatar = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'phone', 'password', 'password2', 'address']
+        fields = [
+            'first_name',    # required
+            'last_name',     # required
+            'username',      # required
+            'email',         # required
+            'phone',         # required
+            'password',      # required
+            'password2',     # required
+            'role',          # required
+            'address',       # required
+            'avatar',        # optional
+        ]
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
