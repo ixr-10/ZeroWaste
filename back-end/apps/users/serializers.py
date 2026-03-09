@@ -44,7 +44,7 @@ class AdminCreateUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'email', 'phone', 'address', 'role']
+        fields = ['username', 'email', 'phone', 'address', 'role']
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
