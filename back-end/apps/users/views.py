@@ -1,9 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
-from django.core.mail import send_mail
 from django.conf import settings
-from django.shortcuts import render
-
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -11,11 +8,10 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import OTPCode
-from .permissions import IsFoodSaver,IsAdmin
+from .permissions import IsFoodSaver, IsAdmin, IsCollectivite, IsAdminOrFoodSaver
 from .serializers import RegisterSerializer, UserSerializer, AdminCreateUserSerializer
 
 User = get_user_model()
-
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -38,29 +34,34 @@ class RegisterView(APIView):
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            # Send verification code
-            code = OTPCode.generate_code()
-            OTPCode.objects.create(user=user, code=code)
-            send_mail(
-                subject='ZeroWaste - Verify Your Email',
-                message=f'Welcome to ZeroWaste!\nYour verification code is: {code}\nThis code expires in 10 minutes.',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-            )
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'user': UserSerializer(user).data,
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-                'message': 'Account created! Please verify your email.',
-            }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        if not username or not password:
+            return Response({'error': 'Username and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response({'error': 'Invalid credentials.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if not check_password(password, user.password):
+            return Response({'error': 'Invalid credentials.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if not user.is_verified:
+            return Response({'error': 'Please verify your email first.'}, status=status.HTTP_403_FORBIDDEN)
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'user': UserSerializer(user).data,
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        })
 
 
 class ProfileView(APIView):
@@ -110,21 +111,28 @@ class ChangePasswordView(APIView):
         return Response({'message': 'Password changed successfully.'})
 
 
-class VerifyUserView(APIView):
-    permission_classes = [IsAuthenticated, IsFoodSaver]
+class VerifyEmailView(APIView):
+    permission_classes = [AllowAny]
 
-    def post(self, request, user_id):
+    def post(self, request):
+        email = request.data.get('email')
+        code = request.data.get('code')
+
         try:
-            user_to_verify = User.objects.get(id=user_id)
-            if user_to_verify.is_verified:
-                return Response({'message': 'User is already verified.'})
-            user_to_verify.is_verified = True
-            user_to_verify.save()
-            request.user.reputation_score += 10
-            request.user.save()
-            return Response({'message': f'{user_to_verify.username} has been verified successfully.'})
+            user = User.objects.get(email=email)
+            otp = OTPCode.objects.filter(user=user, code=code, is_used=False).last()
+
+            if not otp or not otp.is_valid():
+                return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            user.is_verified = True
+            user.save()
+            otp.is_used = True
+            otp.save()
+            return Response({'message': 'Email verified successfully!'})
+
         except User.DoesNotExist:
-            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ForgotPasswordView(APIView):
@@ -141,25 +149,6 @@ class ForgotPasswordView(APIView):
             )
             return Response({'message': 'Reset code sent to your email.'})
         except User.DoesNotExist:
-            return Response({'message': 'If this email exists, a code was sent.'})
-
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        email = request.data.get('email')
-        try:
-            user = User.objects.get(email=email)
-            code = OTPCode.generate_code()
-            OTPCode.objects.create(user=user, code=code)
-            send_mail(
-                subject='ZeroWaste - Password Reset Code',
-                message=f'Your password reset code is: {code}\nThis code expires in 10 minutes.',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-            )
-            return Response({'message': 'Reset code sent to your email.'})
-        except User.DoesNotExist:
-            # Don't reveal if email exists
             return Response({'message': 'If this email exists, a code was sent.'})
 
 
@@ -191,49 +180,22 @@ class ResetPasswordView(APIView):
             return Response({'error': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class VerifyEmailView(APIView):
-    permission_classes = [AllowAny]
+class VerifyUserView(APIView):
+    permission_classes = [IsAuthenticated, IsFoodSaver]
 
-    def post(self, request):
-        email = request.data.get('email')
-        code = request.data.get('code')
-
+    def post(self, request, user_id):
         try:
-            user = User.objects.get(email=email)
-            otp = OTPCode.objects.filter(user=user, code=code, is_used=False).last()
-
-            if not otp or not otp.is_valid():
-                return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
-
-            user.is_verified = True
-            user.save()
-            otp.is_used = True
-            otp.save()
-            return Response({'message': 'Email verified successfully!'})
+            user_to_verify = User.objects.get(id=user_id)
+            if user_to_verify.is_verified:
+                return Response({'message': 'User is already verified.'})
+            user_to_verify.is_verified = True
+            user_to_verify.save()
+            request.user.reputation_score += 10
+            request.user.save()
+            return Response({'message': f'{user_to_verify.username} has been verified successfully.'})
         except User.DoesNotExist:
-            return Response({'error': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        email = request.data.get('email')
-        code = request.data.get('code')
-
-        try:
-            user = User.objects.get(email=email)
-            otp = OTPCode.objects.filter(user=user, code=code, is_used=False).last()
-
-            if not otp or not otp.is_valid():
-                return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
-
-            user.is_verified = True
-            user.save()
-            otp.is_used = True
-            otp.save()
-            return Response({'message': 'Email verified successfully!'})
-
-        except User.DoesNotExist:
-            return Response({'error': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
 
 class AdminCreateUserView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
@@ -245,15 +207,54 @@ class AdminCreateUserView(APIView):
             otp = OTPCode.objects.create(user=user)
             otp.send_to_email(
                 subject="ZeroWaste - Set Your Password",
-                message_prefix=f"Your account has been created by the admin.\nUse this code to set your password."
+                message_prefix="Your account has been created by the admin.\nUse this code to set your password."
             )
-
             return Response({
                 'user': UserSerializer(user).data,
                 'message': f'Account created for {user.username}. An email was sent to set their password.'
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
+class AdminListUsersView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        role = request.query_params.get('role')
+        users = User.objects.all().order_by('-created_at')
+        if role:
+            users = users.filter(role=role)
+        serializer = UserSerializer(users, many=True)
+        return Response({
+            'count': users.count(),
+            'users': serializer.data
+        })
+
+class PromoteToFoodSaverView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminOrFoodSaver]
+
+    def post(self, request, user_id):
+        try:
+            user_to_promote = User.objects.get(id=user_id)
+
+            if user_to_promote.role == 'food_saver':
+                return Response({'message': f'{user_to_promote.username} is already a Food Saver.'})
+
+            if user_to_promote.role == 'collectivite':
+                return Response({'error': 'Cannot change role of a Collectivite account.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            user_to_promote.role = 'food_saver'
+            user_to_promote.save()
+
+            request.user.reputation_score += 10
+            request.user.save()
+
+            return Response({'message': f'{user_to_promote.username} is now a Food Saver.'})
+
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+
 class SetPasswordView(APIView):
     permission_classes = [AllowAny]
 
@@ -264,49 +265,31 @@ class SetPasswordView(APIView):
         confirm_password = request.data.get('confirm_password')
 
         if not all([username, code, new_password, confirm_password]):
-            return Response(
-                {'error': 'All fields are required.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'All fields are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if new_password != confirm_password:
-            return Response(
-                {'error': 'Passwords do not match.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'Passwords do not match.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if len(new_password) < 8:
-            return Response(
-                {'error': 'Password must be at least 8 characters.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'Password must be at least 8 characters.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             user = User.objects.get(username=username)
 
             if user.has_usable_password():
-                return Response(
-                    {'error': 'Password already set. Use forgot password instead.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response({'error': 'Password already set. Use forgot password instead.'}, status=status.HTTP_400_BAD_REQUEST)
 
             otp = OTPCode.objects.filter(user=user, code=code, is_used=False).last()
             if not otp or not otp.is_valid():
-                return Response(
-                    {'error': 'Invalid or expired code.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
 
             user.set_password(new_password)
             user.is_verified = True
             user.save()
             otp.is_used = True
             otp.save()
-
             return Response({'message': 'Password set successfully. You can now login.'})
 
         except User.DoesNotExist:
-            return Response(
-                {'error': 'User not found.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'User not found.'}, status=status.HTTP_400_BAD_REQUEST)
+        
