@@ -253,3 +253,60 @@ class AdminCreateUserView(APIView):
                 'message': f'Account created for {user.username}. An email was sent to set their password.'
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class SetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        username = request.data.get('username')
+        code = request.data.get('code')
+        new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
+
+        if not all([username, code, new_password, confirm_password]):
+            return Response(
+                {'error': 'All fields are required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if new_password != confirm_password:
+            return Response(
+                {'error': 'Passwords do not match.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if len(new_password) < 8:
+            return Response(
+                {'error': 'Password must be at least 8 characters.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = User.objects.get(username=username)
+
+            if user.has_usable_password():
+                return Response(
+                    {'error': 'Password already set. Use forgot password instead.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            otp = OTPCode.objects.filter(user=user, code=code, is_used=False).last()
+            if not otp or not otp.is_valid():
+                return Response(
+                    {'error': 'Invalid or expired code.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user.set_password(new_password)
+            user.is_verified = True
+            user.save()
+            otp.is_used = True
+            otp.save()
+
+            return Response({'message': 'Password set successfully. You can now login.'})
+
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User not found.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
