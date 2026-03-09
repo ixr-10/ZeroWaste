@@ -13,8 +13,9 @@ class User(AbstractUser):
         ('admin', 'Administrateur'),
         ('collectivite', 'Collectivité Locale'),
         ('food_saver', 'Food Saver'),
+        ('user', 'Utilisateur Standard'),
     ]
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='donateur')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='user')
     phone = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
     reputation_score = models.IntegerField(default=0)
@@ -34,7 +35,7 @@ class OTPCode(models.Model):
 
     def is_valid(self):
         # Code expires after 10 minutes
-        return not self.is_used and (timezone.now() - self.created_at).seconds < 600
+        return not self.is_used and (timezone.now() - self.created_at).total_seconds() < 600
 
     @staticmethod
     def generate_code():

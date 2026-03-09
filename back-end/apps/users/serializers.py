@@ -40,7 +40,7 @@ class AdminCreateUserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True)
     phone = serializers.CharField(required=True)
     address = serializers.CharField(required=True)
-    role = serializers.ChoiceField(choices=['food_saver', 'collectivite'])
+    role = serializers.ChoiceField(choices=[('food_saver', 'Food Saver'), ('collectivite', 'Collectivité Locale')])
 
     class Meta:
         model = User
