@@ -42,3 +42,7 @@ Role (dropdown: Donateur, Bénéficiaire, Collectivité, Food Saver)
 Address
 optional:
 Profile picture (avatar)
+
+
+
+pip install celery django-celery-beat --break-system-packages
