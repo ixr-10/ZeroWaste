@@ -7,11 +7,11 @@ User = get_user_model()
 class Donation(models.Model):
     CATEGORY_CHOICES = [
         ('fruits', 'Fruits'),
-        ('legumes', 'Légumes'),
-        ('pain', 'Pain'),
-        ('conserves', 'Conserves'),
-        ('produits_laitiers', 'Produits Laitiers'),
-        ('autre', 'Autre'),
+        ('vegetables', 'Vegetables'),
+        ('bread', 'Bread'),
+        ('canned_goods', 'Canned Goods'),
+        ('dairy', 'Dairy'),
+        ('other', 'Other'),
     ]
     STATUS_CHOICES = [
         ('available', 'Available'),
