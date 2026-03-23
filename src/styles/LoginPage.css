@@ -1,0 +1,235 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap');
+
+.login-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  background-color: #FFFFFF;
+  position: relative; 
+  overflow: hidden; 
+}
+
+/* --- Curves (Ellipses) --- */
+.login-container .background-curves {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1; 
+  pointer-events: none;
+}
+
+.login-container .ellipse {
+  position: absolute;
+  width: 1267px;
+  height: 1024px;
+  border-radius: 50%;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.login-container .ellipse-light {
+  background: #9AC099;
+  left: -850px; 
+  z-index: 3;
+}
+
+.login-container .ellipse-medium {
+  background: #7CA57B;
+  left: -730px; 
+  z-index: 2;
+}
+
+.login-container .ellipse-dark {
+  background: #588157;
+  left: -600px; 
+  z-index: 1;
+}
+
+/* --- Content Layout --- */
+.login-left {
+  width: 40vw; 
+  height: 100%;
+  background: transparent; 
+  position: relative;
+  z-index: 4; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.illustration-img {
+  width: 75%; 
+  max-width: 400px; 
+  height: auto;
+  object-fit: contain;
+  transform: translateX(-20px); 
+}
+
+.login-right {
+  flex: 1;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 100px; 
+  background: transparent;
+}
+
+.form-container {
+  width: 100%;
+  max-width: 420px; 
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Typography & Spacing --- */
+.login-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 50px; 
+  font-weight: 700;
+  letter-spacing: 0.15em; 
+  color: #000000;
+  text-align: center;
+  margin-bottom: 60px; 
+}
+
+.input-group {
+  margin-bottom: 30px; 
+}
+
+.input-label {
+  font-family: 'Outfit', sans-serif;
+  font-size: 20px; 
+  font-weight: 400;
+  color: #000000;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.input-wrapper {
+  width: 100%;
+  height: 55px; 
+  background: #FFFFFF;
+  border-radius: 18px;
+  border: 1.5px solid rgba(88, 129, 87, 0.4); 
+  box-shadow: 0px 4px 12px rgba(88, 129, 87, 0.15);
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.custom-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  padding: 0 45px;
+  background: transparent;
+}
+
+.icon {
+  width: 22px;
+  position: absolute;
+}
+.left-icon { left: 15px; }
+.right-icon { right: 15px; cursor: pointer; }
+
+/* --- Forgot Password --- */
+.forgot-password-container {
+  display: flex;
+  justify-content: center; 
+  margin-bottom: 50px; 
+}
+
+.forgot-password-link {
+  font-family: 'Outfit', sans-serif;
+  font-size: 20px; 
+  color: #000000;
+  text-decoration: none;
+  border-bottom: 1px solid #000000;
+}
+
+/* --- Login Button --- */
+.button-container {
+  display: flex;
+  justify-content: center;
+}
+
+.login-button {
+  width: 140px; 
+  height: 52px;  
+  background: #588157;
+  border-radius: 25px;
+  border: none;
+  color: #000000;
+  font-family: 'Outfit', sans-serif;
+  font-size: 26px; 
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.login-button:hover {
+  background: #4a6d49;
+  transform: scale(1.05);
+  box-shadow: 0px 4px 10px rgba(88, 129, 87, 0.4);
+}
+
+/* ========================================= */
+/* RESPONSIVE DESIGN (LEFT SIDE REMAINS)     */
+/* ========================================= */
+
+@media screen and (max-width: 900px) {
+  .login-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Illustration en haut */
+  .login-left {
+    width: 100%;
+    height: 35vh; 
+    order: -1;
+    justify-content: flex-start;
+  }
+
+  .illustration-img {
+    max-width: 230px;
+    margin-left: 15px;
+    transform: none;
+  }
+
+  /* Curves ajustées pour le mobile (Toujours à gauche) */
+  .login-container .ellipse {
+    width: 650px;
+    height: 650px;
+    top: 0;
+    transform: translateY(-20%);
+  }
+
+  .login-container .ellipse-light  { left: -420px; }
+  .login-container .ellipse-medium { left: -370px; }
+  .login-container .ellipse-dark   { left: -320px; opacity: 0.4; }
+
+  /* Formulaire centré en bas */
+  .login-right {
+    width: 100%;
+    padding: 30px 20px 60px 20px;
+    justify-content: center;
+  }
+
+  .form-container {
+    max-width: 100%;
+    width: 90%;
+  }
+
+  .login-title {
+    font-size: 38px;
+    margin-bottom: 40px;
+  }
+}
