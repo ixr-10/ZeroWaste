@@ -10,12 +10,21 @@ class RegisterSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(required=True)
     address = serializers.CharField(required=True)
     avatar = serializers.ImageField(required=False, allow_null=True)
+    role = serializers.ChoiceField(
+        choices=[
+            ('donateur', 'Donateur'),
+            ('beneficiaire', 'Bénéficiaire'),
+            ('collectivite', 'Collectivité Locale'),
+            ('food_saver', 'Food Saver'),
+            ('user', 'Utilisateur Standard'),
+        ],
+        default='user',
+        required=False)
 
     class Meta:
         model = User
         fields = [
-            'first_name',    # required
-            'last_name',     # required
+           
             'username',      # required
             'email',         # required
             'phone',         # required

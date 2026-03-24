@@ -9,5 +9,5 @@ urlpatterns = [
     path('api/gamification/', include('apps.gamification.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
     path('api/moderation/', include('apps.moderation.urls')),
-    path("users/", include("apps.users.urls")),
+    
 ]
