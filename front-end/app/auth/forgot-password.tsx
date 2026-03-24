@@ -1,18 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,Alert } from 'react-native';
 import { FONTS } from "../../constants/fonts";
 import Header from '../../components/Header';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import api from '../../constants/axios';
 
 
 export default function LoginScreen() {
 
   
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+ 
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' ,marginTop:0,}}>
@@ -37,7 +37,19 @@ export default function LoginScreen() {
         <Ionicons margin={10}  left= {2} top={5} position={'absolute'} name="mail-outline" size={20} color="black" />
       </View>
       
-      <TouchableOpacity style={styles.button} onPress={() => router.replace('/(tabs)')} >
+      <TouchableOpacity style={styles.button}  onPress={async () => {
+  if (!email) {
+    Alert.alert('Error', 'Please enter your email.');
+    return;
+  }
+  try {
+    await api.post('/api/users/forgot-password/', { email });
+    Alert.alert('Success', 'Reset code sent to your email.');
+    router.push({ pathname: '/(tabs)', params: { email } });
+  } catch (err: any) {
+    Alert.alert('Error', err.response?.data?.error || 'Something went wrong.');
+  }
+}}  >
         <Text style={styles.buttonText}>Reset</Text>
       </TouchableOpacity>
     </ScrollView>

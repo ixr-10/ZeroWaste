@@ -14,7 +14,7 @@ SECRET_KEY = 'django-insecure-*mla&@o&@8a+n^xf6qu@#*%8nd3^3lkrcw%&6#&(4@maq-@^7y
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['192.168.1.36', 'localhost', '127.0.0.1']
 EMAIL_SSL_CERTFILE = None
 EMAIL_SSL_KEYFILE = None
 
@@ -94,6 +94,9 @@ STATIC_URL = 'static/'
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+     "http://localhost:8081",  
+    "http://127.0.0.1:8081", 
+    "http://192.168.1.36:8081"
 ]
 
 REST_FRAMEWORK = {

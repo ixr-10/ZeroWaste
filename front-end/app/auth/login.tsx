@@ -5,12 +5,45 @@ import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FONTS } from "../../constants/fonts";
 import Header from '../../components/Header';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../../constants/axios';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+const handleLogin = async () => {
+  if (!email || !password) {
+    alert('Please fill in all fields.');
+    return;
+  }
+  try {
+    const { data } = await api.post('/login/', {
+      username: email,
+      password: password,
+    });
 
+    await AsyncStorage.setItem('access',  data.access);
+    await AsyncStorage.setItem('refresh', data.refresh);
+    await AsyncStorage.setItem('user', JSON.stringify(data.user));
+
+    router.replace('/(tabs)');
+
+  } catch (err: any) {  
+    const status = err.response?.status;
+    const msg    = err.response?.data?.error || 'Login failed.';
+
+    if (status === 403) {
+      alert('Please verify your email first.');
+      router.push({
+        pathname: '/auth/verify-email' as any,  
+        params: { email }
+      });
+    } else {
+      alert(msg);
+    }
+  }
+};
   return (
   <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' ,marginTop:0,}}>
     <Header showBack={false} />
@@ -50,7 +83,7 @@ export default function LoginScreen() {
         <Text style={styles.forgot}>forgot password?</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={() => router.replace('/(tabs)')}>
+      <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
 

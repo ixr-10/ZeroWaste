@@ -5,6 +5,8 @@ import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 import { SafeAreaView } from 'react-native-safe-area-context';
 //import { FONTS } from "../../front-end/constants/fonts";
 import Header from '../../components/Header';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../../constants/axios';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -14,7 +16,56 @@ export default function LoginScreen() {
   const [adresse, setAdresse] = useState('');
   const [username, setUsername] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
+const handleRegister = async () => {
+  if (!email || !username || !phone || !adresse || !password || !confirmPass) {
+    alert('Please fill in all fields.');
+    return;
+  }
+  if (password !== confirmPass) {
+    alert('Passwords do not match.');
+    return;
+  }
+  try {
+    const { data } = await api.post('/register/', {
+        
+      username:   username,
+      email:      email,
+      phone:      phone,
+      address:    adresse,   
+      password:   password,
+      password2:  confirmPass,
+      role:       'user', 
+    });
 
+    
+    await AsyncStorage.setItem('access',  data.access);
+    await AsyncStorage.setItem('refresh', data.refresh);
+    await AsyncStorage.setItem('user', JSON.stringify(data.user));
+
+    alert('Account created! Check your email for the verification code.');
+
+    
+    router.push({ pathname: '/auth/verify-email' as any, params: { email } });
+
+  } catch (err: any) {
+  const errors = err.response?.data;
+
+  if (errors?.email?.[0]?.includes('already registered')) {
+    alert(' This email is already registered. Try logging in.');
+  } else if (errors?.username?.[0]?.includes('already')) {
+    alert('This username is already taken. Choose another one.');
+  } else if (errors?.password?.[0]) {
+    alert(' Password error: ' + errors.password[0]);
+  } else if (errors?.non_field_errors?.[0]) {
+    alert( errors.non_field_errors[0]);
+  } else if (!err.response) {
+    alert(' Network error. Check your connection and try again.');
+  } else {
+    alert(' Registration failed: ' + JSON.stringify(errors));
+  }
+}
+  };
+  
   return (
      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' ,marginTop:0,}}>
       <Header showBack={true} />
@@ -58,7 +109,7 @@ export default function LoginScreen() {
           style={[styles.input, { flex: 1 }]}
           value={phone}
           onChangeText={setPhone}
-          keyboardType="email-address"
+          keyboardType="phone-pad"
           autoCapitalize="none"
         />
         <Ionicons margin={10}  left= {2} top={5} position={'absolute'} name="call-outline" size={20} color="black" />
@@ -72,7 +123,7 @@ export default function LoginScreen() {
           style={[styles.input, { flex: 1 }]}
           value={adresse}
           onChangeText={setAdresse}
-          keyboardType="email-address"
+          keyboardType="default"
           autoCapitalize="none"
         />
         <Ionicons margin={10}  left= {2} top={5} position={'absolute'} name="location-outline" size={20} color="black" />
@@ -111,7 +162,7 @@ export default function LoginScreen() {
 
 
 
-      <TouchableOpacity style={styles.button} onPress={() => router.replace('/(tabs)')} >
+      <TouchableOpacity style={styles.button} onPress={handleRegister} >
         <Text style={styles.buttonText}>Sign Up</Text>
       </TouchableOpacity>
 
