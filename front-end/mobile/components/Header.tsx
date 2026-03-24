@@ -1,73 +1,59 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import AppText from './AppText';
+import { Image, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
-interface HeaderProps {
+type HeaderProps = {
+  showBack?: boolean;
   onBack?: () => void;
-}
+};
 
-export default function Header({ onBack }: HeaderProps) {
+export default function Header({ showBack = false, onBack }: HeaderProps) {
+  const router = useRouter();
+
+  const handleBackPress = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+
+    router.back();
+  };
+
   return (
     <View style={styles.container}>
-      {/* Back Button */}
-      <TouchableOpacity 
-        style={styles.backBtn} 
-        onPress={onBack}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="arrow-back-outline" size={26} color="black" />
-      </TouchableOpacity>
-      
-      {/* Logo */}
-      <View style={styles.logoWrapper}>
-        <MaterialCommunityIcons 
-          name="cached" // This provides the circular arrows
-          size={42} 
-          color="black" 
-          style={styles.arrowsIcon}
-        />
-        <AppText weight="bold" style={styles.logoLetter}>
-          w
-        </AppText>
-      </View>
+      {showBack ? (
+        <TouchableOpacity onPress={handleBackPress}>
+          <Ionicons name="arrow-back-circle-outline" size={32} color="black" style={styles.backIcon} />
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.spacer} />
+      )}
+      <Image source={require('../assets/images/logo.png')} style={styles.logo} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  logo: {
+    width: 36,
+    height: 29.03,
+    resizeMode: 'contain',
+    top: 20,
+    right: 20,
+  },
+  backIcon: {
+    top: 20,
+  },
+  spacer: {
+    width: 32,
+  },
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 5,
-    backgroundColor: 'transparent',
-  },
-  backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoWrapper: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  arrowsIcon: {
-    position: 'absolute',
-    // Slight rotation to match the slant in your PNG
-    transform: [{ rotate: '15deg' }], 
-  },
-  logoLetter: {
-    fontSize: 18,
-    color: '#000',
-    // Adjusting position to center perfectly inside the arrows
-    marginTop: -2, 
+    paddingHorizontal: 20,
+    marginBottom: 25,
+    paddingTop: 0,
+    marginTop: 0,
   },
 });

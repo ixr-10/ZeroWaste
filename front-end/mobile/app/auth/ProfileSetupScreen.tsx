@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { 
-  View, StyleSheet, SafeAreaView, StatusBar, 
-  Platform, ActivityIndicator, TouchableOpacity 
+  View, StyleSheet, SafeAreaView, ActivityIndicator, TouchableOpacity 
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AvatarPicker from '../../components/AvatarPicker';
 import AppText from '../../components/AppText';
+import Header from '../../components/Header';
 
 const ProfileSetupScreen = () => {
   const router = useRouter();
@@ -18,7 +17,7 @@ const ProfileSetupScreen = () => {
     // Logic for upload would go here
     setTimeout(() => {
       setLoading(false);
-      router.push('/finish-confirm');
+      router.push('/auth/finish-confirm');
     }, 1500);
   };
 
@@ -26,11 +25,7 @@ const ProfileSetupScreen = () => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         
-        {/* Header Logo */}
-        <View style={styles.header}>
-          <MaterialCommunityIcons name="cached" size={32} color="black" />
-          <AppText weight="bold" style={styles.logoLetter}>w</AppText>
-        </View>
+        <Header showBack />
 
         {/* Main Content */}
         <View style={styles.content}>
@@ -54,7 +49,7 @@ const ProfileSetupScreen = () => {
           <View style={styles.divider} />
           <AppText style={styles.footerText}>
             Or you can{' '}
-            <AppText weight="bold" style={styles.linkText} onPress={() => router.push('/finish-confirm')}>
+            <AppText weight="bold" style={styles.linkText} onPress={() => router.push('/auth/finish-confirm')}>
               Skip
             </AppText>{' '}
             for now
@@ -69,13 +64,6 @@ const ProfileSetupScreen = () => {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
   container: { flex: 1, paddingHorizontal: 25 },
-  header: {
-    alignItems: 'flex-end',
-    marginTop: 20,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  logoLetter: { position: 'absolute', right: 11, top: 4, fontSize: 14 },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   doneButton: {
     backgroundColor: '#588157',
