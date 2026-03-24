@@ -12,6 +12,17 @@ function AdminUsersPage() {
   const [createError, setCreateError] = useState('');
   const navigate = useNavigate();
 
+  // Lock back/forward navigation while logged in
+  useEffect(() => {
+    window.history.pushState(null, '', window.location.href);
+    window.onpopstate = () => {
+      window.history.pushState(null, '', '/admin/users');
+    };
+    return () => {
+      window.onpopstate = null;
+    };
+  }, []);
+
   const fetchUsers = async () => {
     const data = await adminListUsers(filter);
     setUsers(data.users || []);
@@ -20,6 +31,7 @@ function AdminUsersPage() {
   useEffect(() => { fetchUsers(); }, [filter]);
 
   const handleLogout = () => {
+    window.onpopstate = null; // remove lock before navigating
     removeTokens();
     localStorage.removeItem('user');
     navigate('/login', { replace: true });

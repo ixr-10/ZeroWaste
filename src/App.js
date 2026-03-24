@@ -14,7 +14,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<LandingPage onNavigate={() => navigate('/login')} />} />
+      <Route path="/" element={<LandingPage onNavigate={() => navigate('/login', { replace: true })} />} />
       <Route path="/login" element={<LoginPage onNavigateToReset={() => navigate('/reset-password')} />} />
       <Route path="/admin/users" element={<AdminUsersPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
