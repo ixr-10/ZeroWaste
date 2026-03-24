@@ -32,8 +32,8 @@ function LoginPage({ onNavigateToReset }) {
         return;
       }
 
-      localStorage.setItem('access', data.access);
-      localStorage.setItem('refresh', data.refresh);
+      localStorage.setItem('access_token', data.access);
+      localStorage.setItem('refresh_token', data.refresh);
       localStorage.setItem('user', JSON.stringify(profile));
       navigate('/admin/users');
     } catch (err) {
