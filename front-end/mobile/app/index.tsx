@@ -5,7 +5,7 @@ import { Image, StyleSheet, View, Text } from 'react-native';
 export default function SplashScreen() {
   useEffect(() => {
     setTimeout(() => {
-      router.replace('/auth/login');
+      router.replace('./auth/login');
     }, 4000); // 60 seconds
   }, []);
 
