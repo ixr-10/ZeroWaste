@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import SetPasswordPage from './pages/SetPasswordPage'; 
+import ProtectedRoute from './components/ProtectedRoute';
 
 function AppRoutes() {
   const navigate = useNavigate();
@@ -18,6 +19,10 @@ function AppRoutes() {
       <Route path="/admin/users" element={<AdminUsersPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/set-password" element={<SetPasswordPage />} />
+      <Route path="/admin/users" element={<ProtectedRoute>
+ <AdminUsersPage />
+  </ProtectedRoute>
+} />
     </Routes>
   );
 }

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { adminListUsers, promoteToFoodSaver } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { adminListUsers, promoteToFoodSaver, removeTokens } from '../services/api';
 
 function AdminUsersPage() {
   const [users, setUsers] = useState([]);
   const [filter, setFilter] = useState('');
   const [message, setMessage] = useState('');
+  const navigate = useNavigate();
 
   const fetchUsers = async () => {
     const data = await adminListUsers(filter);
@@ -13,17 +15,39 @@ function AdminUsersPage() {
 
   useEffect(() => { fetchUsers(); }, [filter]);
 
+  const handleLogout = () => {
+    removeTokens();
+    localStorage.removeItem('user');
+    navigate('/login', { replace: true });
+  };
+
   const handlePromote = async (userId, username) => {
     const data = await promoteToFoodSaver(userId);
     if (data.message) {
       setMessage(data.message);
-      fetchUsers(); // refresh list
+      fetchUsers();
     }
   };
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1>Admin — User Management</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1>Admin — User Management</h1>
+        <button
+          onClick={handleLogout}
+          style={{
+            backgroundColor: '#e74c3c',
+            color: 'white',
+            border: 'none',
+            padding: '0.5rem 1.2rem',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+          }}
+        >
+          Logout
+        </button>
+      </div>
 
       {message && <p style={{ color: 'green' }}>{message}</p>}
 

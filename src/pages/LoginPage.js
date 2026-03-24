@@ -35,7 +35,7 @@ function LoginPage({ onNavigateToReset }) {
       localStorage.setItem('access_token', data.access);
       localStorage.setItem('refresh_token', data.refresh);
       localStorage.setItem('user', JSON.stringify(profile));
-      navigate('/admin/users');
+      navigate('/admin/users', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
