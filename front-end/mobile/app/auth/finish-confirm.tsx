@@ -24,7 +24,7 @@ export default function ConfirmationPage() {
     try {
       await new Promise(resolve => setTimeout(resolve, 2000));
       Alert.alert('Success', 'Account verified successfully!');
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Verification failed. Please try again.');
     } finally {
       setIsLoading(false);
@@ -37,7 +37,7 @@ export default function ConfirmationPage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header showBack onBack={() => router.replace('/ProfileSetupScreen')} />
+      <Header showBack onBack={() => router.replace('/auth/ProfileSetupScreen')} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.imageContainer}>
@@ -74,7 +74,7 @@ export default function ConfirmationPage() {
 
           <TouchableOpacity onPress={handleResend} style={styles.resendContainer}>
             <AppText style={styles.resendText}>
-              Didn't receive a code? <AppText weight="bold" style={styles.resendLink}>Resend</AppText>
+              Didn&apos;t receive a code? <AppText weight="bold" style={styles.resendLink}>Resend</AppText>
             </AppText>
           </TouchableOpacity>
         </View>

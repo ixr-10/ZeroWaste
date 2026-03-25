@@ -13,7 +13,7 @@ interface OtpInputProps {
 }
 
 export default function OtpInput({ code, setCode }: OtpInputProps) {
-  const inputs = useRef<Array<TextInput | null>>([]);
+  const inputs = useRef<(TextInput | null)[]>([]);
 
   const handleChange = (text: string, index: number) => {
     // 1. Handle Pasting (Detecting multiple characters)

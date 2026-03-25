@@ -9,7 +9,7 @@ import Header from '../../components/Header';
 
 const ProfileSetupScreen = () => {
   const router = useRouter();
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [, setSelectedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleDone = async () => {
@@ -17,7 +17,7 @@ const ProfileSetupScreen = () => {
     // Logic for upload would go here
     setTimeout(() => {
       setLoading(false);
-      router.push('/finish-confirm');
+      router.push('/auth/finish-confirm');
     }, 1500);
   };
 
@@ -49,7 +49,7 @@ const ProfileSetupScreen = () => {
           <View style={styles.divider} />
           <AppText style={styles.footerText}>
             Or you can{' '}
-            <AppText weight="bold" style={styles.linkText} onPress={() => router.push('/finish-confirm')}>
+            <AppText weight="bold" style={styles.linkText} onPress={() => router.push('/auth/finish-confirm')}>
               Skip
             </AppText>{' '}
             for now

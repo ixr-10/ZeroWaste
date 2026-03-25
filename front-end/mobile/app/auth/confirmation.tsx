@@ -36,9 +36,9 @@ export default function ConfirmationPage() {
       
       setLoading(false);
       // Navigate to the set password screen or next step
-      router.push('/final-confirmation'); 
+      router.push('/auth/final-confirmation'); 
       
-    } catch (error) {
+    } catch {
       setLoading(false);
       Alert.alert("Verification Failed", "The code you entered is incorrect or expired.");
     }
@@ -53,7 +53,7 @@ export default function ConfirmationPage() {
       
       await new Promise(resolve => setTimeout(resolve, 1500));
       Alert.alert("Code Sent", "A new verification code has been sent to your device.");
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Could not resend code. Try again later.");
     } finally {
       setIsResending(false);

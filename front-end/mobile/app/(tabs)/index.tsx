@@ -1,5 +1,5 @@
 import React from 'react';
-import ConfirmationPage from './confirmation';
+import ConfirmationPage from '../auth/confirmation';
 
 
 export default function Index() {

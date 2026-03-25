@@ -12,7 +12,7 @@ export default function FinalConfirmation() {
   const router = useRouter();
   
   // 1. Move hooks INSIDE the component
-  const { email, code } = useLocalSearchParams<{ email?: string; code?: string }>();
+  useLocalSearchParams<{ email?: string; code?: string }>();
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -65,7 +65,7 @@ export default function FinalConfirmation() {
         { 
           text: "Continue", 
           // Use replace so they can't go back to the password screen
-          onPress: () => router.replace('/ProfileSetupScreen') 
+          onPress: () => router.replace('/auth/ProfileSetupScreen') 
         }
       ]);
       
