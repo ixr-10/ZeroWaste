@@ -61,11 +61,8 @@ class AdminCreateUserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True)
     phone = serializers.CharField(required=True)
     address = serializers.CharField(required=True)
-    role = serializers.ChoiceField(choices=[
-        ('admin', 'Admin'),          
-        ('food_saver', 'Food Saver'),
-        ('collectivite', 'Collectivité Locale')
-    ])
+    role = serializers.ChoiceField(choices=[('food_saver', 'Food Saver'), ('collectivite', 'Collectivité Locale')])
+
     class Meta:
         model = User
         fields = ['username', 'email', 'phone', 'address', 'role']

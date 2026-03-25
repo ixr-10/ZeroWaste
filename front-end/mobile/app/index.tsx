@@ -1,19 +1,22 @@
 import { router } from 'expo-router';
 import { useEffect } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View, Text } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SplashScreen() {
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      router.replace('/auth/login');
-    }, 4000);
-
-    return () => clearTimeout(timeout);
+    const init = async () => {
+      await AsyncStorage.clear(); // ← REMOVE AFTER ONE RUN
+      setTimeout(() => {
+        router.replace('/auth/login');
+      }, 500); // small delay to let layout mount
+    };
+    init();
   }, []);
 
   return (
     <View style={styles.container}>
-      <View style={styles.brandRow}>
+      <View style={styles.imgandlogo}>
         <Image source={require('../assets/images/logo.png')} style={styles.logo} />
         <View>
           <Text style={styles.text}>ZER0</Text>
@@ -25,26 +28,8 @@ export default function SplashScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#588157',
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  logo: {
-    width: 98.56,
-    height: 81,
-    resizeMode: 'contain',
-  },
-  text: {
-    fontWeight: '700',
-    fontSize: 32,
-    color: '#FFFFFF',
-    letterSpacing: 2,
-  },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#588157' },
+  logo: { width: 98.56, height: 81, resizeMode: 'contain' },
+  imgandlogo: { flexDirection: 'row' },
+  text: { fontWeight: '700', fontSize: 32, color: 'white', letterSpacing: 2 },
 });

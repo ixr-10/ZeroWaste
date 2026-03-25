@@ -37,7 +37,7 @@ export default function SetPasswordScreen() {
     const { username, code, password, confirmPassword } = formData;
 
     // Basic validation
-    if (!username || !code || !password || !confirmPassword) {
+    if (!username || !code || !password) {
       Alert.alert("Error", "Please fill in all fields");
       return;
     }
@@ -56,8 +56,8 @@ export default function SetPasswordScreen() {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       setLoading(false);
-      router.push('/auth/ProfileSetupScreen');
-    } catch {
+      router.push('./ProfileSetupScreen');
+    } catch (error) {
       setLoading(false);
       Alert.alert("Error", "Failed to update password. Please try again.");
     }
@@ -65,7 +65,7 @@ export default function SetPasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header showBack />
+      <Header onBack={() => router.back()} />
       
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.imageContainer}>

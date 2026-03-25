@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/ResetPasswordPage.css';
 import resetIllustration from '../assets/reset-illustration.png';
@@ -12,40 +12,13 @@ const ResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [codeSent, setCodeSent] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-
-  // Countdown timer
-  useEffect(() => {
-    if (countdown <= 0) return;
-    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [countdown]);
 
   const handleSendCode = async (e) => {
     e.preventDefault();
     if (!email) { setError('Please enter your email first.'); return; }
-    try {
-      const data = await forgotPassword(email);
-      setMessage(data.message || 'Code sent!');
-      setError('');
-      setCodeSent(true);
-      setCountdown(60); // start 60 second cooldown
-    } catch (err) {
-      setError('Something went wrong.');
-    }
-  };
-
-  const handleResendCode = async (e) => {
-    e.preventDefault();
-    try {
-      const data = await forgotPassword(email);
-      setMessage('New code sent!');
-      setError('');
-      setCountdown(60); // reset cooldown
-    } catch (err) {
-      setError('Something went wrong.');
-    }
+    const data = await forgotPassword(email);
+    setMessage(data.message || 'Code sent!');
+    setError('');
   };
 
   const handleReset = async (e) => {
@@ -94,21 +67,7 @@ const ResetPassword = () => {
                 <input type="text" className="custom-input" placeholder="Enter code"
                   value={code} onChange={(e) => setCode(e.target.value)} />
               </div>
-              {/* Send / Resend button */}
-              {!codeSent ? (
-                <button className="send-code-btn" onClick={handleSendCode}>
-                  Send code
-                </button>
-              ) : countdown > 0 ? (
-                <button className="send-code-btn" disabled
-                  style={{ opacity: 0.5, cursor: 'not-allowed' }}>
-                  Resend ({countdown}s)
-                </button>
-              ) : (
-                <button className="send-code-btn" onClick={handleResendCode}>
-                  Resend code
-                </button>
-              )}
+              <button className="send-code-btn" onClick={handleSendCode}>Send code</button>
             </div>
 
             <label className="input-label">Password</label>
