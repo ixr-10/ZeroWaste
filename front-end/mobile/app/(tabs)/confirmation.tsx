@@ -36,7 +36,7 @@ export default function ConfirmationPage() {
       
       setLoading(false);
       // Navigate to the set password screen or next step
-      router.push('/auth/final-confirmation'); 
+      router.push('/final-confirmation'); 
       
     } catch (error) {
       setLoading(false);

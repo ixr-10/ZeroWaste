@@ -37,7 +37,7 @@ export default function ConfirmationPage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header showBack onBack={() => router.replace('/auth/ProfileSetupScreen')} />
+      <Header showBack onBack={() => router.replace('/ProfileSetupScreen')} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.imageContainer}>

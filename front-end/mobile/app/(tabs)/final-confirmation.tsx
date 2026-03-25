@@ -65,7 +65,7 @@ export default function FinalConfirmation() {
         { 
           text: "Continue", 
           // Use replace so they can't go back to the password screen
-          onPress: () => router.replace('/auth/ProfileSetupScreen') 
+          onPress: () => router.replace('/ProfileSetupScreen') 
         }
       ]);
       

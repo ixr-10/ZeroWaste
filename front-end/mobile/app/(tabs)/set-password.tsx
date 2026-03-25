@@ -56,7 +56,7 @@ export default function SetPasswordScreen() {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       setLoading(false);
-      router.push('/auth/ProfileSetupScreen');
+      router.push('/ProfileSetupScreen');
     } catch (error) {
       setLoading(false);
       Alert.alert("Error", "Failed to update password. Please try again.");

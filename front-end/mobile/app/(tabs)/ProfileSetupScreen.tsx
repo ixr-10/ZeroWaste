@@ -17,7 +17,7 @@ const ProfileSetupScreen = () => {
     // Logic for upload would go here
     setTimeout(() => {
       setLoading(false);
-      router.push('/auth/finish-confirm');
+      router.push('/finish-confirm');
     }, 1500);
   };
 
@@ -49,7 +49,7 @@ const ProfileSetupScreen = () => {
           <View style={styles.divider} />
           <AppText style={styles.footerText}>
             Or you can{' '}
-            <AppText weight="bold" style={styles.linkText} onPress={() => router.push('/auth/finish-confirm')}>
+            <AppText weight="bold" style={styles.linkText} onPress={() => router.push('/finish-confirm')}>
               Skip
             </AppText>{' '}
             for now
