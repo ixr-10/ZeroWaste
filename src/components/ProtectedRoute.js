@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getProfile } from '../services/api';
 
 function ProtectedRoute({ children }) {
   const navigate = useNavigate();
@@ -9,9 +10,23 @@ function ProtectedRoute({ children }) {
     const token = localStorage.getItem('access_token');
     if (!token) {
       navigate('/login', { replace: true });
-    } else {
-      setVerified(true);
+      return;
     }
+
+    // Verify token is still valid with the backend
+    getProfile(token)
+      .then((profile) => {
+        if (profile.role !== 'admin') {
+          localStorage.clear();
+          navigate('/login', { replace: true });
+        } else {
+          setVerified(true);
+        }
+      })
+      .catch(() => {
+        localStorage.clear();
+        navigate('/login', { replace: true });
+      });
   }, [navigate]);
 
   return verified ? children : null;

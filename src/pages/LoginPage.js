@@ -18,7 +18,22 @@ function LoginPage({ onNavigateToReset }) {
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    if (token) navigate('/admin/users', { replace: true });
+    if (!token) return; // no token, stay on login page
+
+    // Validate token with backend before redirecting
+    getProfile(token)
+      .then((profile) => {
+        if (profile.role === 'admin') {
+          navigate('/admin/users', { replace: true });
+        } else {
+          // token exists but not admin, clear it
+          localStorage.clear();
+        }
+      })
+      .catch(() => {
+        // token is expired or invalid, clear it
+        localStorage.clear();
+      });
   }, [navigate]);
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
@@ -65,7 +80,6 @@ function LoginPage({ onNavigateToReset }) {
           <h1 className="login-title">LOGIN</h1>
           {error && <p style={{ color: 'red', marginBottom: '10px' }}>{error}</p>}
 
-         
           <form onSubmit={handleLogin}>
             <div className="input-group">
               <label className="input-label">Username</label>
@@ -108,7 +122,6 @@ function LoginPage({ onNavigateToReset }) {
             </div>
 
             <div className="button-container">
-             
               <button type="submit" className="login-button" disabled={loading}>
                 {loading ? 'Logging in...' : 'Login'}
               </button>
