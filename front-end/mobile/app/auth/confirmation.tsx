@@ -3,7 +3,6 @@ import { StyleSheet, View, TouchableOpacity, SafeAreaView, Image, Alert, Activit
 import { useRouter } from 'expo-router';
 import Header from '../../components/Header';
 import OtpInput from '../../components/OtpInput';
-import ConfirmationImg from '../../assets/images/image.png';
 import AppText from '../../components/AppText';
 
 export default function ConfirmationPage() {
@@ -37,9 +36,9 @@ export default function ConfirmationPage() {
       
       setLoading(false);
       // Navigate to the set password screen or next step
-      router.push('/final-confirmation'); 
+      router.push('/auth/final-confirmation'); 
       
-    } catch (error) {
+    } catch {
       setLoading(false);
       Alert.alert("Verification Failed", "The code you entered is incorrect or expired.");
     }
@@ -54,7 +53,7 @@ export default function ConfirmationPage() {
       
       await new Promise(resolve => setTimeout(resolve, 1500));
       Alert.alert("Code Sent", "A new verification code has been sent to your device.");
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Could not resend code. Try again later.");
     } finally {
       setIsResending(false);
@@ -63,12 +62,12 @@ export default function ConfirmationPage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header onBack={() => router.back()} /> 
+      <Header showBack /> 
       
       <View style={styles.content}>
         <View style={styles.illustrationSection}>
           <Image 
-            source={ConfirmationImg} 
+            source={require('../../assets/images/image.png')} 
             style={styles.image} 
             resizeMode="contain" 
           />
