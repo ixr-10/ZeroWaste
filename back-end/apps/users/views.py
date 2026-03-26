@@ -205,16 +205,24 @@ class AdminCreateUserView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             otp = OTPCode.objects.create(user=user)
+            
+            frontend_url = settings.FRONTEND_URL  # e.g. "http://localhost:3000"
+            set_password_link = f"{frontend_url}/set-password"
+            
             otp.send_to_email(
                 subject="ZeroWaste - Set Your Password",
-                message_prefix="Your account has been created by the admin.\nUse this code to set your password."
+                message_prefix=(
+                    f"Your account has been created by the admin.\n\n"
+                    f"Click the link below to set your password:\n"
+                    f"{set_password_link}\n\n"
+                    f"Then use this code when prompted:"
+                )
             )
             return Response({
                 'user': UserSerializer(user).data,
                 'message': f'Account created for {user.username}. An email was sent to set their password.'
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class AdminListUsersView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]

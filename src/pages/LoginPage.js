@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../styles/LoginPage.css';
 import { useNavigate } from 'react-router-dom';
 import { loginUser, getProfile } from '../services/api';
@@ -16,6 +16,11 @@ function LoginPage({ onNavigateToReset }) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (token) navigate('/admin/users', { replace: true });
+  }, [navigate]);
+
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   const handleLogin = async (e) => {
@@ -32,10 +37,10 @@ function LoginPage({ onNavigateToReset }) {
         return;
       }
 
-      localStorage.setItem('access', data.access);
-      localStorage.setItem('refresh', data.refresh);
+      localStorage.setItem('access_token', data.access);
+      localStorage.setItem('refresh_token', data.refresh);
       localStorage.setItem('user', JSON.stringify(profile));
-      navigate('/admin/users');
+      navigate('/admin/users', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -60,51 +65,56 @@ function LoginPage({ onNavigateToReset }) {
           <h1 className="login-title">LOGIN</h1>
           {error && <p style={{ color: 'red', marginBottom: '10px' }}>{error}</p>}
 
-          <div className="input-group">
-            <label className="input-label">Username</label>
-            <div className="input-wrapper">
-              <img src={mailIcon} alt="Email icon" className="icon left-icon" />
-              <input
-                type="text"
-                className="custom-input"
-                placeholder="Enter your username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
+         
+          <form onSubmit={handleLogin}>
+            <div className="input-group">
+              <label className="input-label">Username</label>
+              <div className="input-wrapper">
+                <img src={mailIcon} alt="Email icon" className="icon left-icon" />
+                <input
+                  type="text"
+                  className="custom-input"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="input-group">
-            <label className="input-label">Password</label>
-            <div className="input-wrapper">
-              <img src={padlockIcon} alt="Padlock icon" className="icon left-icon" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                className="custom-input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <img
-                src={eyeIcon}
-                alt="Toggle visibility"
-                className="icon right-icon clickable"
-                onClick={togglePasswordVisibility}
-              />
+            <div className="input-group">
+              <label className="input-label">Password</label>
+              <div className="input-wrapper">
+                <img src={padlockIcon} alt="Padlock icon" className="icon left-icon" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="custom-input"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <img
+                  src={eyeIcon}
+                  alt="Toggle visibility"
+                  className="icon right-icon clickable"
+                  onClick={togglePasswordVisibility}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="forgot-password-container">
-            <a href="#!" className="forgot-password-link"
-              onClick={(e) => { e.preventDefault(); onNavigateToReset(); }}>
-              forgot password?
-            </a>
-          </div>
+            <div className="forgot-password-container">
+              <a href="#!" className="forgot-password-link"
+                onClick={(e) => { e.preventDefault(); onNavigateToReset(); }}>
+                forgot password?
+              </a>
+            </div>
 
-          <div className="button-container">
-            <button className="login-button" onClick={handleLogin} disabled={loading}>
-              {loading ? 'Logging in...' : 'Login'}
-            </button>
-          </div>
+            <div className="button-container">
+             
+              <button type="submit" className="login-button" disabled={loading}>
+                {loading ? 'Logging in...' : 'Login'}
+              </button>
+            </div>
+          </form>
+
         </div>
       </div>
     </div>

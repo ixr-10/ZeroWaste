@@ -51,7 +51,7 @@ const handleLogin = async () => {
       <Image source={require('../../assets/images/login1.png')} style={styles.image}/>
       <Text style={styles.title}>LOGIN</Text>
 
-      <Text style={styles.label}>Email</Text>
+      <Text style={styles.label}>Username</Text>
       <View style={styles.inputRow}>
         <TextInput
           style={[styles.input, { flex: 1 }]}

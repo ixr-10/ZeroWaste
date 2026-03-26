@@ -38,6 +38,16 @@ export const loginUser = async (username, password) => {
   return data;
 };
 
+
+export const setPassword = async (username, code, new_password, confirm_password) => {
+  const res = await fetch(`${BASE_URL}/users/set-password/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, code, new_password, confirm_password }),
+  });
+  return res.json();
+};
+
 export const login = async (username, password) => {
   const res = await fetch(`${BASE_URL}/users/login/`, {
     method: 'POST',
