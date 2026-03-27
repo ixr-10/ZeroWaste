@@ -13,8 +13,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-*mla&@o&@8a+n^xf6qu@#*%8nd3^3lkrcw%&6#&(4@maq-@^7y'
 
 DEBUG = True
-
-ALLOWED_HOSTS = []
+CORS_ALLOW_ALL_ORIGINS = True
+ALLOWED_HOSTS = ['192.168.1.38', 'localhost', '127.0.0.1']
 EMAIL_SSL_CERTFILE = None
 EMAIL_SSL_KEYFILE = None
 
@@ -91,10 +91,16 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+ASGI_APPLICATION = 'core.asgi.application'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
+    "http://localhost:3000",
+     "http://localhost:8081",  
+    "http://127.0.0.1:8081", 
+    "http://192.168.1.38:8081"
 ]
+# ✅ Allow all hosts during development
+ALLOWED_HOSTS = ['*']
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

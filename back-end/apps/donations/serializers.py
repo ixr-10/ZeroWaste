@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Donation
+from .models import Donation,Reservation
 
 class DonationSerializer(serializers.ModelSerializer):
     donor_username = serializers.CharField(source='donor.username', read_only=True)
@@ -30,3 +30,16 @@ class DonationSerializer(serializers.ModelSerializer):
             return round(geodesic(user_location, donation_location).km, 2)
         except Exception:
             return None
+        
+class ReservationSerializer(serializers.ModelSerializer):
+    beneficiary_username = serializers.CharField(source='beneficiary.username', read_only=True)
+    donation_title = serializers.CharField(source='donation.title', read_only=True)
+
+    class Meta:
+        model = Reservation
+        fields = [
+            'id', 'donation', 'donation_title', 'beneficiary',
+            'beneficiary_username', 'quantity_requested', 'status',
+            'pickup_date', 'notes', 'created_at'
+        ]
+        read_only_fields = ['beneficiary', 'status', 'created_at']
