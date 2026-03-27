@@ -8,6 +8,8 @@ import AdminUsersPage from './pages/AdminUsersPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import SetPasswordPage from './pages/SetPasswordPage'; 
 import ProtectedRoute from './components/ProtectedRoute';
+// 1. Import your new Admin page here
+import AdminUsersPage from './pages/AdminUsersPage'; 
 
 function AppRoutes() {
   const navigate = useNavigate();
@@ -23,6 +25,9 @@ function AppRoutes() {
  <AdminUsersPage />
   </ProtectedRoute>
 } />
+      
+      {/* 2. Add the route for your Admin page here */}
+      <Route path="/admin-users" element={<AdminUsersPage />} />
     </Routes>
   );
 }

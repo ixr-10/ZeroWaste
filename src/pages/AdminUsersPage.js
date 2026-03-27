@@ -1,243 +1,226 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { adminListUsers, promoteToFoodSaver, removeTokens, adminCreateUser } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import '../styles/AdminUsersPage.css';
 
-function AdminUsersPage() {
+import {
+  FiPieChart,
+  FiFileText,
+  FiUsers,
+  FiDownload,
+  FiLogOut,
+  FiChevronLeft,
+  FiChevronRight,
+  FiSearch
+} from 'react-icons/fi';
+
+import { FaTrashAlt, FaStar, FaRegStar } from 'react-icons/fa';
+
+const AdminUsersPage = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState([]);
-  const [filter, setFilter] = useState('');
-  const [message, setMessage] = useState('');
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newUser, setNewUser] = useState({ username: '', email: '', phone: '', address: '', role: 'admin' });
-  const [createMessage, setCreateMessage] = useState('');
-  const [createError, setCreateError] = useState('');
-  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Lock back/forward navigation while logged in
+  // Fetch mock data
   useEffect(() => {
-    window.history.pushState(null, '', window.location.href);
-    window.onpopstate = () => {
-      window.history.pushState(null, '', '/admin/users');
+    const fetchData = async () => {
+      setIsLoading(true);
+
+      setTimeout(() => {
+        const mockData = [
+          { id: 1, rank: '🥇', username: 'User_1', email: 'User_1@gmail.com', donations: 59, score: 4.9, status: 'Active', isFoodSaver: true },
+          { id: 2, rank: '🥈', username: 'User_2', email: 'User_2@gmail.com', donations: 50, score: 4.7, status: 'Active', isFoodSaver: false },
+          { id: 3, rank: '🥉', username: 'User_3', email: 'User_3@gmail.com', donations: 45, score: 4.5, status: 'Active', isFoodSaver: true },
+          { id: 4, rank: '#4', username: 'User_4', email: 'User_4@gmail.com', donations: 40, score: 4.3, status: 'Inactive', isFoodSaver: false },
+          { id: 5, rank: '#5', username: 'User_5', email: 'User_5@gmail.com', donations: 35, score: 4.0, status: 'Active', isFoodSaver: false },
+          { id: 6, rank: '#6', username: 'User_6', email: 'User_6@gmail.com', donations: 32, score: 3.8, status: 'Inactive', isFoodSaver: false },
+          { id: 7, rank: '#7', username: 'User_7', email: 'User_7@gmail.com', donations: 30, score: 3.5, status: 'Active', isFoodSaver: false }
+        ];
+
+        setUsers(mockData);
+        setIsLoading(false);
+      }, 1500);
     };
-    return () => {
-      window.onpopstate = null;
-    };
+
+    fetchData();
   }, []);
 
-  const fetchUsers = async () => {
-    const data = await adminListUsers(filter);
-    setUsers(data.users || []);
+  const toggleStar = (userId) => {
+    setUsers(
+      users.map(user =>
+        user.id === userId
+          ? { ...user, isFoodSaver: !user.isFoodSaver }
+          : user
+      )
+    );
   };
 
-  useEffect(() => { fetchUsers(); }, [filter]);
-
-  const handleLogout = () => {
-    window.onpopstate = null; // remove lock before navigating
-    removeTokens();
-    localStorage.removeItem('user');
-    navigate('/login', { replace: true });
-  };
-
-  const handlePromote = async (userId, username) => {
-    const data = await promoteToFoodSaver(userId);
-    if (data.message) {
-      setMessage(data.message);
-      fetchUsers();
+  const deleteUser = (userId) => {
+    if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+      setUsers(users.filter(user => user.id !== userId));
     }
   };
 
-  const handleCreateUser = async (e) => {
-    e.preventDefault();
-    setCreateError('');
-    setCreateMessage('');
-    const data = await adminCreateUser(newUser);
-    if (data.message) {
-      setCreateMessage(data.message);
-      setNewUser({ username: '', email: '', phone: '', address: '', role: 'admin' });
-      fetchUsers();
-      setTimeout(() => {
-        setShowCreateModal(false);
-        setCreateMessage('');
-      }, 2000);
-    } else {
-      setCreateError(data.error || Object.values(data).flat().join(' '));
-    }
-  };
+  const filteredUsers = users.filter(user =>
+    user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const totalUsersCount = users.length;
+  const activeUsersCount = users.filter(user => user.status === 'Active').length;
+  const inactiveUsersCount = users.filter(user => user.status === 'Inactive').length;
+  const foodSaversCount = users.filter(user => user.isFoodSaver).length;
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div className="admin-dashboard">
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Admin — User Management</h1>
-        <div style={{ display: 'flex', gap: '1rem' }}>
+      {/* SIDEBAR */}
+      <aside className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
+        <div className="sidebar-header">
+          {isSidebarOpen && <h2 className="logo-text">ZER0<br />WASTE</h2>}
           <button
-            onClick={() => setShowCreateModal(true)}
-            style={{
-              backgroundColor: '#27ae60', color: 'white', border: 'none',
-              padding: '0.5rem 1.2rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold',
-            }}
+            className="toggle-btn"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           >
-            + Create User
-          </button>
-          <button
-            onClick={handleLogout}
-            style={{
-              backgroundColor: '#e74c3c', color: 'white', border: 'none',
-              padding: '0.5rem 1.2rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold',
-            }}
-          >
-            Logout
+            {isSidebarOpen ? <FiChevronLeft /> : <FiChevronRight />}
           </button>
         </div>
-      </div>
 
-      {message && <p style={{ color: 'green' }}>{message}</p>}
+        <nav className="sidebar-menu">
+          <div className="menu-item">
+            <span className="admin-icon"><FiPieChart /></span>
+            {isSidebarOpen && <span className="menu-text">Statistics</span>}
+          </div>
 
-      {/* Filter */}
-      <div style={{ marginBottom: '1rem' }}>
-        <label>Filter by role: </label>
-        <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-          <option value="">All</option>
-          <option value="user">User</option>
-          <option value="food_saver">Food Saver</option>
-          <option value="collectivite">Collectivite</option>
-        </select>
-      </div>
+          <div className="menu-item">
+            <span className="admin-icon"><FiFileText /></span>
+            {isSidebarOpen && <span className="menu-text">Reports</span>}
+          </div>
 
-      {/* Table */}
-      <table border="1" cellPadding="8" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Username</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Verified</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map(user => (
-            <tr key={user.id}>
-              <td>{user.id}</td>
-              <td>{user.username}</td>
-              <td>{user.email}</td>
-              <td>{user.role}</td>
-              <td>{user.is_verified ? '✅' : '❌'}</td>
-              <td>
-                {user.role !== 'food_saver' && user.role !== 'admin' && (
-                  <button onClick={() => handlePromote(user.id, user.username)}>
-                    Promote to Food Saver
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          <div className="menu-item active">
+            <span className="admin-icon"><FiUsers /></span>
+            {isSidebarOpen && <span className="menu-text">Users</span>}
+          </div>
 
-      {/* Create User Modal */}
-      {showCreateModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
-          justifyContent: 'center', alignItems: 'center', zIndex: 1000,
-        }}>
-          <div style={{
-            backgroundColor: 'white', padding: '2rem', borderRadius: '10px',
-            width: '400px', boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-          }}>
-            <h2 style={{ marginBottom: '1rem' }}>Create New User</h2>
+          <div className="menu-item">
+            <span className="admin-icon"><FiDownload /></span>
+            {isSidebarOpen && <span className="menu-text">Export data</span>}
+          </div>
+        </nav>
 
-            {createMessage && <p style={{ color: 'green', marginBottom: '1rem' }}>{createMessage}</p>}
-            {createError && <p style={{ color: 'red', marginBottom: '1rem' }}>{createError}</p>}
+        <div className="sidebar-footer">
+          <div className="admin-profile">
+            <div className="avatar">👩‍💼</div>
+            {isSidebarOpen && <span className="admin-name">Admin Name</span>}
+          </div>
+          <FiLogOut className="logout-icon" />
+        </div>
+      </aside>
 
-            <form onSubmit={handleCreateUser}>
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.3rem' }}>Username</label>
-                <input
-                  type="text"
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
-                  value={newUser.username}
-                  onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                  required
-                />
-              </div>
+      {/* MAIN CONTENT */}
+      <main className="main-content">
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.3rem' }}>Email</label>
-                <input
-                  type="email"
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  required
-                />
-              </div>
+        {/* STATS */}
+        <div className="stats-container">
+          <div className="stat-card">
+            <div className="stat-title">👥 Total Users</div>
+            <div className="stat-value">{isLoading ? "..." : totalUsersCount}</div>
+          </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.3rem' }}>Phone</label>
-                <input
-                  type="text"
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
-                  value={newUser.phone}
-                  onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
-                  required
-                />
-              </div>
+          <div className="stat-card">
+            <div className="stat-title">👤 Active</div>
+            <div className="stat-value">{isLoading ? "..." : activeUsersCount}</div>
+          </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.3rem' }}>Address</label>
-                <input
-                  type="text"
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
-                  value={newUser.address}
-                  onChange={(e) => setNewUser({ ...newUser, address: e.target.value })}
-                  required
-                />
-              </div>
+          <div className="stat-card">
+            <div className="stat-title">⏸️ Inactive</div>
+            <div className="stat-value">{isLoading ? "..." : inactiveUsersCount}</div>
+          </div>
 
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.3rem' }}>Role</label>
-                <select
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
-                  value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                >
-                  <option value="admin">Admin</option>
-                  <option value="food_saver">Food Saver</option>
-                  <option value="collectivite">Collectivite</option>
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <button
-                  type="submit"
-                  style={{
-                    flex: 1, backgroundColor: '#27ae60', color: 'white', border: 'none',
-                    padding: '0.6rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold',
-                  }}
-                >
-                  Create & Send Email
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowCreateModal(false); setCreateError(''); setCreateMessage(''); }}
-                  style={{
-                    flex: 1, backgroundColor: '#e74c3c', color: 'white', border: 'none',
-                    padding: '0.6rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold',
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+          <div className="stat-card">
+            <div className="stat-title">👑 Food Savers</div>
+            <div className="stat-value">{isLoading ? "..." : foodSaversCount}</div>
           </div>
         </div>
-      )}
 
+        {/* TABLE */}
+        <div className="table-section">
+
+          <div className="search-bar">
+            <FiSearch className="search-icon" />
+            <input
+              type="text"
+              placeholder="Search by name or email ..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <table className="users-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Donations</th>
+                <th>Score</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
+                    <div className="loader">Loading users data...</div>
+                  </td>
+                </tr>
+              ) : filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
+                  <tr key={user.id}>
+                    <td className="rank-cell">{user.rank}</td>
+                    <td>{user.username}</td>
+                    <td>{user.email}</td>
+                    <td>{user.donations}</td>
+                    <td>{user.score}</td>
+
+                    <td className={user.status === 'Active' ? 'status-active' : 'status-inactive'}>
+                      {user.status}
+                    </td>
+
+                    <td className="actions-cell">
+                      <button
+                        className="action-btn star-btn"
+                        data-tooltip={user.isFoodSaver ? "Remove FoodSaver status" : "Set as FoodSaver"}
+                        onClick={() => toggleStar(user.id)}
+                      >
+                        {user.isFoodSaver ? <FaStar color="#ffc107" /> : <FaRegStar color="#666" />}
+                      </button>
+
+                      <button
+                        className="action-btn delete-btn"
+                        data-tooltip="Delete account"
+                        onClick={() => deleteUser(user.id)}
+                      >
+                        <FaTrashAlt color="#dc3545" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                    No users found matching "{searchQuery}"
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+
+        </div>
+      </main>
     </div>
   );
-}
+};
 
 export default AdminUsersPage;
