@@ -18,14 +18,21 @@ class StartConversationView(APIView):
         except Donation.DoesNotExist:
             return Response({'error': 'Donation not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Check that requester is the beneficiary of this donation
-        is_beneficiary = Reservation.objects.filter(
+        # Only the beneficiary can start a conversation (must have a confirmed/pending reservation)
+        if request.user == donation.donor:
+            return Response(
+                {'error': 'You are the donor of this donation.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check that requester has a reservation for this donation
+        has_reservation = Reservation.objects.filter(
             donation=donation,
             beneficiary=request.user,
-            status__in=['confirmed', 'completed']
+            status__in=['pending', 'confirmed', 'completed']
         ).exists()
 
-        if not is_beneficiary and request.user != donation.donor:
+        if not has_reservation:
             return Response(
                 {'error': 'You must have a reservation for this donation to start a chat.'},
                 status=status.HTTP_403_FORBIDDEN
@@ -34,10 +41,9 @@ class StartConversationView(APIView):
         # Get or create conversation
         conversation, created = Conversation.objects.get_or_create(
             donation=donation,
-            beneficiary=request.user if request.user != donation.donor else None,
+            beneficiary=request.user,
             defaults={
                 'donor': donation.donor,
-                'beneficiary': request.user,
                 'firebase_room_id': f"chat_{donation_id}_{request.user.id}_{uuid.uuid4().hex[:8]}"
             }
         )
