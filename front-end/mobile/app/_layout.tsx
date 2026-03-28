@@ -6,7 +6,12 @@ export default function RootLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="auth" />
+      <Stack.Screen name="(Screens)" />
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen
+        name="(Screens)/AddListingModal"
+        options={{ presentation: 'modal' }}
+      />
     </Stack>
   );
 }

@@ -27,7 +27,7 @@ const handleLogin = async () => {
     await AsyncStorage.setItem('refresh', data.refresh);
     await AsyncStorage.setItem('user', JSON.stringify(data.user));
 
-    router.replace('/(tabs)');
+    router.replace('/(tabs)/slides');
 
   } catch (err: any) {  
     const status = err.response?.status;
@@ -90,7 +90,7 @@ const handleLogin = async () => {
       <View style={{ height: 1, backgroundColor: 'black', marginVertical: 10, marginHorizontal: 65 }} />
 
       <Text style={styles.bottomText}>
-        Don't have an account?{' '}
+        Don&apos;t have an account?{' '}
         <Text style={styles.link} onPress={() => router.push('./register')}>Sign up</Text>
       </Text>
     </ScrollView>

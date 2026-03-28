@@ -8,10 +8,21 @@ export default function SplashScreen() {
 
   useEffect(() => {
     const init = async () => {
-      await AsyncStorage.clear(); // ← REMOVE AFTER ONE RUN
+      const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
+      const isLoggedIn = await AsyncStorage.getItem('isLoggedIn');
+
       setTimeout(() => {
-        router.replace('/auth/login');
-      }, 500); // small delay to let layout mount
+        if (!hasSeenOnboarding) {
+          // First ever launch → Onboarding
+          router.replace('/(Screens)/OnboardingScreen');
+        } else if (!isLoggedIn) {
+          // Seen onboarding but not logged in → Login
+          router.replace('/auth/login');
+        } else {
+          // Fully authenticated → Main app (Home tab)
+          router.replace('/(tabs)/slides');
+        }
+      }, 500);
     };
     init();
   }, [router]);

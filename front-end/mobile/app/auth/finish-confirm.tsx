@@ -39,7 +39,7 @@ export default function ConfirmationPage() {
     try {
       const { data } = await api.post('/verify-email/', { email, code: fullCode });
       Alert.alert('Success', data.message ?? 'Email verified successfully!', [
-        { text: 'Login', onPress: () => router.replace('/auth/OnboardingScreen') },
+        { text: 'Login', onPress: () => router.replace('/auth/login') },
       ]);
     } catch (error: any) {
       const message = error.response?.data?.error ?? 'Verification failed. Please try again.';
@@ -121,7 +121,7 @@ export default function ConfirmationPage() {
               <ActivityIndicator color="#588157" size="small" />
             ) : (
               <AppText style={styles.resendText}>
-                Didn't receive a code?{' '}
+                Didn&apos;t receive a code?{' '}
                 <AppText weight="bold" style={styles.resendLink}>
                   Resend
                 </AppText>

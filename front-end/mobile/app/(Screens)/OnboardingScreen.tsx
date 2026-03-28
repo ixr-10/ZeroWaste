@@ -14,6 +14,7 @@ import {
 import { useFonts, Outfit_400Regular, Outfit_700Bold, Outfit_600SemiBold } from '@expo-google-fonts/outfit';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -56,13 +57,18 @@ export default function OnboardingScreen() {
 
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
-  const handleNext = () => {
+  const finishOnboarding = async () => {
+    await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+    router.replace('/(tabs)/slides');
+  };
+
+  const handleNext = async () => {
     if (currentIndex < SLIDES.length - 1) {
       const nextIndex = currentIndex + 1;
       flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
       setCurrentIndex(nextIndex);
     } else {
-      router.replace('/auth/login');
+      await finishOnboarding();
     }
   };
 
@@ -154,7 +160,7 @@ export default function OnboardingScreen() {
               activeOpacity={0.85}
             >
               <Text style={styles.nextButtonText}>
-                {isLastSlide ? 'Get Started' : 'Next'}
+                {isLastSlide ? 'Discover' : 'Next'}
               </Text>
             </TouchableOpacity>
           </View>
