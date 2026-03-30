@@ -4,7 +4,5 @@
     {
       "path": "./mobile"
     }
-  ],
-  "compilerOptions": {},
-  "extends": "expo/tsconfig.base"
+  ]
 }
