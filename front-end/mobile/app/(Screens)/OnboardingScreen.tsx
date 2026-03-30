@@ -8,13 +8,13 @@ import {
   FlatList,
   ImageBackground,
   StatusBar,
-  SafeAreaView,
   ViewToken,
 } from 'react-native';
 import { useFonts, Outfit_400Regular, Outfit_700Bold, Outfit_600SemiBold } from '@expo-google-fonts/outfit';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 

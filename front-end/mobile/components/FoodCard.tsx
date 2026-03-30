@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAppStore } from '../store/useAppStore';
 import {
   View,
   Text,
@@ -7,6 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { FoodListing } from '../constants/data';
 import { CardMenu } from './CardMenu';
@@ -15,9 +17,12 @@ interface FoodCardProps {
   item: FoodListing;
   onReserve: (id: string) => void;
 }
+
 export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
+  const router = useRouter();
   const [menuVisible, setMenuVisible] = useState(false);
-  const [reserved, setReserved] = useState(false);
+
+  const isReserved = useAppStore((state) => state.isReserved(item.id));
 
   const formatDistance = (meters: number) => {
     if (meters < 1000) return `${meters} m`;
@@ -25,8 +30,20 @@ export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
   };
 
   const handleReserve = () => {
-    setReserved(true);
-    onReserve(item.id);
+    if (isReserved) return;
+
+    // Navigate to ReservationScreen — confirmation happens there
+    router.push({
+      pathname: '/(Screens)/ReservationScreen',
+      params: {
+        id:       item.id,
+        title:    item.title,
+        category: item.category,
+        date:     item.expiryDate,
+        postedBy: item.username,
+        imageUrl: item.imageUrl ?? '',
+      },
+    } as any);
   };
 
   return (
@@ -107,13 +124,18 @@ export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
             <Text style={styles.username}>{item.username}</Text>
           </View>
 
+          {/* ✅ Reserve button — navigates to ReservationScreen */}
           <TouchableOpacity
-            style={[styles.reserveButton, reserved && styles.reservedButton]}
+            style={[styles.reserveButton, isReserved && styles.reservedButton]}
             onPress={handleReserve}
-            disabled={reserved}
+            disabled={isReserved}
+            activeOpacity={isReserved ? 1 : 0.8}
           >
-            <Text style={styles.reserveButtonText}>
-              {reserved ? 'Reserved' : 'Reserve'}
+            {isReserved && (
+              <Ionicons name="checkmark" size={14} color="#888888" style={{ marginRight: 4 }} />
+            )}
+            <Text style={[styles.reserveButtonText, isReserved && styles.reservedButtonText]}>
+              {isReserved ? 'Reserved' : 'Reserve'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -275,17 +297,22 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   reserveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.full,
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.sm,
   },
   reservedButton: {
-    backgroundColor: COLORS.primaryMedium,
+    backgroundColor: '#D5DED0',
   },
   reserveButtonText: {
     color: COLORS.white,
     fontSize: 14,
     fontWeight: '600',
+  },
+  reservedButtonText: {
+    color: '#888888',
   },
 });

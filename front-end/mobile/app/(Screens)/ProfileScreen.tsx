@@ -18,7 +18,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { BottomNavBar } from '../../components/ButtomNavBar';
 
-
 // ─── Theme ────────────────────────────────────────────────────────────────────
 const COLORS = {
   primary: '#4A6741',
@@ -68,9 +67,12 @@ const INITIAL_POSTS: Post[] = [
 ];
 
 const INITIAL_RESERVATIONS: Reservation[] = [
-  { id: '1', username: 'Username', product: 'product name', status: 'pending' },
-  { id: '2', username: 'Username', product: 'product name', status: 'confirmed' },
-  { id: '3', username: 'Username', product: 'product name', status: 'rejected' },
+  { id: '1', username: 'Sarah M.',   product: 'Whole Milk',     status: 'pending'   },
+  { id: '2', username: 'Ahmed K.',   product: 'Mixed Berries',  status: 'pending'   },
+  { id: '3', username: 'Fatima Z.',  product: 'Homemade Bread', status: 'pending'   },
+  { id: '4', username: 'Youssef B.', product: 'Whole Milk',     status: 'confirmed' },
+  { id: '5', username: 'Nadia H.',   product: 'Chinese Food',   status: 'confirmed' },
+  { id: '6', username: 'Karim L.',   product: 'Mixed Berries',  status: 'rejected'  },
 ];
 
 // ─── Custom Confirm Modal ─────────────────────────────────────────────────────
@@ -263,9 +265,11 @@ const PostItem = ({
   showEdit: boolean;
   onDelete: () => void;
 }) => {
+  const isDonated = item.status === 'donated';
+
   const getStatusColor = () => {
     if (item.status === 'expired') return COLORS.red;
-    if (item.status === 'donated') return COLORS.textMuted;
+    if (isDonated) return COLORS.primary;
     const days = parseInt(item.expiresIn);
     return days <= 2 ? COLORS.red : COLORS.orange;
   };
@@ -275,11 +279,22 @@ const PostItem = ({
       <Image source={{ uri: item.imageUrl }} style={postStyles.image} />
       <View style={postStyles.info}>
         <Text style={postStyles.title}>{item.title}</Text>
-        <Text style={postStyles.subtitle}>{item.subtitle}</Text>
-        <Text style={[postStyles.status, { color: getStatusColor() }]}>{item.expiresIn}</Text>
+        {/* Donated: show only subtitle, no expiry-style label */}
+        {!isDonated && (
+          <Text style={postStyles.subtitle}>{item.subtitle}</Text>
+        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+          {isDonated && (
+            <Ionicons name="checkmark-circle" size={14} color={COLORS.primary} />
+          )}
+          <Text style={[postStyles.status, { color: getStatusColor() }]}>
+            {item.expiresIn}
+          </Text>
+        </View>
       </View>
       <View style={postStyles.actions}>
-        {showEdit && (
+        {/* Only show edit on actif, never on donated/expired */}
+        {showEdit && !isDonated && (
           <TouchableOpacity style={postStyles.actionBtn} activeOpacity={0.7}>
             <Ionicons name="create-outline" size={22} color={COLORS.primary} />
           </TouchableOpacity>
@@ -474,9 +489,21 @@ export default function ProfileScreen() {
   };
 
   const handleConfirmReservation = (id: string) => {
+    // Move reservation to confirmed
     setReservations((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: 'confirmed' } : r))
     );
+    // Also move the matching post to donated in My Posts
+    const reservation = reservations.find((r) => r.id === id);
+    if (reservation) {
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.title === reservation.product && p.status === 'actif'
+            ? { ...p, status: 'donated', expiresIn: 'Donation made' }
+            : p
+        )
+      );
+    }
   };
 
   const handleRejectReservation = (id: string) => {

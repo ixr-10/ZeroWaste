@@ -17,7 +17,7 @@ export default function SplashScreen() {
           router.replace('/(Screens)/OnboardingScreen');
         } else if (!isLoggedIn) {
           // Seen onboarding but not logged in → Login
-          router.replace('/auth/login');
+          router.replace('/(Screens)/OnboardingScreen');
         } else {
           // Fully authenticated → Main app (Home tab)
           router.replace('/(tabs)/slides');

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Image, SafeAreaView, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Image, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import Header from '../../components/Header';
 import InputField from '../../components/InputField';
 import AppText from '../../components/AppText';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // 1. Define the shape of your form data
 interface PasswordFormData {

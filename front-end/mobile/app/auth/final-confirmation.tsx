@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { 
-  StyleSheet, View, TouchableOpacity, SafeAreaView, 
+  StyleSheet, View, TouchableOpacity, 
   Image, Alert, ActivityIndicator, ScrollView 
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../components/Header';
 import AppText from '../../components/AppText';
 import InputField from '../../components/InputField';

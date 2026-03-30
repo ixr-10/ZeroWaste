@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Platform,
-  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // 👈 ADD THIS
 
 const COLORS = {
   primary: '#4A6741',
@@ -20,32 +20,35 @@ const COLORS = {
 
 const TABS = [
   { label: 'Home',         icon: 'home',          route: '/(Screens)/HomeScreen'         },
-  { label: 'Chat',         icon: 'chatbubble',    route: '/(Screens)/ChatScreen'         },
+  { label: 'Chat',         icon: 'chatbubble',    route: '/(Screens)/ChatList'         },
   { label: '',             icon: '',              route: '__add__'                       },
-  { label: 'Notification', icon: 'notifications', route: '/(Screens)/NotificationScreen' },
+  { label: 'Notification', icon: 'notifications', route: '/(Screens)/notifications' },
   { label: 'Profile',      icon: 'person',        route: '/(Screens)/ProfileScreen'      },
 ];
 
 interface BottomNavBarProps {
-  onAddPress?: () => void; // optional override for + button
+  onAddPress?: () => void;
 }
 
 export const BottomNavBar: React.FC<BottomNavBarProps> = ({ onAddPress }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const insets = useSafeAreaInsets(); 
 
   const isActive = (route: string) => pathname.includes(route.replace('/(Screens)/', ''));
 
   return (
-    <View style={styles.container}>
-      {TABS.map((tab, index) => {
-        // Centre + button
+    <View style={[
+      styles.container,
+      { paddingBottom: Math.max(insets.bottom, 10) } 
+    ]}>
+      {TABS.map((tab) => {
         if (tab.route === '__add__') {
           return (
             <TouchableOpacity
               key="add"
               style={styles.addWrapper}
-              onPress={onAddPress ?? (() => router.push('/(Screens)/AddListingModal' as any))}
+              onPress={onAddPress ?? (() => router.push('/(Screens)/Picture' as any))}
               activeOpacity={0.85}
             >
               <View style={styles.addCircle}>
@@ -83,12 +86,12 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     backgroundColor: COLORS.primaryLight,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
     paddingTop: 8,
     paddingHorizontal: 4,
     alignItems: 'flex-end',
     borderTopWidth: 0,
     borderRadius: 25,
+   
   },
   tabItem: {
     flex: 1,
