@@ -2,7 +2,7 @@ from datetime import timedelta
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-import ssl, certifi
+import ssl, certifi # type: ignore
 EMAIL_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 
@@ -14,7 +14,7 @@ SECRET_KEY = 'django-insecure-*mla&@o&@8a+n^xf6qu@#*%8nd3^3lkrcw%&6#&(4@maq-@^7y
 FRONTEND_URL = "http://localhost:3000"
 DEBUG = True
 CORS_ALLOW_ALL_ORIGINS = True
-ALLOWED_HOSTS = ['192.168.1.38', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['192.168.1.39', 'localhost', '127.0.0.1']
 EMAIL_SSL_CERTFILE = None
 EMAIL_SSL_KEYFILE = None
 
@@ -97,9 +97,11 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
      "http://localhost:8081",  
     "http://127.0.0.1:8081", 
+
     "http://192.168.1.38:8081",
-    "http://192.168.1.37:8081"
-     
+    "http://192.168.1.37:8081",
+    "http://192.168.1.39:8081"
+
 ]
 # ✅ Allow all hosts during development
 ALLOWED_HOSTS = ['*']
@@ -117,7 +119,7 @@ SIMPLE_JWT = {
 
 AUTH_USER_MODEL = 'users.User'
 
-import ssl, certifi
+import ssl, certifi # type: ignore
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
