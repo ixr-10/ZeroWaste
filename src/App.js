@@ -5,9 +5,16 @@ import './App.css';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import AdminUsersPage from './pages/AdminUsersPage';
+import AdminStatisticsPage from './pages/AdminStatisticsPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import SetPasswordPage from './pages/SetPasswordPage'; 
-import ProtectedRoute from './components/ProtectedRoute';
+import AdminExportPage from './pages/AdminExportPage'; 
+
+// 👇 1. Zedt l'importation ta3 la page jdida ta3 Reports hna
+import AdminReportsPage from './pages/AdminReportsPage'; 
+
+// راني درت كومونتير للـ ProtectedRoute باش ما تخدمش درك
+// import ProtectedRoute from './components/ProtectedRoute';
 
 function AppRoutes() {
   const navigate = useNavigate();
@@ -16,13 +23,17 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage onNavigate={() => navigate('/login', { replace: true })} />} />
       <Route path="/login" element={<LoginPage onNavigateToReset={() => navigate('/reset-password')} />} />
-      <Route path="/admin/users" element={<AdminUsersPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/set-password" element={<SetPasswordPage />} />
-      <Route path="/admin/users" element={<ProtectedRoute>
- <AdminUsersPage />
-  </ProtectedRoute>
-} />
+
+      {/* 👇 نحينا الحماية مؤقتا باش يفتحولك ديريكت بلا مشاكل */}
+      <Route path="/admin/users" element={<AdminUsersPage />} />
+      <Route path="/admin/statistics" element={<AdminStatisticsPage />} />
+      <Route path="/admin/export" element={<AdminExportPage />} />
+      
+      {/* 👇 2. Zedt la route jdida ta3 Reports */}
+      <Route path="/admin/reports" element={<AdminReportsPage />} />
+      
     </Routes>
   );
 }
