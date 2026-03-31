@@ -107,3 +107,30 @@ export const adminCreateUser = async (userData) => {
   });
   return res.json();
 };
+export const adminDeleteUser = async (userId) => {
+  const res = await authFetch(`${BASE_URL}/users/admin/users/${userId}/delete/`, {
+    method: 'DELETE',
+  });
+  if (res.status === 204) return { success: true };
+  return res.json();
+};
+export const demoteFromFoodSaver = async (userId) => {
+  const res = await authFetch(`${BASE_URL}/users/demote/${userId}/`, {
+    method: 'POST',
+  });
+  return res.json();
+};
+export const logoutUser = async () => {
+  const refresh = getRefreshToken();
+  try {
+    await authFetch(`${BASE_URL}/users/logout/`, {
+      method: 'POST',
+      body: JSON.stringify({ refresh }),
+    });
+  } catch (err) {
+    console.error('Logout error:', err);
+  } finally {
+    removeTokens();
+    localStorage.removeItem('user');
+  }
+};

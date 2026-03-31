@@ -10,52 +10,76 @@ import {
 } from 'react-icons/fi';
 
 import { FaTrashAlt, FaStar, FaRegStar } from 'react-icons/fa';
-
+import { useNavigate } from 'react-router-dom';
+import { logoutUser } from '../services/api';
+import { adminListUsers, promoteToFoodSaver,demoteFromFoodSaver,  adminDeleteUser } from '../services/api';
 const AdminUsersPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState([]);
+  const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const adminName = user.username || 'Admin';
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch mock data
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-
-      setTimeout(() => {
-        const mockData = [
-          { id: 1, rank: '🥇', username: 'User_1', email: 'User_1@gmail.com', donations: 59, score: 4.9, status: 'Active', isFoodSaver: true },
-          { id: 2, rank: '🥈', username: 'User_2', email: 'User_2@gmail.com', donations: 50, score: 4.7, status: 'Active', isFoodSaver: false },
-          { id: 3, rank: '🥉', username: 'User_3', email: 'User_3@gmail.com', donations: 45, score: 4.5, status: 'Active', isFoodSaver: true },
-          { id: 4, rank: '#4', username: 'User_4', email: 'User_4@gmail.com', donations: 40, score: 4.3, status: 'Inactive', isFoodSaver: false },
-          { id: 5, rank: '#5', username: 'User_5', email: 'User_5@gmail.com', donations: 35, score: 4.0, status: 'Active', isFoodSaver: false },
-          { id: 6, rank: '#6', username: 'User_6', email: 'User_6@gmail.com', donations: 32, score: 3.8, status: 'Inactive', isFoodSaver: false },
-          { id: 7, rank: '#7', username: 'User_7', email: 'User_7@gmail.com', donations: 30, score: 3.5, status: 'Active', isFoodSaver: false }
-        ];
-
-        setUsers(mockData);
-        setIsLoading(false);
-      }, 1500);
-    };
-
-    fetchData();
-  }, []);
-
-  const toggleStar = (userId) => {
-    setUsers(
-      users.map(user =>
-        user.id === userId
-          ? { ...user, isFoodSaver: !user.isFoodSaver }
-          : user
-      )
-    );
-  };
-
-  const deleteUser = (userId) => {
-    if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
-      setUsers(users.filter(user => user.id !== userId));
+  const handleLogout = async () => {
+  await logoutUser();
+  navigate('/login');
+};
+ useEffect(() => {
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const data = await adminListUsers();
+      const mapped = data.users.map((user, index) => ({
+        id: user.id,
+        rank: index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`,
+        username: user.username,
+        email: user.email,
+        donations: user.reputation_score ?? 0,
+        score: ((user.reputation_score ?? 0) / 10).toFixed(1),
+        status: user.is_verified ? 'Active' : 'Inactive',
+        isFoodSaver: user.role === 'food_saver',
+      }));
+      setUsers(mapped);
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
+  fetchData();
+}, []);
+
+const toggleStar = async (userId) => {
+  const user = users.find(u => u.id === userId);
+  try {
+    if (user.isFoodSaver) {
+      await demoteFromFoodSaver(userId);
+      setUsers(prev => prev.map(u =>
+        u.id === userId ? { ...u, isFoodSaver: false } : u
+      ));
+    } else {
+      await promoteToFoodSaver(userId);
+      setUsers(prev => prev.map(u =>
+        u.id === userId ? { ...u, isFoodSaver: true } : u
+      ));
+    }
+  } catch (err) {
+    console.error('Failed to update Food Saver status:', err);
+  }
+};
+const deleteUser = async (userId) => {
+  if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+    try {
+      await adminDeleteUser(userId);
+      setUsers(prev => prev.filter(user => user.id !== userId));
+    } catch (err) {
+      console.error('Failed to delete user:', err);
+    }
+  }
+};
+
 
   const filteredUsers = users.filter(user =>
     user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -130,9 +154,9 @@ const AdminUsersPage = () => {
         <div className="sidebar-footer">
           <div className="admin-profile">
             <div className="avatar">👩‍💼</div>
-            {isSidebarOpen && <span className="admin-name">Admin Name</span>}
+            {isSidebarOpen && <span className="admin-name">{adminName}</span>}
           </div>
-          <FiLogOut className="logout-icon" />
+          <FiLogOut className="logout-icon"  onClick={handleLogout} style={{ cursor: 'pointer' }}  />
         </div>
       </aside>
 
