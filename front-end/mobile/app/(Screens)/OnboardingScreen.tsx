@@ -59,7 +59,8 @@ export default function OnboardingScreen() {
 
   const finishOnboarding = async () => {
     await AsyncStorage.setItem('hasSeenOnboarding', 'true');
-    router.replace('/(tabs)/slides');
+
+    router.replace('../(tabs)/slides');
   };
 
   const handleNext = async () => {
@@ -80,27 +81,27 @@ export default function OnboardingScreen() {
 
   if (!fontsLoaded) return null;
 
- const renderSlide = ({ item }: { item: typeof SLIDES[0] }) => (
-  <View style={styles.slide}>
-    <ImageBackground
-      source={item.image}
-      style={styles.backgroundImage}
-      resizeMode="cover"
-    >
-      {/* Gradient overlay inside the ImageBackground */}
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.65)']}
-        style={StyleSheet.absoluteFillObject}
-      />
-    </ImageBackground>
-  </View>
-);
+  const renderSlide = ({ item }: { item: typeof SLIDES[0] }) => (
+    <View style={styles.slide}>
+      <ImageBackground
+        source={item.image}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.65)']}
+          style={StyleSheet.absoluteFillObject}
+        />
+      </ImageBackground>
+    </View>
+  );
 
   const isLastSlide = currentIndex === SLIDES.length - 1;
 
   return (
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      
       <FlatList
         ref={flatListRef}
         data={SLIDES}
@@ -119,7 +120,6 @@ export default function OnboardingScreen() {
           index,
         })}
         initialScrollIndex={0}
-        scrollEnabled={true}
       />
 
       <LinearGradient
@@ -129,11 +129,10 @@ export default function OnboardingScreen() {
       />
 
       <SafeAreaView style={styles.uiLayer} pointerEvents="box-none">
-
-        {/* Skip Button — hidden on last slide */}
+        {/* Skip Button */}
         {!isLastSlide && (
           <TouchableOpacity style={styles.skipButton} onPress={handleSkip} activeOpacity={0.7}>
-            <Text style={styles.skipText}>Skip▶</Text>
+            <Text style={styles.skipText}>Skip ▶</Text>
           </TouchableOpacity>
         )}
         {isLastSlide && <View style={styles.skipButton} />}
@@ -160,7 +159,7 @@ export default function OnboardingScreen() {
               activeOpacity={0.85}
             >
               <Text style={styles.nextButtonText}>
-                {isLastSlide ? 'Discover' : 'Next'}
+                {isLastSlide ? 'Get Started' : 'Next'}
               </Text>
             </TouchableOpacity>
           </View>
