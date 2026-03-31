@@ -9,10 +9,13 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "ZeroWaste uses your location to show nearby food listings on the map.",
+        "NSLocationAlwaysUsageDescription": "ZeroWaste uses your location to show nearby food listings."
+      }
     },
-  "android": {
-      "permissions": ["INTERNET", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
+    "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -20,7 +23,11 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -41,7 +48,12 @@
         }
       ],
       "expo-font",
-      "@react-native-community/datetimepicker"
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "ZeroWaste uses your location to show nearby food listings."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -46,7 +46,7 @@ export default function UserProfile() {
                       style={[styles.menuItem, index === 0 && styles.menuItemBorder]}
                       onPress={() => {
                         setMenuVisible(false);
-                        if (option === "Report") router.push("/ReportProfile");
+                        if (option === "Report") router.push("/ReportProfile" as any);
                       }}
                     >
                       <Text style={[styles.menuText, option === "Report" && { color: COLORS.emergencyRed }]}>{option}</Text>

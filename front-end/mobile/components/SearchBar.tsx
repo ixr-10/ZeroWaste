@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     marginRight: SPACING.sm,
-    height: 36,
+    height: 44,
   },
   icon: {
     marginRight: SPACING.sm,

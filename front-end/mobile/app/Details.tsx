@@ -64,7 +64,7 @@ export default function Details() {
           style={[styles.continueBtn, selected === "other" && !description.trim() && styles.continueBtnDisabled]}
           onPress={() => {
             if (selected === "other" && !description.trim()) return;
-            router.push("/Quantity");
+            router.push("/Quantity" as any);
           }}>
          <Text style={styles.continueBtnText}>Continue</Text> 
         </TouchableOpacity>

@@ -84,10 +84,10 @@ export default function Picture() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.continueBtn} onPress={() => router.push("/Details")}>
+        <TouchableOpacity style={styles.continueBtn} onPress={() => router.push("/Details" as any)}>
           <Text style={styles.continueBtnText}>Continue </Text>
         </TouchableOpacity>
-        <Text style={styles.skipText} onPress={() => router.push("/Details")}>or skip this step</Text>
+        <Text style={styles.skipText} onPress={() => router.push("/Details" as any)}>or skip this step</Text>
       </View>
     </SafeAreaView>
   );

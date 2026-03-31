@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { 
-  View, StyleSheet, SafeAreaView, StatusBar, 
+  View, StyleSheet, StatusBar, 
   Platform, ActivityIndicator, TouchableOpacity 
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AvatarPicker from '../../components/AvatarPicker';
 import AppText from '../../components/AppText';
 

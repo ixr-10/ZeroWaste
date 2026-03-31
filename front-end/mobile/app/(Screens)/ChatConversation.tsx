@@ -5,6 +5,7 @@ import { useRouter, Stack  } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SPACING, BORDER_RADIUS } from "../../constants/theme";
 import * as ImagePicker from "expo-image-picker";
+// eslint-disable-next-line import/no-unresolved
 import { Audio } from "expo-av";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -37,7 +38,7 @@ export default function ChatConversation() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [recording, setRecording] = useState<any>(null);
   const [isRecording, setIsRecording] = useState(false);
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -123,7 +124,7 @@ export default function ChatConversation() {
             <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
           </TouchableOpacity>
           <View style={styles.avatar}>
-            <TouchableOpacity onPress={() => router.push("/UserProfile")}>
+            <TouchableOpacity onPress={() => router.push("/UserProfile" as any)}>
               <Image style={{ width: 38, height: 38 }} source={require('../../assets/images/avatar.png')} />
             </TouchableOpacity>
           </View>
@@ -142,8 +143,8 @@ export default function ChatConversation() {
                     style={[styles.menuItem, index < 2 && styles.menuItemBorder]}
                     onPress={() => {
                       setMenuVisible(false)
-                      if (option === "View Profile") router.push("/UserProfile");
-                      if (option === "Report") router.push("/ReportProfile");
+                      if (option === "View Profile") router.push("/UserProfile" as any);
+                      if (option === "Report") router.push("/ReportProfile" as any);
                     }}
                   >
                     

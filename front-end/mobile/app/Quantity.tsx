@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image, StatusBar, TextInput, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter ,Stack  } from "expo-router";
+// eslint-disable-next-line import/no-unresolved
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
@@ -100,7 +101,7 @@ export default function Quantity() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.continueBtn} onPress={() => router.push("/Localization")}>
+        <TouchableOpacity style={styles.continueBtn} onPress={() => router.push("/Localization" as any)}>
           <Text style={styles.continueBtnText}>Continue</Text>
         </TouchableOpacity>
       </View>

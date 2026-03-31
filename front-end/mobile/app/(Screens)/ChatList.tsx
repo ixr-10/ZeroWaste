@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, StatusBar ,Image} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter, Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SearchBar } from "../../components/SearchBar";
@@ -46,7 +45,7 @@ export default function ChatList() {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.chatCard}
-              onPress={() => router.push("/ChatConversation")}
+              onPress={() => router.push("/ChatConversation" as any)}
               activeOpacity={0.7}
             >
               {/* Avatar */}

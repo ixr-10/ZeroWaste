@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Image, StatusBar } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, Stack } from "expo-router";
+import { Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SPACING, BORDER_RADIUS } from "../../constants/theme";
 
@@ -21,7 +21,6 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
 ];
 
 export default function Notifications() {
-  const router = useRouter();
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [menuOpenId, setMenuOpenId] = useState<string | null>("1");
 
@@ -50,7 +49,7 @@ export default function Notifications() {
                 <Text style={styles.notifText}>
                   <Text style={styles.bold}>{item.username}</Text>
                   {" "}{item.action}{" "}
-                  <Text style={styles.bold}>'{item.product}'</Text>
+                  <Text style={styles.bold}>&apos;{item.product}&apos;</Text>
                   {item.type === "confirmed" && (
                     <Text> , <Text style={styles.link}>start chatting</Text></Text>
                   )}
