@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, TouchableOpacity, SafeAreaView, Image, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../components/Header';
 import OtpInput from '../../components/OtpInput';
 import ConfirmationImg from '../../assets/images/image.png';

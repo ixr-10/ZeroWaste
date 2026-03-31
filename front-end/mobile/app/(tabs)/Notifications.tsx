@@ -1,9 +1,9 @@
 import { View, Text } from 'react-native';
 
-export default function SlidesScreen() {
+export default function NotificationsScreen() {
   return (
     <View>
-      <Text>Slides</Text>
+      <Text>Notifications</Text>
     </View>
   );
 }

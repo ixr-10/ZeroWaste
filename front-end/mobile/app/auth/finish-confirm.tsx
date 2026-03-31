@@ -3,12 +3,12 @@ import {
   StyleSheet,
   View,
   TouchableOpacity,
-  SafeAreaView,
   Image,
   Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../components/Header';
 import OtpInput from '../../components/OtpInput';
 import ConfirmationImg from '../../assets/images/image.png';
@@ -121,7 +121,7 @@ export default function ConfirmationPage() {
               <ActivityIndicator color="#588157" size="small" />
             ) : (
               <AppText style={styles.resendText}>
-                Didn't receive a code?{' '}
+                Didn&apos;t receive a code?{' '}
                 <AppText weight="bold" style={styles.resendLink}>
                   Resend
                 </AppText>

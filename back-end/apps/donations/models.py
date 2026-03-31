@@ -7,17 +7,22 @@ User = get_user_model()
 class Donation(models.Model):
     CATEGORY_CHOICES = [
         ('fruits', 'Fruits'),
-        ('vegetables', 'Vegetables'),
-        ('bread', 'Bread'),
-        ('canned_goods', 'Canned Goods'),
-        ('dairy', 'Dairy'),
-        ('other', 'Other'),
+        ('legumes', 'Légumes'),
+        ('pain', 'Pain'),
+        ('conserves', 'Conserves'),
+        ('produits_laitiers', 'Produits Laitiers'),
+        ('autre', 'Autre'),
     ]
     STATUS_CHOICES = [
         ('available', 'Available'),
         ('reserved', 'Reserved'),
         ('completed', 'Completed'),
         ('expired', 'Expired'),
+    ]
+    URGENCY_CHOICES = [
+        ('green', 'Fresh but not urgent'),
+        ('orange', 'Dry or less perishable'),
+        ('red', 'Urgent - pick up fast'),
     ]
 
     donor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='donations')
@@ -32,6 +37,7 @@ class Donation(models.Model):
     latitude = models.FloatField()
     longitude = models.FloatField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
+    urgency = models.CharField(max_length=10, choices=URGENCY_CHOICES, default='green')  # ← NEW
     image = models.ImageField(upload_to='donations/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -61,6 +67,7 @@ class Reservation(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     pickup_date = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
+    confirmation_deadline = models.DateTimeField(null=True, blank=True)  # ← NEW
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
 import { 
-  StyleSheet, View, TouchableOpacity, SafeAreaView, 
+  StyleSheet, View, TouchableOpacity, 
   Image, Alert, ActivityIndicator, ScrollView 
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../components/Header';
 import AppText from '../../components/AppText';
 import InputField from '../../components/InputField';
 
-// Type for navigation params
-const { email, code } = useLocalSearchParams<{ email?: string; code?: string }>();
-
-
 export default function FinalConfirmation() {
   const router = useRouter();
-  
+  const { email, code } = useLocalSearchParams<{ email?: string; code?: string }>();
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -125,7 +122,6 @@ export default function FinalConfirmation() {
               <ActivityIndicator color="#FFF" />
             ) : (
               <AppText weight="bold"
-               onPress={() => router.push('./set-password')}
                style={styles.finishButtonText}>Finish</AppText>
             )}
           </TouchableOpacity>
