@@ -8,7 +8,7 @@
 
 /* --- SIDEBAR --- */
 .sidebar {
-  background-color: #d1dbcd; /* Light sage green from your design */
+  background-color: #d1dbcd; 
   transition: width 0.3s ease;
   display: flex;
   flex-direction: column;
@@ -16,8 +16,7 @@
   border-right: 1px solid #D1D8C4;
 }
 
-/* رجعنا العرض 492px كيما الديزاين تاعك */
-.sidebar.open { width: 492px; }
+.sidebar.open { width: 260px; }
 .sidebar.closed { width: 80px; }
 
 .sidebar-header {
@@ -25,14 +24,22 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  height: 80px;
+  min-height: 100px; 
 }
 
 .logo-text {
-  font-size: 1.2rem;
-  color: #fff;
-  margin: 0;
-  line-height: 1.2;
+  margin-left: 10px;
+  width: auto;
+  background: none; 
+  font-family: "Times New Roman", Times, serif;
+  font-weight: 700;
+  font-size: 26px;
+  color: white; 
+  line-height: 1.1;
+  text-transform: uppercase; 
+  text-shadow: 1px 2px 4px #588157;
+  border: none;
+  box-shadow: none;
 }
 
 .toggle-btn {
@@ -51,8 +58,6 @@
   cursor: pointer;
   color: #588157;            
   z-index: 10;               
-  
-  /* --- السر تاع الأنيميشن هنا --- */
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
@@ -122,9 +127,6 @@
   margin-right: 10px;
 }
 
-/* =========================================
-   تعديل الخط اللي فوق حساب الأدمن
-   ========================================= */
 .sidebar-footer {
   display: flex;
   justify-content: space-between;
@@ -161,19 +163,24 @@
 /* --- MAIN CONTENT --- */
 .main-content {
   flex: 1;
-  padding: 30px;
-  overflow-y: auto;
+  padding: 20px 30px; 
+  display: flex;
+  flex-direction: column; 
+  height: 100vh;
+  overflow: hidden; 
+  box-sizing: border-box; 
 }
 
 /* Stats Cards */
 .stats-container {
-  display: flex;
+  display: grid; /* رجعناها Grid باش تتريڨل وحدها */
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
+  width: 100%;
 }
 
 .stat-card {
-  flex: 1;
   background-color: #e2ebd9;
   padding: 20px;
   border-radius: 12px;
@@ -181,6 +188,9 @@
   border: 1px solid #c8d6c3;
   transition: all 0.3s ease-in-out;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .stat-card:hover {
@@ -213,20 +223,27 @@
    ========================================= */
 .table-section {
   background-color: #F5F5F5; 
-  padding: 30px;
+  padding: 20px;
   border-radius: 20px;
   border: 1px solid #588157; 
+  display: flex;
+  flex-direction: column;
+  flex: 1; 
+  overflow: hidden; 
+  box-sizing: border-box;
 }
 
 .search-bar {
   display: flex;
   align-items: center;
   background-color: #D1D8C4; 
-  width: 678px;              
+  width: 100%;               
+  max-width: 600px; 
   height: 46px;              
   padding: 0 20px;           
   border-radius: 30px;       
-  margin-bottom: 30px;
+  margin-bottom: 20px; 
+  flex-shrink: 0;
   box-sizing: border-box;
 }
 
@@ -245,17 +262,50 @@
   color: #333;
 }
 
+.table-container {
+  flex: 0 1 auto;
+  min-height: 0;        
+  max-height: 60vh;     
+  width: 100%;          
+  overflow-y: auto;
+  overflow-x: auto;     
+  border: 1px solid #588157;
+  border-radius: 12px;
+  background: linear-gradient(to bottom, #e6eadb 50px, #ffffff 50px);
+}
+
+/* =========================================
+   Custom Scrollbar 
+   ========================================= */
+.table-container::-webkit-scrollbar {
+  width: 8px; 
+  height: 8px; 
+}
+
+.table-container::-webkit-scrollbar-track {
+  background: transparent; 
+  border-radius: 12px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background-color: #a3b18a; 
+  border-radius: 10px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+  background-color: #588157; 
+}
+
 /* =========================================
    Users Table
    ========================================= */
 .users-table {
   width: 100%;
+  table-layout: fixed; 
   border-collapse: separate; 
   border-spacing: 0; 
   background-color: #F5F5F5; 
-  border: 2px solid #588157; 
-  border-radius: 20px;
-  overflow: hidden; 
+  min-width: 700px; 
 }
 
 .users-table thead {
@@ -264,37 +314,44 @@
 
 .users-table th {
   text-align: left;
-  padding: 16px 20px;
+  padding: 14px 20px; 
   color: #2c3e2c;
   font-weight: 600;
   border-bottom: 1px solid #588157; 
+  position: sticky; 
+  top: 0;
+  background-color: #E4E9D9; 
+  z-index: 2;
 }
 
+.users-table th:first-child { border-top-left-radius: 14px; }
+.users-table th:last-child { border-top-right-radius: 14px; }
+
 .users-table td {
-  padding: 15px 20px;
+  padding: 12px 20px; 
   color: #333;
   font-size: 0.95rem;
   border-bottom: 1px solid #588157; 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
 }
 
-.users-table tbody tr:last-child td {
-  border-bottom: none; 
-}
+.users-table tbody tr:last-child td { border-bottom: none; }
 
-.rank-cell {
-  font-size: 1.2rem;
-}
+.rank-cell { font-size: 1.2rem; }
 
 .status-active { color: #588157; font-weight: 600; }
 .status-inactive { color: #f4a261; font-weight: 600; }
 
 /* =========================================
-   Action Buttons & Tooltips (Fixed Overlap & Sizes)
+   Action Buttons & Tooltips 
    ========================================= */
 .actions-cell {
   display: flex;
   align-items: center;
-  gap: 8px; /* مسافة متناسقة بين الأزرار */
+  gap: 8px; 
+  overflow: visible !important; 
 }
 
 .action-btn {
@@ -302,32 +359,26 @@
   background-color: #E4E9D9; 
   border: 1px solid #588157; 
   border-radius: 6px;        
-  padding: 6px 8px; /* حجم صغير ومتحوف */
+  padding: 6px 8px; 
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
   box-sizing: border-box;
-  z-index: 1; /* مهم باش نطلعوه في الـ hover */
+  z-index: 1; 
 }
 
-.action-btn:hover {
-  background-color: #D1D8C4; 
-  z-index: 9999; /* هادي اللي تخلي السطر يطلع فوق كلش وما يتغطاش */
-}
+.action-btn:hover { background-color: #D1D8C4; z-index: 999; }
 
-.action-btn svg {
-  font-size: 16px; /* حجم الأيقونة صغير ومناسب */
-}
+.action-btn svg { font-size: 16px; }
 
-/* Tooltip (الكتيبة اللي تخرج كي تحطي لا سوري) */
 .action-btn::after {
   content: attr(data-tooltip);
   position: absolute;
-  top: 100%; /* تخرج من التحت */
-  right: 0; /* تجي على ليمين باش ما تعوجش */
-  margin-top: 6px;
+  bottom: 100%; 
+  right: 0; 
+  margin-bottom: 8px; 
   background-color: #F5F5F5; 
   color: #333;
   padding: 5px 8px;
@@ -340,12 +391,102 @@
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s ease, transform 0.2s ease;
-  transform: translateY(-5px); 
+  transform: translateY(5px); 
   pointer-events: none; 
+  z-index: 9999; 
 }
 
 .action-btn:hover::after {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
+}
+
+/* =========================================
+   RESPONSIVE DESIGN ADDITIONS (CLEANED)
+   ========================================= */
+
+
+@media (max-width: 1440px) {
+  .main-content { padding: 15px 20px; }
+  .stats-container { gap: 15px; margin-bottom: 15px; }
+  .stat-card { padding: 15px; }
+  .stat-value { font-size: 1.5rem; }
+  .search-bar { height: 40px; margin-bottom: 15px; }
+  .table-section { padding: 15px; }
+  .users-table th { padding: 10px 15px; }
+  .users-table td { padding: 8px 15px; }
+}
+
+
+@media (max-width: 1024px) {
+  .sidebar.open { width: 240px; }
+  .search-bar { width: 100%; max-width: 100%; }
+}
+
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: absolute;
+    left: 0;   
+    top: 0;    
+    height: 100vh;
+    z-index: 1000;
+  }
+  
+  .sidebar.open {
+    width: 280px;
+    box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+  }
+  
+  .sidebar.closed {
+    width: 0;
+    border-right: none;
+  }
+
+  
+  .sidebar.closed .logo-text,
+  .sidebar.closed .sidebar-menu,
+  .sidebar.closed .sidebar-footer { 
+    display: none; 
+  }
+  
+ 
+  .sidebar.closed .sidebar-header {
+    padding: 0;
+    min-height: 0;
+  }
+  
+  .sidebar.closed .toggle-btn {
+    right: -41px;
+    border-radius: 0 15px 15px 0;
+    border-left: none;
+    border-right: 1px solid #588157;
+    background-color: #D9E0C9; 
+  }
+  
+  .main-content { 
+    padding: 20px; 
+    overflow-y: auto; 
+  } 
+  
+  .table-section { padding: 15px; }
+}
+
+@media (max-width: 480px) {
+  .logo-text { font-size: 20px; width: auto; }
+  .stat-value { font-size: 1.5rem; }
+  .stat-title { font-size: 0.85rem; }
+  .search-bar { height: 40px; padding: 0 15px; margin-bottom: 20px; }
+  .main-content { padding: 15px 10px; }
+  .users-table th, .users-table td {
+    padding: 12px 10px;
+    font-size: 0.85rem;
+  }
+  
+  
+  .stats-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
 }
