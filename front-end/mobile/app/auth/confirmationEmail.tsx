@@ -18,7 +18,7 @@ export default function ConfirmationEmail() {
   const [isResending, setIsResending] = useState<boolean>(false);
 
   useEffect(() => {
-    console.log('✅ Confirmation page loaded with email:', email);
+    console.log(' Confirmation page loaded with email:', email);
   }, [email]);
 
   // ====================== VERIFY CODE ======================
@@ -38,7 +38,7 @@ export default function ConfirmationEmail() {
     try {
       setLoading(true);
 
-      await api.post('/verify-email/', {
+      await api.post('/users/verify-email/', {
         email: email.trim(),
         code: fullCode,
       });

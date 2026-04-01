@@ -18,7 +18,7 @@ const handleLogin = async () => {
     return;
   }
   try {
-    const { data } = await api.post('/login/', {
+    const { data } = await api.post('users/login/', {
       username: username,
       password: password,
     });
