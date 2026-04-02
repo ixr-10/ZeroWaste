@@ -19,7 +19,7 @@ export default function LoginScreen() {
       return;
     }
     try {
-      const { data } = await api.post('/login/', {
+      const { data } = await api.post('/users/login/', {
         username: username,
         password: password,
       });
@@ -28,9 +28,9 @@ export default function LoginScreen() {
       await AsyncStorage.setItem('access', data.access);
       await AsyncStorage.setItem('refresh', data.refresh);
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
-      await AsyncStorage.setItem('isLoggedIn', 'true'); // ✅ added so index.tsx can read it
+      await AsyncStorage.setItem('isLoggedIn', 'true');
 
-      router.replace('/(tabs)/slides'); // ✅ go to main app
+      router.replace('/(tabs)/slides');
 
     } catch (err: any) {
       const status = err.response?.status;

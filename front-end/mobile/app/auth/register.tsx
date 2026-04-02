@@ -25,8 +25,9 @@ export default function RegisterScreen() {
       alert('Passwords do not match.');
       return;
     }
+
     try {
-      const { data } = await api.post('/register/', {
+      const { data } = await api.post('/users/register/', {
         username,
         email,
         phone,
@@ -36,11 +37,10 @@ export default function RegisterScreen() {
         role: 'user',
       });
 
-     // replace the router.push after successful register:
-router.push({
-  pathname: '/auth/verify-email' as any,
-  params: { email: data.user.email },
-});
+      router.push({
+        pathname: '/auth/confirmationEmail',
+        params: { email: data.user?.email || email },
+      });
 
     } catch (err: any) {
       const errors = err.response?.data;
@@ -49,7 +49,7 @@ router.push({
       } else if (errors?.username) {
         alert('This username is already taken. Choose another one.');
       } else if (errors?.password) {
-        alert('Password error: ' + errors.password[0]);
+        alert('Password error: ' + (errors.password[0] || 'Invalid password'));
       } else if (!err.response) {
         alert('Network error. Check your connection and try again.');
       } else {
@@ -178,9 +178,14 @@ const styles = StyleSheet.create({
   eyeBtn: { position: 'absolute', right: 12, top: 12 },
   eyeText: { fontSize: 18 },
   button: {
-    backgroundColor: '#588157', paddingHorizontal: 20, width: 96,
-    paddingVertical: 10, borderRadius: 25, alignItems: 'center',
-    marginBottom: 24, alignSelf: 'center',
+    backgroundColor: '#588157', 
+    paddingHorizontal: 20, 
+    width: 96,
+    paddingVertical: 10, 
+    borderRadius: 25, 
+    alignItems: 'center',
+    marginBottom: 24, 
+    alignSelf: 'center',
   },
   buttonText: { color: 'black', fontWeight: '700', fontSize: 16 },
   bottomText: { textAlign: 'center', color: 'black', fontSize: 13 },

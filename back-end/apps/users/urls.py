@@ -1,11 +1,23 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (
-    PromoteToFoodSaverView, AdminListUsersView, RegisterView, ProfileView,
-    LogoutView, ChangePasswordView, LoginView, VerifyUserView, ForgotPasswordView,
-    ResetPasswordView, VerifyEmailView, AdminCreateUserView, SetPasswordView,
+    PromoteToFoodSaverView,
+    AdminListUsersView,
+    RegisterView,
+    ProfileView,
+    LogoutView,
+    ChangePasswordView,
+    LoginView,
+    VerifyUserView,
+    ForgotPasswordView,
+    ResetPasswordView,
+    VerifyEmailView,
+    AdminCreateUserView,
+    SetPasswordView,
+    AdminDeleteUserView,
+    DemoteFromFoodSaverView,
     ChangeEmailRequestView, ChangeEmailConfirmView,
-    DeactivateAccountView, DeleteAccountView,  # ✅ new
+    DeactivateAccountView, DeleteAccountView,
 )
 
 urlpatterns = [
@@ -25,6 +37,8 @@ urlpatterns = [
     path('promote/<int:user_id>/', PromoteToFoodSaverView.as_view(), name='promote-food-saver'),
     path('change-email/request/', ChangeEmailRequestView.as_view(), name='change_email_request'),
     path('change-email/confirm/', ChangeEmailConfirmView.as_view(), name='change_email_confirm'),
-    path('deactivate/', DeactivateAccountView.as_view(), name='deactivate_account'),        # ✅ new
-    path('delete-account/', DeleteAccountView.as_view(), name='delete_account'),            # ✅ new
+    path('deactivate/', DeactivateAccountView.as_view(), name='deactivate_account'),
+    path('delete-account/', DeleteAccountView.as_view(), name='delete_account'),
+    path('admin/users/<int:user_id>/delete/', AdminDeleteUserView.as_view(), name='admin-delete-user'),
+    path('demote/<int:user_id>/', DemoteFromFoodSaverView.as_view(), name='demote-food-saver'),
 ]

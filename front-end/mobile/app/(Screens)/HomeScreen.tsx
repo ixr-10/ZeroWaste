@@ -1,101 +1,86 @@
-import { ReservationModal } from '../../components/ReservationModal';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  View,
-  FlatList,
-  StyleSheet,
-  StatusBar,
-  Text,
-  TouchableOpacity,
+  View, FlatList, StyleSheet, StatusBar,
+  Text, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
-import { useAppStore } from '../../store/useAppStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SearchBar } from '../../components/SearchBar';
 import { FilterButton } from '../../components/FilterButton';
 import { FoodCard } from '../../components/FoodCard';
-import { MOCK_LISTINGS } from '../../constants/data';
+import axios from '../../constants/axios';
 
 const COLORS = {
-  primary: '#588157BF',
-  secondary: '#588157',
-  primaryLight: '#D1D8C4',
-  background: '#F8F8F6',
-  white: '#FFFFFF',
-  textSecondary: '#555555',
-  textMuted: '#888888',
-  border: '#D5DED0',
-  tagBg: '#E8EEE5',
+  primary: '#588157BF', secondary: '#588157',
+  primaryLight: '#D1D8C4', background: '#F8F8F6',
+  white: '#FFFFFF', textSecondary: '#555555',
+  textMuted: '#888888', border: '#D5DED0', tagBg: '#E8EEE5',
 };
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { addRequest } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedDistance, setSelectedDistance] = useState<number | null>(null);
   const [emergencyOnly, setEmergencyOnly] = useState(false);
+  const [donations, setDonations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredListings = useMemo(() => {
-    return MOCK_LISTINGS.filter((item) => {
+  useEffect(() => {
+    const fetchDonations = async () => {
+      try {
+        const res = await axios.get('/donations/available/');
+        setDonations(res.data);
+      } catch (err) {
+        console.log('Error fetching donations:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDonations();
+  }, []);
+
+  const filteredDonations = useMemo(() => {
+    return donations.filter((item) => {
       if (
         searchQuery &&
         !item.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
         !item.description.toLowerCase().includes(searchQuery.toLowerCase())
       ) return false;
       if (selectedCategory && item.category !== selectedCategory) return false;
-      if (selectedDistance !== null && item.distance > selectedDistance) return false;
-      if (emergencyOnly && !item.isEmergency) return false;
+      if (selectedDistance !== null && item.distance_km != null &&
+        item.distance_km * 1000 > selectedDistance) return false;
+      if (emergencyOnly && item.urgency !== 'red') return false;
       return true;
     });
-  }, [searchQuery, selectedCategory, selectedDistance, emergencyOnly]);
+  }, [searchQuery, selectedCategory, selectedDistance, emergencyOnly, donations]);
 
-   const [reservingItem, setReservingItem] = useState<typeof MOCK_LISTINGS[0] | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-
-  const handleReserve = (id: string) => {
-    const item = MOCK_LISTINGS.find((l) => l.id === id);
+  // ✅ This is the only place navigation to ReservationScreen happens
+  const handleReserve = (donationId: string) => {
+    const item = donations.find((d) => String(d.id) === donationId);
     if (!item) return;
-  addRequest({
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      category: item.category,
-      weight: item.weight,
-      expiryDate: item.expiryDate,
-      distance: item.distance,
-      donorName: item.donorName,
-      donorId: item.donorId ?? '',
-      imageUrl: item.imageUrl ?? '',
-      status: 'pending',
+
+    router.push({
+      pathname: '/(Screens)/ReservationScreen' as any,
+      params: {
+        donationId:   String(item.id),           // ✅ key is "donationId"
+        title:        item.title,
+        category:     item.category,
+        date:         item.expiry_date,           // ✅ API field name
+        postedBy:     item.donor_username,        // ✅ API field name
+        imageUrl:     item.image ?? '',           // ✅ API field name
+        maxQuantity:  String(item.available_quantity),
+      },
     });
   };
-  
 
-  const handleConfirm = (itemId: string) => {
-    setIsSuccess(true);
-    // After 2 seconds → go to chat
-    setTimeout(() => {
-      setShowModal(false);
-      router.push(`/(Screens)/ChatList?donorId=${reservingItem?.id}` as any);
-    }, 2000);
-  };
-
-  const handleClose = () => {
-    setShowModal(false);
-    setReservingItem(null);
-  };
-
-  
   const hasActiveFilter = selectedCategory || selectedDistance !== null || emergencyOnly;
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
-      {/* Header row: Search | Filter | Map icon */}
       <View style={styles.header}>
         <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="" />
         <FilterButton
@@ -107,17 +92,15 @@ export default function HomeScreen() {
           onSelectEmergency={setEmergencyOnly}
           emergencyOnly={emergencyOnly}
         />
-        {/* Map icon button */}
         <TouchableOpacity
           style={styles.mapBtn}
           onPress={() => router.push('/(Screens)/MapScreen' as any)}
           activeOpacity={0.8}
         >
-          <Ionicons name="map-outline" size={22} color={COLORS.primary} />
+          <Ionicons name="map-outline" size={22} color={COLORS.secondary} />
         </TouchableOpacity>
       </View>
 
-      {/* Active filter tags */}
       {hasActiveFilter && (
         <View style={styles.activeFilterRow}>
           {selectedCategory && (
@@ -128,10 +111,8 @@ export default function HomeScreen() {
           {selectedDistance !== null && (
             <View style={styles.activeFilterTag}>
               <Text style={styles.activeFilterText}>
-                {selectedDistance === Infinity
-                  ? 'All distances'
-                  : selectedDistance < 1000
-                  ? `< ${selectedDistance} m`
+                {selectedDistance === Infinity ? 'All distances'
+                  : selectedDistance < 1000 ? `< ${selectedDistance} m`
                   : `< ${selectedDistance / 1000} km`}
               </Text>
             </View>
@@ -144,67 +125,45 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Listings */}
-      <FlatList
-        data={filteredListings}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <FoodCard item={item} onReserve={handleReserve} />}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No listings found</Text>
-            <Text style={styles.emptySubText}>Try adjusting your filters or search</Text>
-          </View>
-        }
-      />
-       <ReservationModal
-        visible={showModal}
-        item={reservingItem}
-        onClose={handleClose}
-        onConfirm={handleConfirm}
-        isSuccess={isSuccess}
-      />
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={COLORS.secondary} />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredDonations}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => (
+            <FoodCard
+              item={item}
+              onReserve={handleReserve}  // ✅ FoodCard calls this with item.id
+            />
+          )}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No listings found</Text>
+              <Text style={styles.emptySubText}>Try adjusting your filters or search</Text>
+            </View>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-    zIndex: 100,
-    gap: 8,
-  },
-  mapBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 999,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeFilterRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    gap: 8,
-  },
-  activeFilterTag: {
-    backgroundColor: '#C8D5C0',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  emergencyTag: { backgroundColor: '#F5C6C6' },
-  activeFilterText: { fontSize: 12, color: COLORS.primary, fontWeight: '600' },
-  listContent: { paddingTop: 8, paddingBottom: 80 },
-  emptyState: { alignItems: 'center', paddingTop: 80 },
-  emptyText: { fontSize: 18, fontWeight: '600', color: COLORS.textSecondary, marginBottom: 8 },
-  emptySubText: { fontSize: 14, color: COLORS.textMuted },
+  safeArea:        { flex: 1, backgroundColor: COLORS.background },
+  centered:        { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  header:          { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, zIndex: 100, gap: 8 },
+  mapBtn:          { width: 44, height: 44, borderRadius: 999, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  activeFilterRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
+  activeFilterTag: { backgroundColor: '#C8D5C0', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  emergencyTag:    { backgroundColor: '#F5C6C6' },
+  activeFilterText:{ fontSize: 12, color: COLORS.secondary, fontWeight: '600' },
+  listContent:     { paddingTop: 8, paddingBottom: 80 },
+  emptyState:      { alignItems: 'center', paddingTop: 80 },
+  emptyText:       { fontSize: 18, fontWeight: '600', color: COLORS.textSecondary, marginBottom: 8 },
+  emptySubText:    { fontSize: 14, color: COLORS.textMuted },
 });
