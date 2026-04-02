@@ -128,6 +128,14 @@ class PublicDonationDetailView(APIView):
         serializer = DonationSerializer(donation, context={'request': request})
         return Response(serializer.data)
 
+class MyReceivedReservationsView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        reservations = Reservation.objects.filter(
+            donation__donor=request.user
+        ).order_by('-created_at')
+        serializer = ReservationSerializer(reservations, many=True, context={'request': request})
+        return Response(serializer.data)
 
 class ReserveDonationView(APIView):
     permission_classes = [IsAuthenticated]
@@ -177,7 +185,7 @@ class ReserveDonationView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-# ── FIX 2: Donor confirms reservation within 2 hours ──
+
 class ConfirmReservationView(APIView):
     permission_classes = [IsAuthenticated]
 

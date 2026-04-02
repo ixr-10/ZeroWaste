@@ -142,5 +142,10 @@ DEFAULT_FROM_EMAIL = os.getenv('EMAIL_USER')
 EMAIL_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+

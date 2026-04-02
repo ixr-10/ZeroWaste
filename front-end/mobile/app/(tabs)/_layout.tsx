@@ -1,5 +1,5 @@
-import { Tabs, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { Tabs } from 'expo-router';
+import React, { useState } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -8,6 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 const COLORS = {
   primary: '#4A6741',
@@ -17,72 +18,76 @@ const COLORS = {
   black: '#1A1A1A',
 };
 
-type TabItem = {
-  routeName: string;
-  screen: string;       // actual file in (Screens)/
-  iconBase: string;
-  label: string;
-};
-
-const TAB_ITEMS: TabItem[] = [
-  { routeName: 'home',         screen: '/(Screens)/HomeScreen',         iconBase: 'home',          label: 'Home'         },
-  { routeName: 'chat',         screen: '/(Screens)/ChatList',           iconBase: 'chatbubble',    label: 'Chat'         },
-  { routeName: 'notification', screen: '/(Screens)/notifications',      iconBase: 'notifications', label: 'Notification' },
-  { routeName: 'profile',      screen: '/(Screens)/ProfileScreen',      iconBase: 'person',        label: 'Profile'      },
+const TAB_ITEMS = [
+  { screen: '/(tabs)/HomeScreen',   icon: 'home',          label: 'Home' },
+  { screen: '/(tabs)/ChatList',     icon: 'chatbubble',    label: 'Chat' },
+  { screen: '/(tabs)/Picture',      icon: 'add',           label: '' },
+  { screen: '/(tabs)/notifications', icon: 'notifications', label: 'Notification' }, // ← lowercase
+  { screen: '/(tabs)/ProfileScreen', icon: 'person',        label: 'Profile' },
 ];
 
-function CustomTabBar({ state, navigation }: any) {
+function CustomTabBar() {
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
 
-  // Build the visual slots: 2 tabs | + button | 2 tabs
-  const leftTabs  = TAB_ITEMS.slice(0, 2);
-  const rightTabs = TAB_ITEMS.slice(2, 4);
-
-  const handleTab = (screen: string, index: number) => {
+  const handlePress = (index: number, screen: string) => {
     setActiveIndex(index);
-    router.push(screen as any);
-  };
-
-  const renderTab = (tab: TabItem, visualIndex: number) => {
-    const isFocused = activeIndex === visualIndex;
-    return (
-      <TouchableOpacity
-        key={tab.routeName}
-        style={styles.tabItem}
-        onPress={() => handleTab(tab.screen, visualIndex)}
-        activeOpacity={0.7}
-      >
-        <Ionicons
-          name={(isFocused ? tab.iconBase : `${tab.iconBase}-outline`) as any}
-          size={22}
-          color={isFocused ? COLORS.primary : COLORS.textSecondary}
-        />
-        <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
-          {tab.label}
-        </Text>
-      </TouchableOpacity>
-    );
+    router.push(screen as any);   
   };
 
   return (
     <View style={styles.container}>
-      {/* Left: Home + Chat */}
-      {leftTabs.map((tab, i) => renderTab(tab, i))}
+      {/* Home + Chat */}
+      {TAB_ITEMS.slice(0, 2).map((tab, i) => (
+        <TouchableOpacity
+          key={i}
+          style={styles.tabItem}
+          onPress={() => handlePress(i, tab.screen)}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={(i === activeIndex ? tab.icon : `${tab.icon}-outline`) as any}
+            size={22}
+            color={i === activeIndex ? COLORS.primary : COLORS.textSecondary}
+          />
+          <Text style={[styles.tabLabel, i === activeIndex && styles.tabLabelActive]}>
+            {tab.label}
+          </Text>
+        </TouchableOpacity>
+      ))}
 
-      {/* Centre + button */}
+      {/* Center + Button */}
       <TouchableOpacity
         style={styles.addWrapper}
-        onPress={() => router.push('/Picture' as any)}
+        onPress={() => router.push('/(tabs)/Picture' as any)}
         activeOpacity={0.85}
       >
         <View style={styles.addCircle}>
-          <Ionicons name="add" size={30} color={COLORS.black} />
+          <Ionicons name="add" size={32} color={COLORS.black} />
         </View>
       </TouchableOpacity>
 
-      {/* Right: Notification + Profile */}
-      {rightTabs.map((tab, i) => renderTab(tab, i + 2))}
+      {/* Notification + Profile */}
+      {TAB_ITEMS.slice(3).map((tab, i) => {
+        const index = i + 3;
+        return (
+          <TouchableOpacity
+            key={index}
+            style={styles.tabItem}
+            onPress={() => handlePress(index, tab.screen)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={(index === activeIndex ? tab.icon : `${tab.icon}-outline`) as any}
+              size={22}
+              color={index === activeIndex ? COLORS.primary : COLORS.textSecondary}
+            />
+            <Text style={[styles.tabLabel, index === activeIndex && styles.tabLabelActive]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -90,14 +95,21 @@ function CustomTabBar({ state, navigation }: any) {
 export default function TabsLayout() {
   return (
     <Tabs
-      tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
+      tabBar={() => <CustomTabBar />}
+      screenOptions={{
+        headerShown: false,
+      }}
     >
-      {/* These are placeholder screens so Expo Router is happy.
-          Navigation actually pushes to (Screens)/ routes. */}
-      <Tabs.Screen name="slides"        options={{ title: 'Home' }}         />
-      <Tabs.Screen name="Notifications" options={{ title: 'Notification' }} />
-      <Tabs.Screen name="Profile"       options={{ title: 'Profile' }}      />
+      <Tabs.Screen name="HomeScreen" />
+      <Tabs.Screen name="ChatList" />
+      <Tabs.Screen name="Picture" />
+      <Tabs.Screen name="notifications" />
+      <Tabs.Screen name="ProfileScreen" />
+      <Tabs.Screen name="slides" />
+      <Tabs.Screen name="Profile" />
+      <Tabs.Screen name="Quantity" />
+      <Tabs.Screen name="Localization" />
+      <Tabs.Screen name="Details" />
     </Tabs>
   );
 }
@@ -106,12 +118,17 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     backgroundColor: COLORS.primaryLight,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
     paddingTop: 8,
     paddingHorizontal: 4,
     alignItems: 'flex-end',
     borderTopWidth: 0,
     borderRadius: 25,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
   },
   tabItem: {
     flex: 1,
@@ -132,21 +149,21 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -22,
+    marginTop: -26,
   },
   addCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: COLORS.primaryLight,
-    borderWidth: 3,
+    borderWidth: 4,
     borderColor: COLORS.white,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 6,
   },
 });

@@ -146,7 +146,7 @@ export default function ChatList() {
                     }
 
                     router.push({
-                      pathname: "/ChatConversation" as any,
+                      pathname: "/../(Screens)/ChatConversation" as any,
                       params: {
                         conversationId: item.id.toString(),
                         otherUsername: otherUser.username,

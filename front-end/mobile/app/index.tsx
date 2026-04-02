@@ -20,7 +20,7 @@ export default function SplashScreen() {
           router.replace('/auth/login');
         } else {
           // Fully authenticated → Main app (Home tab)
-          router.replace('/(Screens)/HomeScreen');
+          router.replace('/(tabs)/HomeScreen');
         }
       }, 500);
     };

@@ -219,7 +219,7 @@ export default function ChatConversation() {
 }
 
 
-// ONLY showing CHANGES — everything else stays EXACTLY as your code
+
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "white" },
@@ -297,9 +297,9 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.full
   },
 
-  // ✅ FIXED (IMPORTANT)
+  
   bubble: {
-    maxWidth: "80%", // 🔥 fixes long text wrapping
+    maxWidth: "80%", 
     borderRadius: BORDER_RADIUS.lg,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md
@@ -316,12 +316,12 @@ const styles = StyleSheet.create({
     // ❌ removed alignSelf (it was breaking layout)
   },
 
-  // ✅ FIXED TEXT WRAP
+ 
   bubbleText: {
     fontSize: 14,
     color: COLORS.textPrimary,
     lineHeight: 20,
-    flexShrink: 1 // 🔥 prevents overflow + weird breaking
+    flexShrink: 1 
   },
 
   bubbleTextMine: {
