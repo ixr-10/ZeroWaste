@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../components/Header';
 import AppText from '../../components/AppText';
 import InputField from '../../components/InputField';
+import api from '@/constants/axios';
 
 export default function FinalConfirmation() {
   const router = useRouter();
@@ -43,23 +44,22 @@ export default function FinalConfirmation() {
       setLoading(true);
 
       // --- BACKEND LINK ---
-      const response = await fetch('https://your-api.com/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code, password }),
-      });
+     // fix the api call in final-confirmation.tsx
+const { data } = await api.post('/reset-password/', {
+  email,
+  code,
+  new_password: password,  // ← was 'password', backend expects 'new_password'
+});
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to update password');
+      if (!data) {
+        throw new Error('Failed to update password');
       }
 
       setLoading(false);
       
       // Success Alert then Navigate
       Alert.alert("Success", "Password updated!", [
-        { text: "Continue", onPress: () => router.push('./set-password') }
+        { text: "Continue", onPress: () => router.replace('/auth/login') }
       ]);
       
     } catch (error: any) {

@@ -10,6 +10,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false); // ← fixed
   const [phone, setPhone] = useState('');
   const [adresse, setAdresse] = useState('');
   const [username, setUsername] = useState('');
@@ -35,10 +36,11 @@ export default function RegisterScreen() {
         role: 'user',
       });
 
-      router.push({
-        pathname: '/auth/finish-confirm' as any,
-        params: { username: data.username },
-      });
+     // replace the router.push after successful register:
+router.push({
+  pathname: '/auth/verify-email' as any,
+  params: { email: data.user.email },
+});
 
     } catch (err: any) {
       const errors = err.response?.data;
@@ -136,11 +138,11 @@ export default function RegisterScreen() {
             style={[styles.input, { flex: 1 }]}
             value={confirmPass}
             onChangeText={setConfirmPass}
-            secureTextEntry={!showPassword}
+            secureTextEntry={!showConfirmPass} // ← fixed
           />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+          <TouchableOpacity onPress={() => setShowConfirmPass(!showConfirmPass)} style={styles.eyeBtn}> // ← fixed
             <Text style={styles.eyeText}>
-              {showPassword
+              {showConfirmPass // ← fixed
                 ? <Ionicons name="eye" size={24} color="black" />
                 : <Ionicons name="eye-off-outline" size={24} color="black" />}
             </Text>
@@ -170,6 +172,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1, borderColor: '#588157', opacity: 0.5,
     borderRadius: 20, padding: 12, marginBottom: 16, fontSize: 14,
+    paddingLeft: 38,
   },
   inputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   eyeBtn: { position: 'absolute', right: 12, top: 12 },
@@ -182,5 +185,5 @@ const styles = StyleSheet.create({
   buttonText: { color: 'black', fontWeight: '700', fontSize: 16 },
   bottomText: { textAlign: 'center', color: 'black', fontSize: 13 },
   link: { color: '#588157', fontWeight: '600', textDecorationLine: 'underline' },
-  image: { width: 285, height: 285 },
+  image: { width: 285, height: 285, alignSelf: 'center' },
 });

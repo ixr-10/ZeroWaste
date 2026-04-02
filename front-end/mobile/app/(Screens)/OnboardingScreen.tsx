@@ -58,8 +58,8 @@ export default function OnboardingScreen() {
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
   const finishOnboarding = async () => {
-    await AsyncStorage.setItem('hasSeenOnboarding', 'true');
-    router.replace('/(tabs)/slides');
+    await AsyncStorage.setItem('hasSeenOnboarding', 'true'); // ✅ mark as seen
+    router.replace('/auth/login'); // ✅ go to login, not slides
   };
 
   const handleNext = async () => {
@@ -80,21 +80,20 @@ export default function OnboardingScreen() {
 
   if (!fontsLoaded) return null;
 
- const renderSlide = ({ item }: { item: typeof SLIDES[0] }) => (
-  <View style={styles.slide}>
-    <ImageBackground
-      source={item.image}
-      style={styles.backgroundImage}
-      resizeMode="cover"
-    >
-      {/* Gradient overlay inside the ImageBackground */}
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.65)']}
-        style={StyleSheet.absoluteFillObject}
-      />
-    </ImageBackground>
-  </View>
-);
+  const renderSlide = ({ item }: { item: typeof SLIDES[0] }) => (
+    <View style={styles.slide}>
+      <ImageBackground
+        source={item.image}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.65)']}
+          style={StyleSheet.absoluteFillObject}
+        />
+      </ImageBackground>
+    </View>
+  );
 
   const isLastSlide = currentIndex === SLIDES.length - 1;
 

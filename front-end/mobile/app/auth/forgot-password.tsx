@@ -43,9 +43,9 @@ export default function LoginScreen() {
     return;
   }
   try {
-    await api.post('/api/users/forgot-password/', { email });
+    await api.post('/forgot-password/', { email });
     Alert.alert('Success', 'Reset code sent to your email.');
-    router.push({ pathname: '../(tabs)', params: { email } });
+    router.push({ pathname: '/auth/confirmation', params: { email } });
   } catch (err: any) {
     Alert.alert('Error', err.response?.data?.error || 'Something went wrong.');
   }

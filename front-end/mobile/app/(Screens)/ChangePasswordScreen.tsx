@@ -8,10 +8,12 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import api from '../../constants/axios';
 
 const COLORS = {
   primary: '#588157',
@@ -63,15 +65,33 @@ export default function ChangePasswordScreen() {
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setError('');
     setSuccess(false);
+
+    // Frontend validation
     if (!current) { setError('Please enter your current password.'); return; }
     if (newPass.length < 8) { setError('New password must be at least 8 characters.'); return; }
     if (newPass !== confirm) { setError('Passwords do not match.'); return; }
-    setSuccess(true);
-    setCurrent(''); setNewPass(''); setConfirm('');
+
+    setLoading(true);
+    try {
+      await api.post('/change-password/', {
+        old_password: current,
+        new_password: newPass,
+      });
+      setSuccess(true);
+      setCurrent('');
+      setNewPass('');
+      setConfirm('');
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Failed to change password. Please try again.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -91,7 +111,7 @@ export default function ChangePasswordScreen() {
             <View style={styles.formCard}>
               <PasswordField
                 label="Current Password"
-                placeholder="enter your current password"
+                placeholder="Enter your current password"
                 value={current}
                 onChangeText={setCurrent}
               />
@@ -112,8 +132,16 @@ export default function ChangePasswordScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
-            <Text style={styles.saveBtnText}>SAVE CHANGES</Text>
+          <TouchableOpacity
+            style={[styles.saveBtn, loading && { opacity: 0.7 }]}
+            onPress={handleSave}
+            activeOpacity={0.85}
+            disabled={loading}
+          >
+            {loading
+              ? <ActivityIndicator color={COLORS.white} />
+              : <Text style={styles.saveBtnText}>SAVE CHANGES</Text>
+            }
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
