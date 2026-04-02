@@ -1,7 +1,12 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import (PromoteToFoodSaverView,AdminListUsersView, RegisterView, ProfileView, LogoutView, ChangePasswordView,LoginView,
-                    VerifyUserView, ForgotPasswordView, ResetPasswordView, VerifyEmailView , AdminCreateUserView,SetPasswordView)
+from .views import (
+    PromoteToFoodSaverView, AdminListUsersView, RegisterView, ProfileView,
+    LogoutView, ChangePasswordView, LoginView, VerifyUserView, ForgotPasswordView,
+    ResetPasswordView, VerifyEmailView, AdminCreateUserView, SetPasswordView,
+    ChangeEmailRequestView, ChangeEmailConfirmView,
+    DeactivateAccountView, DeleteAccountView,  # ✅ new
+)
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -14,8 +19,12 @@ urlpatterns = [
     path('forgot-password/', ForgotPasswordView.as_view(), name='forgot_password'),
     path('reset-password/', ResetPasswordView.as_view(), name='reset_password'),
     path('verify-email/', VerifyEmailView.as_view(), name='verify_email'),
-    path('set-password/', SetPasswordView.as_view() , name='set_password'),
-    path('admin/create-user/', AdminCreateUserView.as_view(), name='admin_create_user'),   
+    path('set-password/', SetPasswordView.as_view(), name='set_password'),
+    path('admin/create-user/', AdminCreateUserView.as_view(), name='admin_create_user'),
     path('admin/users/', AdminListUsersView.as_view(), name='admin-list-users'),
     path('promote/<int:user_id>/', PromoteToFoodSaverView.as_view(), name='promote-food-saver'),
+    path('change-email/request/', ChangeEmailRequestView.as_view(), name='change_email_request'),
+    path('change-email/confirm/', ChangeEmailConfirmView.as_view(), name='change_email_confirm'),
+    path('deactivate/', DeactivateAccountView.as_view(), name='deactivate_account'),        # ✅ new
+    path('delete-account/', DeleteAccountView.as_view(), name='delete_account'),            # ✅ new
 ]

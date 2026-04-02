@@ -6,10 +6,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 from .models import OTPCode
 from .permissions import IsFoodSaver, IsAdmin, IsCollectivite, IsAdminOrFoodSaver
 from .serializers import RegisterSerializer, UserSerializer, AdminCreateUserSerializer
+from django.contrib.auth import authenticate
 
 User = get_user_model()
 
@@ -35,6 +37,8 @@ class RegisterView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -43,18 +47,22 @@ class LoginView(APIView):
         password = request.data.get('password')
 
         if not username or not password:
-            return Response({'error': 'Username and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Username and password are required.'}, status=400)
 
+        # Try email or username
         try:
-            user = User.objects.get(username=username)
+            if '@' in username:
+                user_obj = User.objects.get(email=username)
+                username = user_obj.username  # get actual username for authenticate()
         except User.DoesNotExist:
-            return Response({'error': 'Invalid credentials.'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Invalid credentials.'}, status=401)
 
-        if not check_password(password, user.password):
-            return Response({'error': 'Invalid credentials.'}, status=status.HTTP_401_UNAUTHORIZED)
+        user = authenticate(username=username, password=password)
+        if not user:
+            return Response({'error': 'Invalid credentials.'}, status=401)
 
         if not user.is_verified:
-            return Response({'error': 'Please verify your email first.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': 'Please verify your email first.'}, status=403)
 
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -142,6 +150,7 @@ class ForgotPasswordView(APIView):
         email = request.data.get('email')
         try:
             user = User.objects.get(email=email)
+            OTPCode.objects.filter(user=user, is_used=False).update(is_used=True)
             otp = OTPCode.objects.create(user=user)
             otp.send_to_email(
                 subject="ZeroWaste - Password Reset Code",
@@ -150,7 +159,6 @@ class ForgotPasswordView(APIView):
             return Response({'message': 'Reset code sent to your email.'})
         except User.DoesNotExist:
             return Response({'message': 'If this email exists, a code was sent.'})
-
 
 class ResetPasswordView(APIView):
     permission_classes = [AllowAny]
@@ -263,6 +271,99 @@ class PromoteToFoodSaverView(APIView):
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
+# ─── Add these two classes to your existing views.py ─────────────────────────
+# Make sure OTPCode is already imported (it is in your current views.py)
+# Also make sure this import is at the top of views.py:
+# from django.core.validators import validate_email
+# from django.core.exceptions import ValidationError
+
+
+class ChangeEmailRequestView(APIView):
+    """
+    Step 1 — User submits their desired new email.
+    We validate it, then send an OTP to that new email address.
+    POST /change-email/request/
+    Body: { "new_email": "new@example.com" }
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        new_email = request.data.get('new_email', '').strip()
+
+        if not new_email:
+            return Response({'error': 'New email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Basic format check
+        if '@' not in new_email:
+            return Response({'error': 'Enter a valid email address.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Must be different from current
+        if new_email == request.user.email:
+            return Response({'error': 'New email must be different from your current email.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Must not already be taken by another user
+        if User.objects.filter(email=new_email).exclude(id=request.user.id).exists():
+            return Response({'error': 'This email is already in use.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Invalidate any previous unused OTPs for this user
+        OTPCode.objects.filter(user=request.user, is_used=False).update(is_used=True)
+
+        # Create and send OTP to the NEW email (not the current one)
+        otp = OTPCode.objects.create(user=request.user)
+        otp.send_to_email_address(
+            email=new_email,
+            subject="ZeroWaste - Confirm Your New Email",
+            message_prefix="You requested an email change. Use this code to confirm your new email address."
+        )
+
+        return Response({'message': 'Confirmation code sent to your new email address.'})
+
+
+class ChangeEmailConfirmView(APIView):
+    """
+    Step 2 — User submits the OTP they received on their new email.
+    We verify the OTP, then update their email.
+    POST /change-email/confirm/
+    Body: { "new_email": "new@example.com", "code": "123456" }
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        new_email = request.data.get('new_email', '').strip()
+        code = request.data.get('code', '').strip()
+
+        if not new_email or not code:
+            return Response({'error': 'Email and code are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verify OTP
+        otp = OTPCode.objects.filter(user=request.user, code=code, is_used=False).last()
+        if not otp or not otp.is_valid():
+            return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Double-check email not taken
+        if User.objects.filter(email=new_email).exclude(id=request.user.id).exists():
+            return Response({'error': 'This email is already in use.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update email
+        request.user.email = new_email
+        request.user.save()
+        otp.is_used = True
+        otp.save()
+
+        return Response({'message': 'Email updated successfully.'})
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SetPasswordView(APIView):
     permission_classes = [AllowAny]
 
@@ -301,3 +402,59 @@ class SetPasswordView(APIView):
         except User.DoesNotExist:
             return Response({'error': 'User not found.'}, status=status.HTTP_400_BAD_REQUEST)
         
+# ─── Add these two classes to the bottom of your views.py ────────────────────
+
+
+class DeactivateAccountView(APIView):
+    """
+    Temporarily deactivate the user's account.
+    Sets is_active=False so they can't log in until they reactivate
+    by contacting support or logging back in (if you re-enable on login).
+    POST /deactivate/
+    Body: { "reason": "..." }  (optional)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        reason = request.data.get('reason', '')
+
+        # Blacklist current refresh token if provided
+        try:
+            refresh_token = request.data.get('refresh')
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+        except Exception:
+            pass  # not critical if this fails
+
+        # Deactivate the account
+        user.is_active = False
+        user.save()
+
+        return Response({'message': 'Account deactivated successfully. You can reactivate by logging back in.'})
+
+
+class DeleteAccountView(APIView):
+    """
+    Permanently delete the user's account and all their data.
+    DELETE /delete-account/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        user = request.user
+
+        # Blacklist current refresh token if provided
+        try:
+            refresh_token = request.data.get('refresh')
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+        except Exception:
+            pass  # not critical if this fails
+
+        # Permanently delete user — cascades to all related data
+        user.delete()
+
+        return Response({'message': 'Account permanently deleted.'}, status=status.HTTP_200_OK)

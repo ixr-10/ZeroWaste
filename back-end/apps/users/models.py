@@ -26,7 +26,6 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.role})"
 
-
 class OTPCode(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     code = models.CharField(max_length=6)
@@ -34,7 +33,6 @@ class OTPCode(models.Model):
     is_used = models.BooleanField(default=False)
 
     def is_valid(self):
-        # Code expires after 10 minutes
         return not self.is_used and (timezone.now() - self.created_at).total_seconds() < 600
 
     @staticmethod
@@ -42,15 +40,25 @@ class OTPCode(models.Model):
         return str(random.randint(100000, 999999))
 
     def send_to_email(self, subject, message_prefix):
-        """Generate a code, save it, and send it to the user’s email."""
+        """Generate a code, save it, and send it to the user's email."""
         self.code = OTPCode.generate_code()
         self.save()
-
-        subject_line = subject
         message = f"{message_prefix}\nYour verification code is: {self.code}\nThis code expires in 10 minutes."
         send_mail(
-            subject=subject_line,
+            subject=subject,
             message=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[self.user.email],
+        )
+
+    # ✅ indented inside the class — 4 spaces
+    def send_to_email_address(self, email, subject, message_prefix):
+        self.code = OTPCode.generate_code()  # ✅ also generate + save the code
+        self.save()
+        message = f"{message_prefix}\nYour verification code is: {self.code}\nThis code expires in 10 minutes."
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],  # ✅ sends to new email, not user.email
         )
