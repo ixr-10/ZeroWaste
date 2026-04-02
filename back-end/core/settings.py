@@ -2,7 +2,7 @@ from datetime import timedelta
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-import ssl, certifi
+import ssl, certifi # type: ignore
 EMAIL_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 
@@ -14,7 +14,7 @@ SECRET_KEY = 'django-insecure-*mla&@o&@8a+n^xf6qu@#*%8nd3^3lkrcw%&6#&(4@maq-@^7y
 FRONTEND_URL = "http://localhost:3000"
 DEBUG = True
 CORS_ALLOW_ALL_ORIGINS = True
-ALLOWED_HOSTS = ['192.168.1.38', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['192.168.1.39', 'localhost', '127.0.0.1']
 EMAIL_SSL_CERTFILE = None
 EMAIL_SSL_KEYFILE = None
 
@@ -38,11 +38,11 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -65,7 +65,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'core.wsgi.application'
+ASGI_APPLICATION = 'core.asgi.application'
 
 DATABASES = {
     'default': {
@@ -97,10 +97,23 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
      "http://localhost:8081",  
     "http://127.0.0.1:8081", 
-    "http://192.168.1.38:8081"
+
+    "http://192.168.1.38:8081",
+    "http://192.168.1.37:8081",
+    "http://192.168.1.39:8081"
+
 ]
 # ✅ Allow all hosts during development
 ALLOWED_HOSTS = ['*']
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],
+        },
+    },
+}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -115,7 +128,7 @@ SIMPLE_JWT = {
 
 AUTH_USER_MODEL = 'users.User'
 
-import ssl, certifi
+import ssl, certifi # type: ignore
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -129,5 +142,10 @@ DEFAULT_FROM_EMAIL = os.getenv('EMAIL_USER')
 EMAIL_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+

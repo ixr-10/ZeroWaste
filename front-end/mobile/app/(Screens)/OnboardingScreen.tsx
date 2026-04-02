@@ -100,6 +100,7 @@ export default function OnboardingScreen() {
   return (
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      
       <FlatList
         ref={flatListRef}
         data={SLIDES}
@@ -118,7 +119,6 @@ export default function OnboardingScreen() {
           index,
         })}
         initialScrollIndex={0}
-        scrollEnabled={true}
       />
 
       <LinearGradient
@@ -128,11 +128,10 @@ export default function OnboardingScreen() {
       />
 
       <SafeAreaView style={styles.uiLayer} pointerEvents="box-none">
-
-        {/* Skip Button — hidden on last slide */}
+        {/* Skip Button */}
         {!isLastSlide && (
           <TouchableOpacity style={styles.skipButton} onPress={handleSkip} activeOpacity={0.7}>
-            <Text style={styles.skipText}>Skip▶</Text>
+            <Text style={styles.skipText}>Skip ▶</Text>
           </TouchableOpacity>
         )}
         {isLastSlide && <View style={styles.skipButton} />}
@@ -159,7 +158,7 @@ export default function OnboardingScreen() {
               activeOpacity={0.85}
             >
               <Text style={styles.nextButtonText}>
-                {isLastSlide ? 'Discover' : 'Next'}
+                {isLastSlide ? 'Get Started' : 'Next'}
               </Text>
             </TouchableOpacity>
           </View>

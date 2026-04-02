@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
     CreateDonationView, MyDonationsView,
-    DonationDetailView, CompleteDonationView, AvailableDonationsView, PublicDonationDetailView,
+    DonationDetailView, CompleteDonationView, AvailableDonationsView, MyReceivedReservationsView, PublicDonationDetailView,
     ReserveDonationView, CancelReservationView, MyReservationsView,
     ConfirmReservationView, RejectReservationView, DonationReservationsView
 )
@@ -19,4 +19,5 @@ urlpatterns = [
     path('reservations/<int:reservation_id>/cancel/', CancelReservationView.as_view(), name='cancel_reservation'),
     path('reservations/<int:reservation_id>/confirm/', ConfirmReservationView.as_view(), name='confirm_reservation'),
     path('reservations/<int:reservation_id>/reject/', RejectReservationView.as_view(), name='reject_reservation'),
+    path('reservations/received/', MyReceivedReservationsView.as_view(), name='received_reservations'),
 ]

@@ -12,6 +12,16 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+const handleLogin = async () => {
+  if (!username || !password) {
+    alert('Please fill in all fields.');
+    return;
+  }
+  try {
+    const { data } = await api.post('users/login/', {
+      username: username,
+      password: password,
+    });
 
   const handleLogin = async () => {
     if (!username || !password) {

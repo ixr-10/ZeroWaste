@@ -9,10 +9,27 @@ class Conversation(models.Model):
     donor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='donor_conversations')
     beneficiary = models.ForeignKey(User, on_delete=models.CASCADE, related_name='beneficiary_conversations')
     created_at = models.DateTimeField(auto_now_add=True)
-    firebase_room_id = models.CharField(max_length=255, unique=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ('donation', 'beneficiary')
 
     def __str__(self):
-        return f"Chat: {self.donor.username} ↔ {self.beneficiary.username} | Donation: {self.donation.title}"
+        return f"{self.donor.username} ↔ {self.beneficiary.username} | {self.donation.title}"
+
+    def get_room_name(self):
+        return f"conversation_{self.id}"
+
+
+class Message(models.Model):
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    content = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.sender.username}: {self.content[:50]}"
