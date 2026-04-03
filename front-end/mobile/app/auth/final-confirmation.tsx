@@ -45,7 +45,7 @@ export default function FinalConfirmation() {
 
       // --- BACKEND LINK ---
      // fix the api call in final-confirmation.tsx
-const { data } = await api.post('/reset-password/', {
+const { data } = await api.post('/users/reset-password/', {
   email,
   code,
   new_password: password,  // ← was 'password', backend expects 'new_password'

@@ -149,7 +149,7 @@ class ReserveDonationView(APIView):
         if donation.donor == request.user:
             return Response({'error': 'You cannot reserve your own donation.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # ── FIX 3: Max 2 reservations/day for unverified users ──
+        # Limit for unverified users
         if not request.user.is_verified:
             today = timezone.now().date()
             daily_count = Reservation.objects.filter(
@@ -158,16 +158,16 @@ class ReserveDonationView(APIView):
             ).count()
             if daily_count >= 2:
                 return Response(
-                    {'error': 'Unverified users can only make 2 reservations per day. Please get verified by a Food Saver.'},
+                    {'error': 'Unverified users can only make 2 reservations per day.'},
                     status=status.HTTP_403_FORBIDDEN
                 )
 
-        quantity_requested = request.data.get('quantity_requested', 1)
+        quantity_requested = int(request.data.get('quantity_requested', 1))
 
-        if int(quantity_requested) > donation.available_quantity:
+        if quantity_requested > donation.available_quantity:
             return Response({'error': 'Not enough quantity available.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # ── FIX 2: Reservation starts as pending with 2h confirmation deadline ──
+        # Create reservation
         reservation = Reservation.objects.create(
             donation=donation,
             beneficiary=request.user,
@@ -176,15 +176,29 @@ class ReserveDonationView(APIView):
             confirmation_deadline=timezone.now() + timedelta(hours=2)
         )
 
-        donation.available_quantity -= int(quantity_requested)
+        # Update donation
+        donation.available_quantity -= quantity_requested
         if donation.available_quantity == 0:
             donation.status = 'reserved'
         donation.save()
 
+        # Create/Get conversation
+        from apps.chat.models import Conversation
+
+        conversation, created = Conversation.objects.get_or_create(
+            donation=donation,
+            beneficiary=request.user,
+            defaults={'donor': donation.donor}
+        )
+
         serializer = ReservationSerializer(reservation, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-
+        return Response({
+            "message": "Reservation created successfully!",
+            "reservation": serializer.data,
+            "conversation_id": conversation.id,
+            "conversation_created": created
+        }, status=status.HTTP_201_CREATED)
 
 class ConfirmReservationView(APIView):
     permission_classes = [IsAuthenticated]

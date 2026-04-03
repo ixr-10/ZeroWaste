@@ -17,7 +17,7 @@ export default function VerifyEmailScreen() {
       return;
     }
     try {
-      await api.post('/verify-email/', { username, code });
+      await api.post('/users/verify-email/', { username, code });
       Alert.alert('Success', 'Email verified! You can now login.');
       router.replace('/auth/login');
     } catch (err: any) {

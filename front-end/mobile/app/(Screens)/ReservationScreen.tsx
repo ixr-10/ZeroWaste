@@ -33,33 +33,48 @@ export default function ReservationScreen() {
   const increment = () => setQuantity((q) => Math.min(q + 1, maxQuantity));
   const decrement = () => setQuantity((q) => Math.max(1, q - 1));
 
-  const handleConfirm = async () => {
-    if (!donationId || donationId === 'undefined') {
-      Alert.alert('Error', 'Invalid donation. Please go back and try again.');
-      return;
-    }
+ const handleConfirm = async () => {
+  if (!donationId || donationId === 'undefined') {
+    Alert.alert('Error', 'Invalid donation. Please go back and try again.');
+    return;
+  }
 
-    setLoading(true);
-    try {
-      await axios.post(`/donations/available/${donationId}/reserve/`, {
-        quantity_requested: quantity,
-      });
+  setLoading(true);
+  try {
+    const response = await axios.post(`/donations/available/${donationId}/reserve/`, {
+      quantity_requested: quantity,
+    });
 
-      setSuccess(true);
-      setTimeout(() => {
-        router.replace('/(Screens)/ChatList' as any);
-      }, 1500);
+    setSuccess(true);
 
-    } catch (err: any) {
-      const message =
-        err?.response?.data?.detail ||
-        err?.response?.data?.error ||
-        'Reservation failed. Please try again.';
-      Alert.alert('Error', message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const conversationId = response.data.conversation_id;
+
+    // Redirect to the specific chat after success
+    setTimeout(() => {
+      if (conversationId) {
+        router.replace({
+          pathname: '/(tabs)/ChatList',           // Change this to your actual single chat screen path
+          params: { 
+            conversationId: conversationId.toString(),
+            donationTitle: title,                    // optional
+          },
+        });
+      } else {
+        router.replace('/(tabs)/ChatList' as any);
+      }
+    }, 1800);
+
+  } catch (err: any) {
+    const message =
+      err?.response?.data?.detail ||
+      err?.response?.data?.error ||
+      err?.response?.data?.message ||
+      'Reservation failed. Please try again.';
+    Alert.alert('Error', message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <SafeAreaView style={styles.safeArea}>

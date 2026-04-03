@@ -22,7 +22,7 @@ const TAB_ITEMS = [
   { screen: '/(tabs)/HomeScreen',   icon: 'home',          label: 'Home' },
   { screen: '/(tabs)/ChatList',     icon: 'chatbubble',    label: 'Chat' },
   { screen: '/(tabs)/Picture',      icon: 'add',           label: '' },
-  { screen: '/(tabs)/notifications', icon: 'notifications', label: 'Notification' }, // ← lowercase
+  { screen: '/(tabs)/Notificationss', icon: 'notifications', label: 'Notification' }, // ← lowercase
   { screen: '/(tabs)/ProfileScreen', icon: 'person',        label: 'Profile' },
 ];
 

@@ -35,7 +35,7 @@ const handleConfirm = async () => {
     if (!email) return;
     try {
       setIsResending(true);
-      await api.post('/forgot-password/', { email });
+      await api.post('/users/forgot-password/', { email });
       Alert.alert('Code Sent', `A new code has been sent to ${email}.`);
       setCode(['', '', '', '', '', '']);
     } catch (error) {
