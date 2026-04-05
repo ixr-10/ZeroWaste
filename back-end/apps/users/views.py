@@ -401,20 +401,35 @@ class SetPasswordView(APIView):
 
         except User.DoesNotExist:
             return Response({'error': 'User not found.'}, status=status.HTTP_400_BAD_REQUEST)
+<<<<<<< HEAD
+        
+# ─── Add these two classes to the bottom of your views.py ────────────────────
+
 
 class DeactivateAccountView(APIView):
+    """
+    Temporarily deactivate the user's account.
+    Sets is_active=False so they can't log in until they reactivate
+    by contacting support or logging back in (if you re-enable on login).
+    POST /deactivate/
+    Body: { "reason": "..." }  (optional)
+    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         user = request.user
+        reason = request.data.get('reason', '')
+
+        # Blacklist current refresh token if provided
         try:
             refresh_token = request.data.get('refresh')
             if refresh_token:
                 token = RefreshToken(refresh_token)
                 token.blacklist()
         except Exception:
-            pass
+            pass  # not critical if this fails
 
+        # Deactivate the account
         user.is_active = False
         user.save()
 
@@ -422,22 +437,29 @@ class DeactivateAccountView(APIView):
 
 
 class DeleteAccountView(APIView):
+    """
+    Permanently delete the user's account and all their data.
+    DELETE /delete-account/
+    """
     permission_classes = [IsAuthenticated]
 
     def delete(self, request):
         user = request.user
 
+        # Blacklist current refresh token if provided
         try:
             refresh_token = request.data.get('refresh')
             if refresh_token:
                 token = RefreshToken(refresh_token)
                 token.blacklist()
         except Exception:
-            pass
+            pass  # not critical if this fails
 
+        # Permanently delete user — cascades to all related data
         user.delete()
 
         return Response({'message': 'Account permanently deleted.'}, status=status.HTTP_200_OK)
+=======
 
 class AdminDeleteUserView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
@@ -470,3 +492,4 @@ class DemoteFromFoodSaverView(APIView):
 
         except User.DoesNotExist:
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+>>>>>>> 4b91348b95f8d390f860bbbdbc27a7e3fa67e633

@@ -37,10 +37,19 @@ export default function RegisterScreen() {
         role: 'user',
       });
 
+<<<<<<< HEAD
+     // replace the router.push after successful register:
+router.push({
+  pathname: '/auth/verify-email' as any,
+  params: { email: data.user.email },
+});
+=======
+      // ✅ FIXED: Correct way to pass email to confirmation page
       router.push({
         pathname: '/auth/confirmationEmail',
-        params: { email: data.user?.email || email },
+        params: { email: data.user?.email || email },   // Use backend response or fallback to form email
       });
+>>>>>>> 4b91348b95f8d390f860bbbdbc27a7e3fa67e633
 
     } catch (err: any) {
       const errors = err.response?.data;
@@ -170,9 +179,19 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '700', textAlign: 'center', marginBottom: 32, color: '#1a1a1a' },
   label: { fontSize: 16, color: 'black', marginBottom: 6 },
   input: {
+<<<<<<< HEAD
     borderWidth: 1, borderColor: '#588157', opacity: 0.5,
     borderRadius: 20, padding: 12, marginBottom: 16, fontSize: 14,
     paddingLeft: 38,
+=======
+    borderWidth: 1, 
+    borderColor: '#588157', 
+    opacity: 0.5,
+    borderRadius: 20, 
+    padding: 12, 
+    marginBottom: 16, 
+    fontSize: 14,
+>>>>>>> 4b91348b95f8d390f860bbbdbc27a7e3fa67e633
   },
   inputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   eyeBtn: { position: 'absolute', right: 12, top: 12 },

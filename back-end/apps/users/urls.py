@@ -1,23 +1,12 @@
 from django.urls import path
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
-    PromoteToFoodSaverView,
-    AdminListUsersView,
-    RegisterView,
-    ProfileView,
-    LogoutView,
-    ChangePasswordView,
-    LoginView,
-    VerifyUserView,
-    ForgotPasswordView,
-    ResetPasswordView,
-    VerifyEmailView,
-    AdminCreateUserView,
-    SetPasswordView,
-    AdminDeleteUserView,
-    DemoteFromFoodSaverView,
+    PromoteToFoodSaverView, AdminListUsersView, RegisterView, ProfileView,
+    LogoutView, ChangePasswordView, LoginView, VerifyUserView, ForgotPasswordView,
+    ResetPasswordView, VerifyEmailView, AdminCreateUserView, SetPasswordView,
     ChangeEmailRequestView, ChangeEmailConfirmView,
     DeactivateAccountView, DeleteAccountView,
+    AdminDeleteUserView, DemoteFromFoodSaverView,
 )
 
 urlpatterns = [
@@ -34,11 +23,11 @@ urlpatterns = [
     path('set-password/', SetPasswordView.as_view(), name='set_password'),
     path('admin/create-user/', AdminCreateUserView.as_view(), name='admin_create_user'),
     path('admin/users/', AdminListUsersView.as_view(), name='admin-list-users'),
+    path('admin/users/<int:user_id>/delete/', AdminDeleteUserView.as_view(), name='admin-delete-user'),
     path('promote/<int:user_id>/', PromoteToFoodSaverView.as_view(), name='promote-food-saver'),
+    path('demote/<int:user_id>/', DemoteFromFoodSaverView.as_view(), name='demote-food-saver'),
     path('change-email/request/', ChangeEmailRequestView.as_view(), name='change_email_request'),
     path('change-email/confirm/', ChangeEmailConfirmView.as_view(), name='change_email_confirm'),
     path('deactivate/', DeactivateAccountView.as_view(), name='deactivate_account'),
     path('delete-account/', DeleteAccountView.as_view(), name='delete_account'),
-    path('admin/users/<int:user_id>/delete/', AdminDeleteUserView.as_view(), name='admin-delete-user'),
-    path('demote/<int:user_id>/', DemoteFromFoodSaverView.as_view(), name='demote-food-saver'),
 ]

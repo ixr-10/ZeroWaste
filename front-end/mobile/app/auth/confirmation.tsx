@@ -6,7 +6,11 @@ import Header from '../../components/Header';
 import OtpInput from '../../components/OtpInput';
 import ConfirmationImg from '../../assets/images/image.png';
 import AppText from '../../components/AppText';
+<<<<<<< HEAD
+import api from '../../constants/axios'; // ← unified import
+=======
 import api from '../../constants/axios';
+>>>>>>> 4b91348b95f8d390f860bbbdbc27a7e3fa67e633
 
 export default function ConfirmationPage() {
   const router = useRouter();

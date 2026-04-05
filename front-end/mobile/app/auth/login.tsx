@@ -12,6 +12,19 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+<<<<<<< HEAD
+=======
+const handleLogin = async () => {
+  if (!username || !password) {
+    alert('Please fill in all fields.');
+    return;
+  }
+  try {
+    const { data } = await api.post('users/login/', {
+      username: username,
+      password: password,
+    });
+>>>>>>> 4b91348b95f8d390f860bbbdbc27a7e3fa67e633
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -19,7 +32,7 @@ export default function LoginScreen() {
       return;
     }
     try {
-      const { data } = await api.post('/users/login/', {
+      const { data } = await api.post('/login/', {
         username: username,
         password: password,
       });
@@ -28,9 +41,9 @@ export default function LoginScreen() {
       await AsyncStorage.setItem('access', data.access);
       await AsyncStorage.setItem('refresh', data.refresh);
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
-      await AsyncStorage.setItem('isLoggedIn', 'true');
+      await AsyncStorage.setItem('isLoggedIn', 'true'); // ✅ added so index.tsx can read it
 
-      router.replace('/(tabs)/slides');
+      router.replace('/(tabs)/slides'); // ✅ go to main app
 
     } catch (err: any) {
       const status = err.response?.status;
