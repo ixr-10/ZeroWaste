@@ -1,21 +1,30 @@
 import React, { useState, useRef } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Image, StatusBar, ScrollView, ActivityIndicator, TextInput, Alert } from "react-native";
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  StyleSheet, 
+  Image, 
+  StatusBar, 
+  ScrollView, 
+  ActivityIndicator, 
+  TextInput, 
+  Alert 
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, Stack } from "expo-router";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
-import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useDonationStore } from '../../store/useDonationStore';
 import api from '../../constants/axios';
+import axios from "../../constants/axios";
 
-// Map frontend units to backend units
 const UNIT_MAP: Record<string, string> = {
   'Kg': 'kg', 'g': 'g', 'L': 'L', 'Pieces': 'pieces'
 };
 
-// Map frontend categories to backend categories
 const CATEGORY_MAP: Record<string, string> = {
   'fruits': 'fruits', 
   'pastries': 'pain',
@@ -51,9 +60,9 @@ export default function Step4Localization() {
   };
 
   const searchAddress = async (text: string) => {
-    if (text.length < 2) { 
-      setSuggestions([]); 
-      return; 
+    if (text.length < 2) {
+      setSuggestions([]);
+      return;
     }
     try {
       const res = await axios.get(`https://api.mapbox.com/search/searchbox/v1/suggest`, {
@@ -61,14 +70,14 @@ export default function Step4Localization() {
           q: text,
           access_token: "pk.eyJ1IjoiYmVuZGFsaSIsImEiOiJjbW5haTcxOGwwaDcyMzJxd3ZwcnU0ZnQxIn0.0aPD9u57r-PMElca5MEG-w",
           session_token: "zerowaste-session",
-          limit: 6, 
+          limit: 6,
           language: "en",
           proximity: `${marker.longitude},${marker.latitude}`,
         },
       });
       setSuggestions(res.data.suggestions || []);
-    } catch (e) { 
-      setSuggestions([]); 
+    } catch (e) {
+      setSuggestions([]);
     }
   };
 
@@ -85,23 +94,23 @@ export default function Step4Localization() {
       setMarker({ latitude: lat, longitude: lng });
       setAddress(item.name + ", " + item.place_formatted);
       setSuggestions([]);
-    } catch (e) { 
-      console.log(e); 
+    } catch (e) {
+      console.log(e);
     }
   };
 
   const handlePublish = async () => {
-    if (!address) { 
-      Alert.alert('Error', 'Please select a location'); 
-      return; 
+    if (!address) {
+      Alert.alert('Error', 'Please select a location');
+      return;
     }
-    if (!category) { 
-      Alert.alert('Error', 'Please go back and select a category'); 
-      return; 
+    if (!category) {
+      Alert.alert('Error', 'Please go back and select a category');
+      return;
     }
-    if (!expiryDate) { 
-      Alert.alert('Error', 'Please go back and select an expiry date'); 
-      return; 
+    if (!expiryDate) {
+      Alert.alert('Error', 'Please go back and select an expiry date');
+      return;
     }
 
     setPublishing(true);
@@ -134,36 +143,26 @@ export default function Step4Localization() {
         formData.append('image', { uri: image, name: filename, type } as any);
       }
 
-      const token = await AsyncStorage.getItem('access');
+      const response = await api.post('/donations/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-      const response = await axios.post(
-        'http://192.168.1.39:8000/api/donations/',
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      // Success: Reset form and go back to Home Screen
       reset();
 
       Alert.alert(
-        'Success! 🎉', 
+        'Success! 🎉',
         'Your donation has been published successfully!',
-        [
-          { 
-            text: 'OK', 
-            onPress: () => router.replace('/(tabs)/slides')   // ← Goes to Home Screen
-          }
-        ]
+        [{ 
+          text: 'OK', 
+          onPress: () => router.replace('/(tabs)/slides')
+        }]
       );
 
     } catch (err: any) {
-      console.log('Publish error:', err.response?.data);
-      Alert.alert('Error', err.response?.data?.error || 'Failed to publish donation. Please try again.');
+      console.log('Publish error:', err.response?.data || err.message);
+      Alert.alert('Error', err.response?.data?.error || err.response?.data?.detail || 'Failed to publish donation. Please try again.');
     } finally {
       setPublishing(false);
     }
@@ -300,7 +299,7 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 14, fontWeight: "700", color: "#1a3320", marginBottom: 8 },
   locateBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: "#e8f3e8", alignItems: "center", justifyContent: "center", marginRight: 8, alignSelf: "center" },
   map: { height: 180, borderRadius: 14, overflow: "hidden" },
-  footer: { paddingHorizontal: 24, paddingBottom: 70,paddingTop: 10, gap: 10, backgroundColor: "white", marginTop: 20 },
+  footer: { paddingHorizontal: 24, paddingBottom: 70, paddingTop: 10, gap: 10, backgroundColor: "white", marginTop: 20 },
   publishBtn: { backgroundColor: "rgba(88, 129, 87, 1)", borderRadius: 25, paddingVertical: 16, alignItems: "center" },
   publishBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   publicInput: { backgroundColor: "#fff", borderRadius: 10, padding: 14, fontSize: 14, color: "#1a3320", borderWidth: 1, borderColor: "rgba(88, 129, 87, 1)" },

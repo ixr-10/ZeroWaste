@@ -9,6 +9,7 @@ from .models import Donation, Reservation
 from .serializers import DonationSerializer, ReservationSerializer
 
 
+# ====================== CREATE DONATION ======================
 class CreateDonationView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -20,44 +21,175 @@ class CreateDonationView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+# ====================== MY DONATIONS (Donor Profile) ======================
 class MyDonationsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         donations = Donation.objects.filter(donor=request.user).order_by('-created_at')
+
         for donation in donations:
-            if donation.is_expired() and donation.status == 'available':
-                donation.status = 'expired'
-                donation.save()
+
+            # ---------- 1. EXPIRY CHECK ----------
+            if donation.expiry_date and donation.is_expired():
+                if donation.status in ['available', 'reserved']:
+                    donation.status = 'expired'
+                    donation.save(update_fields=['status'])
+
+                    donation.reservations.filter(status='pending').update(status='expired')
+                continue
+
+            # ---------- 2. HANDLE PENDING RESERVATIONS ----------
+            pending_reservations = donation.reservations.filter(status='pending')
+
+            for res in pending_reservations:
+                if res.is_expired:
+                    res.status = 'expired'
+                    res.save(update_fields=['status'])
+
+                    # restore quantity
+                    donation.available_quantity += res.quantity_requested
+                    donation.save(update_fields=['available_quantity'])
+
+            # ---------- 3. FIX STATUS (STRICT LOGIC) ----------
+            if donation.available_quantity == 0:
+                donation.status = 'reserved'   # NOT completed yet
+            elif donation.available_quantity > 0:
+                donation.status = 'available'
+
+            donation.save(update_fields=['status'])
+
         serializer = DonationSerializer(donations, many=True, context={'request': request})
         return Response(serializer.data)
-
-
-class DonationDetailView(APIView):
+# ====================== RESERVE DONATION ======================
+class ReserveDonationView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_object(self, donation_id, user):
+    def post(self, request, donation_id):
         try:
-            return Donation.objects.get(id=donation_id, donor=user)
+            donation = Donation.objects.get(id=donation_id, status='available')
         except Donation.DoesNotExist:
-            return None
+            return Response({'error': 'Donation not available.'}, status=status.HTTP_404_NOT_FOUND)
 
-    def put(self, request, donation_id):
-        donation = self.get_object(donation_id, request.user)
-        if not donation:
-            return Response({'error': 'Donation not found or not yours.'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = DonationSerializer(donation, data=request.data, partial=True, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if donation.donor == request.user:
+            return Response({'error': 'You cannot reserve your own donation.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request, donation_id):
-        donation = self.get_object(donation_id, request.user)
-        if not donation:
-            return Response({'error': 'Donation not found or not yours.'}, status=status.HTTP_404_NOT_FOUND)
-        donation.delete()
-        return Response({'message': 'Donation deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
+        quantity_requested = int(request.data.get('quantity_requested', 1))
+
+        if quantity_requested > donation.available_quantity:
+            return Response({'error': 'Not enough quantity available.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create reservation (confirmation_deadline is auto-set in model)
+        reservation = Reservation.objects.create(
+            donation=donation,
+            beneficiary=request.user,
+            quantity_requested=quantity_requested,
+            status='pending',
+        )
+
+        # Update donation quantity (fix for partial reservations)
+        donation.available_quantity -= quantity_requested
+        if donation.available_quantity <= 0:
+            donation.status = 'reserved'
+        # else: remains 'available'
+
+        donation.save()
+
+        # Create conversation for chat
+        from apps.chat.models import Conversation
+        conversation, _ = Conversation.objects.get_or_create(
+            donation=donation,
+            beneficiary=request.user,
+            defaults={'donor': donation.donor}
+        )
+
+        serializer = ReservationSerializer(reservation, context={'request': request})
+
+        return Response({
+            "message": "Reservation created successfully!",
+            "reservation": serializer.data,
+            "conversation_id": conversation.id,
+        }, status=status.HTTP_201_CREATED)
+
+
+# ====================== CONFIRM RESERVATION ======================
+class ConfirmReservationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, reservation_id):
+        try:
+            reservation = Reservation.objects.get(
+                id=reservation_id, 
+                donation__donor=request.user
+            )
+        except Reservation.DoesNotExist:
+            return Response({'error': 'Reservation not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if reservation.status != 'pending':
+            return Response({'error': 'Reservation is not pending.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if reservation.is_expired:
+            return Response({'error': 'Confirmation deadline has passed.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Confirm reservation
+        reservation.status = 'confirmed'
+        reservation.save()
+
+        # Update donation quantity (do NOT force 'completed')
+        donation = reservation.donation
+        # We already deducted quantity when reservation was created
+        # So we just check if it's now fully taken
+        if donation.available_quantity <= 0:
+            donation.status = 'completed'
+        donation.save()
+
+        # Optional: Give reputation
+        request.user.reputation_score += 10
+        request.user.save()
+
+        return Response({
+            'message': 'Reservation confirmed successfully.',
+            'donation_status': donation.status
+        })
+
+# ====================== REJECT RESERVATION ======================
+class RejectReservationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, reservation_id):
+        try:
+            reservation = Reservation.objects.get(
+                id=reservation_id, donation__donor=request.user
+            )
+        except Reservation.DoesNotExist:
+            return Response({'error': 'Reservation not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if reservation.status != 'pending':
+            return Response({'error': 'Reservation is not pending.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Restore quantity
+        donation = reservation.donation
+        donation.available_quantity += reservation.quantity_requested
+        if donation.status == 'reserved':
+            donation.status = 'available'
+        donation.save()
+
+        reservation.status = 'rejected'
+        reservation.save()
+
+        return Response({'message': 'Reservation rejected successfully.'})
+
+
+# ====================== OTHER VIEWS ======================
+class MyReceivedReservationsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        reservations = Reservation.objects.filter(
+            donation__donor=request.user
+        ).order_by('-created_at')
+        serializer = ReservationSerializer(reservations, many=True, context={'request': request})
+        return Response(serializer.data)
 
 
 class CompleteDonationView(APIView):
@@ -100,6 +232,7 @@ class AvailableDonationsView(APIView):
         if expiry_before:
             donations = donations.filter(expiry_date__lte=expiry_before)
 
+        # Location filtering
         lat = request.query_params.get('lat')
         lng = request.query_params.get('lng')
         max_km = request.query_params.get('max_km')
@@ -128,142 +261,7 @@ class PublicDonationDetailView(APIView):
         serializer = DonationSerializer(donation, context={'request': request})
         return Response(serializer.data)
 
-class MyReceivedReservationsView(APIView):
-    permission_classes = [IsAuthenticated]
-    def get(self, request):
-        reservations = Reservation.objects.filter(
-            donation__donor=request.user
-        ).order_by('-created_at')
-        serializer = ReservationSerializer(reservations, many=True, context={'request': request})
-        return Response(serializer.data)
 
-class ReserveDonationView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, donation_id):
-        try:
-            donation = Donation.objects.get(id=donation_id, status='available')
-        except Donation.DoesNotExist:
-            return Response({'error': 'Donation not available.'}, status=status.HTTP_404_NOT_FOUND)
-
-        if donation.donor == request.user:
-            return Response({'error': 'You cannot reserve your own donation.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Limit for unverified users
-        if not request.user.is_verified:
-            today = timezone.now().date()
-            daily_count = Reservation.objects.filter(
-                beneficiary=request.user,
-                created_at__date=today
-            ).count()
-            if daily_count >= 2:
-                return Response(
-                    {'error': 'Unverified users can only make 2 reservations per day.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-        quantity_requested = int(request.data.get('quantity_requested', 1))
-
-        if quantity_requested > donation.available_quantity:
-            return Response({'error': 'Not enough quantity available.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Create reservation
-        reservation = Reservation.objects.create(
-            donation=donation,
-            beneficiary=request.user,
-            quantity_requested=quantity_requested,
-            status='pending',
-            confirmation_deadline=timezone.now() + timedelta(hours=2)
-        )
-
-        # Update donation
-        donation.available_quantity -= quantity_requested
-        if donation.available_quantity == 0:
-            donation.status = 'reserved'
-        donation.save()
-
-        # Create/Get conversation
-        from apps.chat.models import Conversation
-
-        conversation, created = Conversation.objects.get_or_create(
-            donation=donation,
-            beneficiary=request.user,
-            defaults={'donor': donation.donor}
-        )
-
-        serializer = ReservationSerializer(reservation, context={'request': request})
-
-        return Response({
-            "message": "Reservation created successfully!",
-            "reservation": serializer.data,
-            "conversation_id": conversation.id,
-            "conversation_created": created
-        }, status=status.HTTP_201_CREATED)
-
-class ConfirmReservationView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, reservation_id):
-        try:
-            reservation = Reservation.objects.get(
-                id=reservation_id,
-                donation__donor=request.user
-            )
-        except Reservation.DoesNotExist:
-            return Response({'error': 'Reservation not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-        if reservation.status != 'pending':
-            return Response({'error': 'Reservation is not pending.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Check if deadline passed
-        if reservation.confirmation_deadline and timezone.now() > reservation.confirmation_deadline:
-            reservation.status = 'cancelled'
-            reservation.save()
-            # Restore quantity
-            donation = reservation.donation
-            donation.available_quantity += reservation.quantity_requested
-            if donation.status == 'reserved':
-                donation.status = 'available'
-            donation.save()
-            return Response(
-                {'error': 'Confirmation deadline passed. Reservation has been cancelled.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        reservation.status = 'confirmed'
-        reservation.save()
-        return Response({'message': 'Reservation confirmed successfully.'})
-
-
-# ── FIX 2: Donor rejects reservation ──
-class RejectReservationView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, reservation_id):
-        try:
-            reservation = Reservation.objects.get(
-                id=reservation_id,
-                donation__donor=request.user
-            )
-        except Reservation.DoesNotExist:
-            return Response({'error': 'Reservation not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-        if reservation.status != 'pending':
-            return Response({'error': 'Reservation is not pending.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Restore quantity
-        donation = reservation.donation
-        donation.available_quantity += reservation.quantity_requested
-        if donation.status == 'reserved':
-            donation.status = 'available'
-        donation.save()
-
-        reservation.status = 'cancelled'
-        reservation.save()
-        return Response({'message': 'Reservation rejected.'})
-
-
-# ── View pending reservations on my donations (donor) ──
 class DonationReservationsView(APIView):
     permission_classes = [IsAuthenticated]
 

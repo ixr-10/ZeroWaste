@@ -41,7 +41,7 @@ type MainTab   = 'posts' | 'reservations';
 type PostFilter = 'available' | 'reserved' | 'completed' | 'expired';
 type ResFilter  = 'pending' | 'confirmed' | 'rejected';
 
-// ─── Confirm Modal ────────────────────────────────────────────────────────────
+// Confirm Modal
 const ConfirmModal = ({
   visible, message, confirmLabel = 'Delete', confirmColor = COLORS.red, onConfirm, onCancel,
 }: {
@@ -85,7 +85,7 @@ const cStyles = StyleSheet.create({
   confirmText:{ fontSize: 14, fontWeight: '700', color: COLORS.white },
 });
 
-// ─── Edit Username Modal ──────────────────────────────────────────────────────
+// Edit Username Modal
 const EditUsernameModal = ({
   visible, currentUsername, onSave, onClose,
 }: {
@@ -141,35 +141,12 @@ const EditUsernameModal = ({
 };
 
 const eStyles = StyleSheet.create({
-  box:   { 
-    backgroundColor: COLORS.white, 
-    borderRadius: 20, 
-    padding: 24, 
-    width: '82%', 
-    zIndex: 10, 
-    elevation: 10 
-  },
-  title: { 
-    fontSize: 17, 
-    fontWeight: '700', 
-    color: COLORS.textPrimary, 
-    marginBottom: 16, 
-    textAlign: 'center' 
-  },
-  input: { 
-    borderWidth: 1.5, 
-    borderColor: COLORS.border, 
-    borderRadius: 12, 
-    paddingHorizontal: 14, 
-    paddingVertical: 10, 
-    fontSize: 15, 
-    color: COLORS.textPrimary, 
-    marginBottom: 20, 
-    backgroundColor: '#F7FAF5' 
-  },
+  box:   { backgroundColor: COLORS.white, borderRadius: 20, padding: 24, width: '82%', zIndex: 10, elevation: 10 },
+  title: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 16, textAlign: 'center' },
+  input: { borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: COLORS.textPrimary, marginBottom: 20, backgroundColor: '#F7FAF5' },
 });
 
-// ─── PostItem & ReservationItem (kept as is, but cleaner) ─────────────────────
+// PostItem
 const PostItem = ({ item, onDelete }: { item: any; onDelete: () => void; }) => {
   const getStatusColor = () => {
     switch (item.status) {
@@ -191,8 +168,7 @@ const PostItem = ({ item, onDelete }: { item: any; onDelete: () => void; }) => {
     }
   };
 
-
-   return (
+  return (
     <View style={pStyles.card}>
       {item.image ? (
         <Image source={{ uri: item.image }} style={pStyles.image} />
@@ -216,7 +192,6 @@ const PostItem = ({ item, onDelete }: { item: any; onDelete: () => void; }) => {
         </View>
       </View>
       <View style={pStyles.actions}>
-        {/* Only allow delete if not completed */}
         {item.status !== 'completed' && (
           <TouchableOpacity style={pStyles.actionBtn} onPress={onDelete} activeOpacity={0.7}>
             <Ionicons name="trash-outline" size={22} color={COLORS.red} />
@@ -239,98 +214,56 @@ const pStyles = StyleSheet.create({
   actionBtn:    { padding: 4 },
 });
 
-const rStyles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-  },
-  cardConfirmed: { borderColor: COLORS.primary },
-  cardRejected:  { borderColor: COLORS.red },
-  avatar: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#E8D5B7',
-    alignItems: 'center', justifyContent: 'center', marginRight: 10,
-  },
-  textContainer: { flex: 1 },
-  notifText:    { fontSize: 13, color: COLORS.textPrimary, lineHeight: 18 },
-  bold:         { fontWeight: '700' },
-  productName:  { color: COLORS.primary, fontWeight: '600' },
-  quantity:     { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-  confirmedBadge: { fontSize: 12, color: COLORS.primary, fontWeight: '700' },
-  rejectedBadge:  { fontSize: 12, color: COLORS.red, fontWeight: '600' },
-  menu: {
-    position: 'absolute', right: 0, top: 26,
-    backgroundColor: COLORS.white, borderRadius: 10,
-    elevation: 8, zIndex: 999, minWidth: 100,
-    borderWidth: 1, borderColor: COLORS.border,
-  },
-  menuItem:    { paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center' },
-  menuConfirm: { fontSize: 13, color: COLORS.primary, fontWeight: '600' },
-  menuReject:  { fontSize: 13, color: COLORS.red, fontWeight: '600' },
-});
-
-// Replace ReservationItem with this notification-style design
-const ReservationItem = ({
-  item,
-  onAction,
-}: {
-  item: any;
+// ReservationItem
+const ReservationItem = ({ 
+  item, 
+  onAction 
+}: { 
+  item: any; 
   onAction: (id: number, action: 'confirm' | 'reject') => void;
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
-  const isPending   = item.status === 'pending';
+  const isPending = item.status === 'pending';
   const isConfirmed = item.status === 'confirmed';
-  const isRejected  = item.status === 'cancelled' || item.status === 'rejected';
+  const isRejected = item.status === 'rejected';
 
   return (
     <View style={[
       rStyles.card,
       isConfirmed && rStyles.cardConfirmed,
-      isRejected  && rStyles.cardRejected,
+      isRejected && rStyles.cardRejected,
     ]}>
-      {/* Avatar */}
       <View style={rStyles.avatar}>
-        <Ionicons name="person" size={18} color={COLORS.primaryMedium} />
+        <Ionicons name="person" size={20} color={COLORS.primaryMedium} />
       </View>
 
-      {/* Text */}
       <View style={rStyles.textContainer}>
         <Text style={rStyles.notifText}>
-          <Text style={rStyles.bold}>{item.beneficiary_username || 'User'}</Text>
-          <Text> wants to reserve </Text>
-          <Text style={rStyles.productName}>'{item.donation_title || 'Donation'}'</Text>
+          <Text style={rStyles.bold}>{item.beneficiary_username || 'User'}</Text> wants to reserve 
+          <Text style={rStyles.productName}> "{item.donation_title || 'Donation'}"</Text>
         </Text>
         <Text style={rStyles.quantity}>Qty: {item.quantity_requested}</Text>
       </View>
 
-      {/* Status badge or 3-dot menu */}
       {isPending ? (
         <View style={{ position: 'relative' }}>
-          <TouchableOpacity onPress={() => setMenuOpen(!menuOpen)} style={{ padding: 4 }}>
-            <Ionicons name="ellipsis-vertical" size={18} color={COLORS.textMuted} />
+          <TouchableOpacity onPress={() => setMenuOpen(!menuOpen)} style={{ padding: 6 }}>
+            <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textMuted} />
           </TouchableOpacity>
+
           {menuOpen && (
             <>
-              <Pressable
-                style={StyleSheet.absoluteFillObject}
-                onPress={() => setMenuOpen(false)}
-              />
+              <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setMenuOpen(false)} />
               <View style={rStyles.menu}>
-                <TouchableOpacity
-                  style={rStyles.menuItem}
+                <TouchableOpacity 
+                  style={rStyles.menuItem} 
                   onPress={() => { setMenuOpen(false); onAction(item.id, 'confirm'); }}
                 >
                   <Text style={rStyles.menuConfirm}>Confirm</Text>
                 </TouchableOpacity>
                 <View style={{ height: 1, backgroundColor: COLORS.border }} />
-                <TouchableOpacity
-                  style={rStyles.menuItem}
+                <TouchableOpacity 
+                  style={rStyles.menuItem} 
                   onPress={() => { setMenuOpen(false); onAction(item.id, 'reject'); }}
                 >
                   <Text style={rStyles.menuReject}>Reject</Text>
@@ -347,14 +280,48 @@ const ReservationItem = ({
     </View>
   );
 };
-  
 
+const rStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+  },
+  cardConfirmed: { borderColor: COLORS.primary },
+  cardRejected:  { borderColor: COLORS.red },
+  avatar: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#F5C6C6',
+    alignItems: 'center', justifyContent: 'center', marginRight: 10,
+  },
+  textContainer: { flex: 1 },
+  notifText: { fontSize: 13, color: COLORS.textPrimary, lineHeight: 18 },
+  bold: { fontWeight: '700' },
+  productName: { color: COLORS.primary, fontWeight: '600' },
+  quantity: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  confirmedBadge: { fontSize: 12, color: COLORS.primary, fontWeight: '700' },
+  rejectedBadge:  { fontSize: 12, color: COLORS.red, fontWeight: '600' },
+  menu: {
+    position: 'absolute', right: 0, top: 40,
+    backgroundColor: COLORS.white, borderRadius: 10,
+    elevation: 8, zIndex: 999, minWidth: 110,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  menuItem: { paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center' },
+  menuConfirm: { fontSize: 14, color: COLORS.primary, fontWeight: '600' },
+  menuReject:  { fontSize: 14, color: COLORS.red, fontWeight: '600' },
+});
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
+// Main Screen
 export default function ProfileScreen() {
   const router = useRouter();
   const [username, setUsername] = useState('');
-  const [profileImage, setProfileImage] = useState<string | null>(null);   // ← New state for profile picture
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [editModalVisible, setEditModal] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mainTab, setMainTab] = useState<MainTab>('posts');
@@ -364,7 +331,6 @@ export default function ProfileScreen() {
   const [reservations, setReservations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Confirm modal
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [confirmMsg, setConfirmMsg] = useState('');
   const [confirmAct, setConfirmAct] = useState<() => void>(() => {});
@@ -379,7 +345,6 @@ export default function ProfileScreen() {
     setConfirmVisible(true);
   };
 
-  // Load data
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -387,17 +352,15 @@ export default function ProfileScreen() {
       if (userStr) {
         const user = JSON.parse(userStr);
         setUsername(user.username || 'Username');
-        // You can also load saved profile image from AsyncStorage if you want persistence
       }
 
       const [donRes, resRes] = await Promise.all([
         api.get('/donations/my-donations/'),
-        api.get('/donations/reservations/received/'),
+        api.get('/donations/reservations/received/'),   // Received reservations (others requesting from me)
       ]);
 
       setDonations(donRes.data || []);
       setReservations(resRes.data || []);
-
     } catch (err) {
       console.log('Error loading profile data:', err);
     } finally {
@@ -405,15 +368,12 @@ export default function ProfileScreen() {
     }
   }, []);
 
-  useEffect(() => { 
-    loadData(); 
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
-  // Pick profile picture from gallery
   const pickProfileImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'We need permission to access your photos.');
+      Alert.alert('Permission Denied', 'We need access to your photos.');
       return;
     }
 
@@ -426,46 +386,67 @@ export default function ProfileScreen() {
 
     if (!result.canceled && result.assets[0]) {
       setProfileImage(result.assets[0].uri);
-      // Optionally save to AsyncStorage for persistence
-      // await AsyncStorage.setItem('profileImage', result.assets[0].uri);
     }
   };
-const handleReservationAction = async (id: number, action: 'confirm' | 'reject') => {
-  try {
-    if (action === 'confirm') {
-      await api.post(`/donations/reservations/${id}/confirm/`);
-    } else {
-      await api.post(`/donations/reservations/${id}/reject/`);
-    }
 
-    setReservations((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? { ...r, status: action === 'confirm' ? 'confirmed' : 'rejected' }
-          : r
-      )
-    );
-  } catch (err) {
-    console.log('Reservation update failed:', err);
-    Alert.alert('Error', 'Failed to update reservation');
-  }
-};
-  // Actions
-const handleDeletePost = (id: number) => {
-  showConfirm(
-    'Delete this donation? This cannot be undone.',
-    async () => {
-      try {
-        await api.delete(`/donations/${id}/`);
-        setDonations((prev) => prev.filter((d) => d.id !== id));
-      } catch (err: any) {
-        console.log('Delete failed:', err);
-        const msg = err?.response?.data?.error || 'Failed to delete donation';
-        Alert.alert('Error', msg);
-      }
-    }
+  // Confirm / Reject Reservation + Update Donation Status
+  const handleReservationAction = async (id: number, action: 'confirm' | 'reject') => {
+    try {
+      const endpoint = action === 'confirm' 
+        ? `/donations/reservations/${id}/confirm/` 
+        : `/donations/reservations/${id}/reject/`;
+
+      await api.post(endpoint);
+
+      // Update reservation status
+      setReservations((prev) =>
+        prev.map((r) =>
+          r.id === id 
+            ? { ...r, status: action === 'confirm' ? 'confirmed' : 'rejected' } 
+            : r
+        )
+      );
+
+      // If confirmed → mark the related donation as completed
+      if (action === 'confirm') {
+  const updatedReservation = reservations.find(r => r.id === id);
+
+  setDonations((prev) =>
+    prev.map((d) => {
+      if (d.id !== updatedReservation?.donation) return d;
+
+      const newAvailable = d.available_quantity - updatedReservation.quantity_requested;
+
+      return {
+        ...d,
+        available_quantity: newAvailable,
+        status: newAvailable <= 0 ? 'completed' : 'available',
+      };
+    })
   );
-};
+}
+
+      Alert.alert('Success', `Reservation ${action}ed successfully!`);
+    } catch (err: any) {
+      console.log('Reservation action failed:', err.response?.data || err.message);
+      Alert.alert('Error', err.response?.data?.error || 'Failed to update reservation');
+    }
+  };
+
+  const handleDeletePost = (id: number) => {
+    showConfirm(
+      'Delete this donation? This cannot be undone.',
+      async () => {
+        try {
+          await api.delete(`/donations/${id}/`);
+          setDonations((prev) => prev.filter((d) => d.id !== id));
+        } catch (err: any) {
+          const msg = err?.response?.data?.error || 'Failed to delete donation';
+          Alert.alert('Error', msg);
+        }
+      }
+    );
+  };
 
   const handleLogout = () => {
     setMenuOpen(false);
@@ -477,7 +458,7 @@ const handleDeletePost = (id: number) => {
 
   const filteredDonations = donations.filter((d) => d.status === postFilter);
   const filteredReservations = reservations.filter((r) => {
-    if (resFilter === 'rejected') return r.status === 'cancelled' || r.status === 'rejected';
+    if (resFilter === 'rejected') return r.status === 'rejected';
     return r.status === resFilter;
   });
 
@@ -501,7 +482,6 @@ const handleDeletePost = (id: number) => {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-        {/* Profile Card */}
         <View style={styles.profileCard}>
           <TouchableOpacity style={styles.menuBtn} onPress={() => setMenuOpen(!menuOpen)}>
             <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textSecondary} />
@@ -513,10 +493,7 @@ const handleDeletePost = (id: number) => {
               <View style={styles.dropdown}>
                 <TouchableOpacity 
                   style={styles.dropdownItem} 
-                  onPress={() => { 
-                    setMenuOpen(false); 
-                    router.push('/(Screens)/SettingsScreen' as any); 
-                  }}
+                  onPress={() => { setMenuOpen(false); router.push('/(Screens)/SettingsScreen' as any); }}
                 >
                   <Text style={styles.dropdownText}>Settings</Text>
                 </TouchableOpacity>
@@ -529,7 +506,6 @@ const handleDeletePost = (id: number) => {
             </>
           )}
 
-          {/* Profile Picture with Edit Button */}
           <TouchableOpacity onPress={pickProfileImage} style={styles.avatarWrapper}>
             <View style={styles.avatarCircle}>
               {profileImage ? (
@@ -563,7 +539,6 @@ const handleDeletePost = (id: number) => {
           </View>
         </View>
 
-        {/* Content Card */}
         <View style={styles.contentCard}>
           <View style={styles.mainTabs}>
             {(['posts', 'reservations'] as MainTab[]).map((tab) => (
@@ -603,12 +578,8 @@ const handleDeletePost = (id: number) => {
                 <Text style={styles.emptyText}>No {postFilter} donations found</Text>
               ) : (
                 filteredDonations.map((item) => (
-               <PostItem
-                 key={item.id}
-                 item={item}
-                 onDelete={() => handleDeletePost(item.id)}
-               />
-))
+                  <PostItem key={item.id} item={item} onDelete={() => handleDeletePost(item.id)} />
+                ))
               )}
             </>
           ) : (
@@ -630,10 +601,13 @@ const handleDeletePost = (id: number) => {
               {filteredReservations.length === 0 ? (
                 <Text style={styles.emptyText}>No {resFilter} reservations found</Text>
               ) : (
-                
-filteredReservations.map((item) => (
-  <ReservationItem key={item.id} item={item} onAction={handleReservationAction} />
-))
+                filteredReservations.map((item) => (
+                  <ReservationItem 
+                    key={item.id} 
+                    item={item} 
+                    onAction={handleReservationAction} 
+                  />
+                ))
               )}
             </>
           )}
@@ -646,95 +620,36 @@ filteredReservations.map((item) => (
 }
 
 const styles = StyleSheet.create({
-  safeArea:          { flex: 1, backgroundColor: COLORS.background },
-  scroll:            { flex: 1 },
-  scrollContent:     { padding: 16, paddingBottom: 100 },
-  profileCard:       { 
-    backgroundColor: COLORS.sectionBg, 
-    borderRadius: 20, 
-    padding: 20, 
-    alignItems: 'center', 
-    marginBottom: 16, 
-    position: 'relative' 
-  },
-  menuBtn:           { position: 'absolute', top: 14, right: 14, zIndex: 10 },
-  menuBackdrop:      { position: 'absolute', top: -300, left: -300, right: -300, bottom: -300, zIndex: 15 },
-  dropdown:          { 
-    position: 'absolute', 
-    top: 40, 
-    right: 14, 
-    backgroundColor: COLORS.white, 
-    borderRadius: 12, 
-    minWidth: 140, 
-    zIndex: 20, 
-    elevation: 6, 
-    overflow: 'hidden' 
-  },
-  dropdownItem:      { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16 },
-  dropdownDivider:   { height: 1, backgroundColor: COLORS.border },
-  dropdownText:      { fontSize: 15, color: COLORS.textPrimary, fontWeight: '500' },
-  avatarWrapper:     { marginTop: 8, marginBottom: 12, position: 'relative' },
-  avatarCircle:      { 
-    width: 110, 
-    height: 110, 
-    borderRadius: 55, 
-    borderWidth: 3, 
-    borderColor: COLORS.primary, 
-    overflow: 'hidden', 
-    backgroundColor: '#B8D4E8' 
-  },
-  avatarImage:       { width: '100%', height: '100%' },
-  editPhotoBadge:    { 
-    position: 'absolute', 
-    bottom: 4, 
-    right: 4, 
-    backgroundColor: COLORS.primary, 
-    borderRadius: 12, 
-    padding: 4 
-  },
-  nameRow:           { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  username:          { fontSize: 20, fontWeight: '700', color: COLORS.textPrimary },
-  statsRow:          { 
-    flexDirection: 'row', 
-    borderWidth: 1.5, 
-    borderColor: COLORS.primary, 
-    borderRadius: 12, 
-    overflow: 'hidden', 
-    width: '80%' 
-  },
-  statBox:           { flex: 1, alignItems: 'center', paddingVertical: 10 },
-  statDivider:       { width: 1.5, backgroundColor: COLORS.primary },
-  statValue:         { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
-  statLabel:         { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
-  contentCard:       { backgroundColor: COLORS.sectionBg, borderRadius: 20, padding: 16 },
-  mainTabs:          { flexDirection: 'row', marginBottom: 14, gap: 10 },
-  mainTab:           { 
-    flex: 1, 
-    paddingVertical: 9, 
-    borderRadius: 999, 
-    borderWidth: 1.5, 
-    borderColor: COLORS.border, 
-    alignItems: 'center' 
-  },
-  mainTabActive:     { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  mainTabText:       { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
+  safeArea: { flex: 1, backgroundColor: COLORS.background },
+  scroll: { flex: 1 },
+  scrollContent: { padding: 16, paddingBottom: 100 },
+  profileCard: { backgroundColor: COLORS.sectionBg, borderRadius: 20, padding: 20, alignItems: 'center', marginBottom: 16, position: 'relative' },
+  menuBtn: { position: 'absolute', top: 14, right: 14, zIndex: 10 },
+  menuBackdrop: { position: 'absolute', top: -300, left: -300, right: -300, bottom: -300, zIndex: 15 },
+  dropdown: { position: 'absolute', top: 40, right: 14, backgroundColor: COLORS.white, borderRadius: 12, minWidth: 140, zIndex: 20, elevation: 6, overflow: 'hidden' },
+  dropdownItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16 },
+  dropdownDivider: { height: 1, backgroundColor: COLORS.border },
+  dropdownText: { fontSize: 15, color: COLORS.textPrimary, fontWeight: '500' },
+  avatarWrapper: { marginTop: 8, marginBottom: 12, position: 'relative' },
+  avatarCircle: { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: COLORS.primary, overflow: 'hidden', backgroundColor: '#B8D4E8' },
+  avatarImage: { width: '100%', height: '100%' },
+  editPhotoBadge: { position: 'absolute', bottom: 4, right: 4, backgroundColor: COLORS.primary, borderRadius: 12, padding: 4 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  username: { fontSize: 20, fontWeight: '700', color: COLORS.textPrimary },
+  statsRow: { flexDirection: 'row', borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: 12, overflow: 'hidden', width: '80%' },
+  statBox: { flex: 1, alignItems: 'center', paddingVertical: 10 },
+  statDivider: { width: 1.5, backgroundColor: COLORS.primary },
+  statValue: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  statLabel: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  contentCard: { backgroundColor: COLORS.sectionBg, borderRadius: 20, padding: 16 },
+  mainTabs: { flexDirection: 'row', marginBottom: 14, gap: 10 },
+  mainTab: { flex: 1, paddingVertical: 9, borderRadius: 999, borderWidth: 1.5, borderColor: COLORS.border, alignItems: 'center' },
+  mainTabActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  mainTabText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
   mainTabTextActive: { color: COLORS.white, fontWeight: '700' },
-  filterChip:        { 
-    paddingVertical: 8, 
-    paddingHorizontal: 14, 
-    borderRadius: 999, 
-    borderWidth: 1.5, 
-    borderColor: COLORS.border, 
-    alignItems: 'center' 
-  },
-  filterChipActive:  { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  filterChipText:    { fontSize: 13, color: COLORS.textSecondary, fontWeight: '500' },
+  filterChip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1.5, borderColor: COLORS.border, alignItems: 'center' },
+  filterChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  filterChipText: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '500' },
   filterChipTextActive: { color: COLORS.white, fontWeight: '700' },
-  emptyText:         { 
-    textAlign: 'center', 
-    color: COLORS.textMuted, 
-    marginTop: 24, 
-    fontSize: 14 
-  },
+  emptyText: { textAlign: 'center', color: COLORS.textMuted, marginTop: 24, fontSize: 14 },
 });
-
