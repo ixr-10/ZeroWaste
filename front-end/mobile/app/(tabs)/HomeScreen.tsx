@@ -10,7 +10,7 @@ import { SearchBar } from '../../components/SearchBar';
 import { FilterButton } from '../../components/FilterButton';
 import { FoodCard } from '../../components/FoodCard';
 import axios from '../../constants/axios';
-
+import * as Location from 'expo-location';
 const COLORS = {
   primary: '#588157BF', secondary: '#588157',
   primaryLight: '#D1D8C4', background: '#F8F8F6',
@@ -27,19 +27,27 @@ export default function HomeScreen() {
   const [donations, setDonations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchDonations = async () => {
-      try {
-        const res = await axios.get('/donations/available/');
-        setDonations(res.data);
-      } catch (err) {
-        console.log('Error fetching donations:', err);
-      } finally {
-        setLoading(false);
+
+
+useEffect(() => {
+  const fetchDonations = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      let params = {};
+      if (status === 'granted') {
+        const loc = await Location.getCurrentPositionAsync({});
+        params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
       }
-    };
-    fetchDonations();
-  }, []);
+      const res = await axios.get('/donations/available/', { params });
+      setDonations(res.data);
+    } catch (err) {
+      console.log('Error fetching donations:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchDonations();
+}, []);
 
   const filteredDonations = useMemo(() => {
     return donations.filter((item) => {
