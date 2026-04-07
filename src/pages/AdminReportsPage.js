@@ -90,7 +90,7 @@ const AdminReportsPage = () => {
             <span className="admin-icon"><FiUsers /></span>
             {isSidebarOpen && <span className="menu-text">Users</span>}
           </div>
-          <div className="menu-item" style={{ cursor: 'pointer' }}>
+          <div className="menu-item" onClick={() => navigate('/admin/export')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FiDownload /></span>
             {isSidebarOpen && <span className="menu-text">Export data</span>}
           </div>

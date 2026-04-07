@@ -109,7 +109,7 @@ const deleteUser = async (userId) => {
         <nav className="sidebar-menu">
           
           {/* 🔴 أيقونة Statistics (Pie Chart) */}
-          <div className="menu-item">
+          <div className="menu-item" onClick={() => navigate('/admin/statistics')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
                 <path d="M21 11H13V3C17.418 3 21 6.582 21 11ZM11 13V3.061C6.382 3.553 3 7.568 3 12.5C3 17.747 7.253 22 12.5 22C17.432 22 21.447 18.618 21.939 14H11V13Z" />
@@ -119,7 +119,7 @@ const deleteUser = async (userId) => {
           </div>
 
           {/* 🔴 أيقونة Reports (Document) */}
-          <div className="menu-item">
+          <div className="menu-item" onClick={() => navigate('/admin/reports')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
                 <path d="M20 22H4C2.897 22 2 21.103 2 20V4C2 2.897 2.897 2 4 2H13.586C14.116 2 14.625 2.211 15 2.586L21.414 9C21.789 9.375 22 9.884 22 10.414V20C22 21.103 21.103 22 20 22ZM13 4V10H19.586L13 3.414V4ZM4 4V20H20V11H12C11.448 11 11 10.552 11 10V4H4Z" />
@@ -130,7 +130,7 @@ const deleteUser = async (userId) => {
           </div>
 
           {/* 🔴 أيقونة Users (Team/Group) - درتها Active */}
-          <div className="menu-item active">
+          <div className="menu-item active" style={{ cursor: 'pointer' }}>
             <span className="admin-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
                 <path d="M12 2C9.243 2 7 4.243 7 7C7 9.757 9.243 12 12 12C14.757 12 17 9.757 17 7C17 4.243 14.757 2 12 2ZM12 10C10.346 10 9 8.654 9 7C9 5.346 10.346 4 12 4C13.654 4 15 5.346 15 7C15 8.654 13.654 10 12 10ZM21 21H3C3 17.134 6.134 14 10 14H14C17.866 14 21 17.134 21 21ZM5.05 19H18.95C18.455 16.726 16.44 15 14 15H10C7.56 15 5.545 16.726 5.05 19Z" />
@@ -140,7 +140,7 @@ const deleteUser = async (userId) => {
           </div>
 
           {/* 🔴 أيقونة Export (Download) */}
-          <div className="menu-item">
+          <div className="menu-item" onClick={() => navigate('/admin/export')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
                 <path d="M19 14V19H5V14H3V20C3 20.552 3.448 21 4 21H20C20.552 21 21 20.552 21 20V14H19ZM11 15.586L6.707 11.293L8.121 9.879L11 12.758V3H13V12.758L15.879 9.879L17.293 11.293L13 15.586C12.448 16.138 11.552 16.138 11 15.586Z" />
