@@ -43,7 +43,7 @@ export default function LoginScreen() {
     return;
   }
   try {
-    await api.post('/forgot-password/', { email });
+    await api.post('/users/forgot-password/', { email });
     Alert.alert('Success', 'Reset code sent to your email.');
     router.push({ pathname: '/auth/confirmation', params: { email } });
   } catch (err: any) {

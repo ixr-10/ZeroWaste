@@ -7,20 +7,20 @@ import api from '../../constants/axios';
 import Header2 from '../../components/Header2';
 
 export default function VerifyEmailScreen() {
- const { email: paramEmail } = useLocalSearchParams();
-const email = Array.isArray(paramEmail) ? paramEmail[0] : paramEmail || '';
-  const [code,  setCode]  = useState('');
+  const { username: paramUsername } = useLocalSearchParams();
+  const username = Array.isArray(paramUsername) ? paramUsername[0] : paramUsername || '';
+  const [code, setCode] = useState('');
 
   const handleVerify = async () => {
-    if ( !code) {
-      Alert.alert('Error', 'Please enter  the OTP code.');
+    if (!code) {
+      Alert.alert('Error', 'Please enter the OTP code.');
       return;
     }
     try {
-      await api.post('/verify-email/', { email, code });
+      await api.post('/users/verify-email/', { username, code });
       Alert.alert('Success', 'Email verified! You can now login.');
       router.replace('/auth/login');
-    } catch (err:any) {
+    } catch (err: any) {
       Alert.alert('Error', err.response?.data?.error || 'Invalid or expired code.');
     }
   };
@@ -31,10 +31,9 @@ const email = Array.isArray(paramEmail) ? paramEmail[0] : paramEmail || '';
       <View style={styles.container}>
         <Text style={styles.title}>VERIFY EMAIL</Text>
         <Text style={styles.subtitle}>
-          Enter the code sent to {'\n'}<Text style={{ color: '#588157' }}>{email}</Text>
+          Enter the code sent to the email linked to{'\n'}
+          <Text style={{ color: '#588157' }}>{username}</Text>
         </Text>
-
-        
 
         <Text style={styles.label}>OTP Code</Text>
         <View style={styles.inputRow}>
@@ -65,7 +64,7 @@ const styles = StyleSheet.create({
   title:      { fontSize: 24, fontWeight: '700', textAlign: 'center', marginBottom: 12, color: '#1a1a1a' },
   subtitle:   { textAlign: 'center', color: '#666', marginBottom: 32, lineHeight: 22 },
   label:      { fontSize: 16, color: 'black', marginBottom: 6 },
-  input:      { borderWidth: 1, borderColor: '#588157', opacity: 0.7, borderRadius: 20, padding: 12, marginBottom: 16, fontSize: 14 },
+  input:      { borderWidth: 1, borderColor: '#588157', opacity: 0.7, borderRadius: 20, padding: 12, paddingLeft: 38, marginBottom: 16, fontSize: 14 },
   inputRow:   { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   button:     { backgroundColor: '#588157', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 25, alignItems: 'center', marginBottom: 24, alignSelf: 'center', width: 120 },
   buttonText: { color: 'black', fontWeight: '700', fontSize: 16 },

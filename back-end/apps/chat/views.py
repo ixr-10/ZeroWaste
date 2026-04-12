@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.donations.models import Donation, Reservation
-from .models import Conversation
-from .serializers import ConversationSerializer
+from .models import Conversation, Message
+from .serializers import ConversationSerializer, MessageSerializer
 
 
 class StartConversationView(APIView):
@@ -18,14 +18,9 @@ class StartConversationView(APIView):
         except Donation.DoesNotExist:
             return Response({'error': 'Donation not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Only the beneficiary can start a conversation (must have a confirmed/pending reservation)
         if request.user == donation.donor:
-            return Response(
-                {'error': 'You are the donor of this donation.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'You are the donor of this donation.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check that requester has a reservation for this donation
         has_reservation = Reservation.objects.filter(
             donation=donation,
             beneficiary=request.user,
@@ -34,24 +29,20 @@ class StartConversationView(APIView):
 
         if not has_reservation:
             return Response(
-                {'error': 'You must have a reservation for this donation to start a chat.'},
+                {'error': 'You must have a reservation to start a chat.'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # Get or create conversation
         conversation, created = Conversation.objects.get_or_create(
             donation=donation,
             beneficiary=request.user,
-            defaults={
-                'donor': donation.donor,
-                'firebase_room_id': f"chat_{donation_id}_{request.user.id}_{uuid.uuid4().hex[:8]}"
-            }
+            defaults={'donor': donation.donor}
         )
 
-        serializer = ConversationSerializer(conversation)
+        serializer = ConversationSerializer(conversation, context={'request': request})
         return Response({
             'conversation': serializer.data,
-            'firebase_room_id': conversation.firebase_room_id,
+            'websocket_url': f'ws://192.168.43.100:8000/ws/chat/{conversation.id}/',
             'created': created
         }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
@@ -65,8 +56,8 @@ class MyConversationsView(APIView):
         ) | Conversation.objects.filter(
             beneficiary=request.user
         )
-        conversations = conversations.order_by('-created_at')
-        serializer = ConversationSerializer(conversations, many=True)
+        conversations = conversations.order_by('-updated_at')
+        serializer = ConversationSerializer(conversations, many=True, context={'request': request})
         return Response(serializer.data)
 
 
@@ -79,12 +70,31 @@ class ConversationDetailView(APIView):
         except Conversation.DoesNotExist:
             return Response({'error': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Only donor or beneficiary can access
         if request.user not in [conversation.donor, conversation.beneficiary]:
             return Response({'error': 'Access denied.'}, status=status.HTTP_403_FORBIDDEN)
 
-        serializer = ConversationSerializer(conversation)
+        serializer = ConversationSerializer(conversation, context={'request': request})
         return Response({
             'conversation': serializer.data,
-            'firebase_room_id': conversation.firebase_room_id
+            'websocket_url': f'ws://localhost:8000/ws/chat/{conversation.id}/',
         })
+
+
+class MarkMessagesReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, conversation_id):
+        try:
+            conversation = Conversation.objects.get(id=conversation_id)
+        except Conversation.DoesNotExist:
+            return Response({'error': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.user not in [conversation.donor, conversation.beneficiary]:
+            return Response({'error': 'Access denied.'}, status=status.HTTP_403_FORBIDDEN)
+
+        Message.objects.filter(
+            conversation=conversation,
+            is_read=False
+        ).exclude(sender=request.user).update(is_read=True)
+
+        return Response({'message': 'Messages marked as read.'})

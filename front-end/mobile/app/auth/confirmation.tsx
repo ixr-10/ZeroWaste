@@ -6,7 +6,7 @@ import Header from '../../components/Header';
 import OtpInput from '../../components/OtpInput';
 import ConfirmationImg from '../../assets/images/image.png';
 import AppText from '../../components/AppText';
-import api from '../../constants/axios'; // ← unified import
+import api from '../../constants/axios';
 
 export default function ConfirmationPage() {
   const router = useRouter();
@@ -35,7 +35,7 @@ const handleConfirm = async () => {
     if (!email) return;
     try {
       setIsResending(true);
-      await api.post('/forgot-password/', { email });
+      await api.post('/users/forgot-password/', { email });
       Alert.alert('Code Sent', `A new code has been sent to ${email}.`);
       setCode(['', '', '', '', '', '']);
     } catch (error) {

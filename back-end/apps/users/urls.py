@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (PromoteToFoodSaverView,AdminListUsersView, RegisterView, ProfileView, LogoutView, ChangePasswordView,LoginView,
-                    VerifyUserView, ForgotPasswordView, ResetPasswordView, VerifyEmailView , AdminCreateUserView,SetPasswordView)
+                    VerifyUserView, ForgotPasswordView, ResetPasswordView, VerifyEmailView , AdminCreateUserView,SetPasswordView,AdminDeleteUserView,DemoteFromFoodSaverView)
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -18,4 +18,6 @@ urlpatterns = [
     path('admin/create-user/', AdminCreateUserView.as_view(), name='admin_create_user'),   
     path('admin/users/', AdminListUsersView.as_view(), name='admin-list-users'),
     path('promote/<int:user_id>/', PromoteToFoodSaverView.as_view(), name='promote-food-saver'),
+    path('admin/users/<int:user_id>/delete/', AdminDeleteUserView.as_view(), name='admin-delete-user'),
+    path('demote/<int:user_id>/', DemoteFromFoodSaverView.as_view(), name='demote-food-saver'),
 ]

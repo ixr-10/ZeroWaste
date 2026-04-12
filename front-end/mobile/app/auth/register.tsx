@@ -10,7 +10,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPass, setShowConfirmPass] = useState(false); // ← fixed
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [phone, setPhone] = useState('');
   const [adresse, setAdresse] = useState('');
   const [username, setUsername] = useState('');
@@ -25,8 +25,9 @@ export default function RegisterScreen() {
       alert('Passwords do not match.');
       return;
     }
+
     try {
-      const { data } = await api.post('/register/', {
+      const { data } = await api.post('/users/register/', {
         username,
         email,
         phone,
@@ -36,11 +37,10 @@ export default function RegisterScreen() {
         role: 'user',
       });
 
-     // replace the router.push after successful register:
-router.push({
-  pathname: '/auth/verify-email' as any,
-  params: { email: data.user.email },
-});
+      router.push({
+        pathname: '/auth/confirmationEmail' as any,
+        params: { email: data.user?.email || email },
+      });
 
     } catch (err: any) {
       const errors = err.response?.data;
@@ -49,7 +49,7 @@ router.push({
       } else if (errors?.username) {
         alert('This username is already taken. Choose another one.');
       } else if (errors?.password) {
-        alert('Password error: ' + errors.password[0]);
+        alert('Password error: ' + (errors.password[0] || 'Invalid password'));
       } else if (!err.response) {
         alert('Network error. Check your connection and try again.');
       } else {
@@ -123,11 +123,9 @@ router.push({
             secureTextEntry={!showPassword}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-            <Text style={styles.eyeText}>
-              {showPassword
-                ? <Ionicons name="eye" size={24} color="black" />
-                : <Ionicons name="eye-off-outline" size={24} color="black" />}
-            </Text>
+            {showPassword
+              ? <Ionicons name="eye" size={24} color="black" />
+              : <Ionicons name="eye-off-outline" size={24} color="black" />}
           </TouchableOpacity>
         </View>
 
@@ -138,14 +136,12 @@ router.push({
             style={[styles.input, { flex: 1 }]}
             value={confirmPass}
             onChangeText={setConfirmPass}
-            secureTextEntry={!showConfirmPass} // ← fixed
+            secureTextEntry={!showConfirmPass}
           />
-          <TouchableOpacity onPress={() => setShowConfirmPass(!showConfirmPass)} style={styles.eyeBtn}> // ← fixed
-            <Text style={styles.eyeText}>
-              {showConfirmPass // ← fixed
-                ? <Ionicons name="eye" size={24} color="black" />
-                : <Ionicons name="eye-off-outline" size={24} color="black" />}
-            </Text>
+          <TouchableOpacity onPress={() => setShowConfirmPass(!showConfirmPass)} style={styles.eyeBtn}>
+            {showConfirmPass
+              ? <Ionicons name="eye" size={24} color="black" />
+              : <Ionicons name="eye-off-outline" size={24} color="black" />}
           </TouchableOpacity>
         </View>
 
@@ -169,19 +165,11 @@ const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 24, justifyContent: 'center', backgroundColor: '#fff' },
   title: { fontSize: 24, fontWeight: '700', textAlign: 'center', marginBottom: 32, color: '#1a1a1a' },
   label: { fontSize: 16, color: 'black', marginBottom: 6 },
-  input: {
-    borderWidth: 1, borderColor: '#588157', opacity: 0.5,
-    borderRadius: 20, padding: 12, marginBottom: 16, fontSize: 14,
-    paddingLeft: 38,
-  },
+  input: { borderWidth: 1, borderColor: '#588157', opacity: 0.5, borderRadius: 20, padding: 12, marginBottom: 16, fontSize: 14 },
   inputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   eyeBtn: { position: 'absolute', right: 12, top: 12 },
   eyeText: { fontSize: 18 },
-  button: {
-    backgroundColor: '#588157', paddingHorizontal: 20, width: 96,
-    paddingVertical: 10, borderRadius: 25, alignItems: 'center',
-    marginBottom: 24, alignSelf: 'center',
-  },
+  button: { backgroundColor: '#588157', paddingHorizontal: 20, width: 96, paddingVertical: 10, borderRadius: 25, alignItems: 'center', marginBottom: 24, alignSelf: 'center' },
   buttonText: { color: 'black', fontWeight: '700', fontSize: 16 },
   bottomText: { textAlign: 'center', color: 'black', fontSize: 13 },
   link: { color: '#588157', fontWeight: '600', textDecorationLine: 'underline' },
