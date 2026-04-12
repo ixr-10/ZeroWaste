@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import {
+  SafeAreaView,
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
+  
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

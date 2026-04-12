@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  SafeAreaView,
   View,
   Text,
   StyleSheet,
@@ -7,7 +8,7 @@ import {
   TouchableOpacity,
   Image,
   Pressable,
-  SafeAreaView,
+  
   Modal,
   TextInput,
   KeyboardAvoidingView,

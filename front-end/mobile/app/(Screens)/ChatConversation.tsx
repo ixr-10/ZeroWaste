@@ -1,12 +1,18 @@
-import React, { useState, useRef , useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, StatusBar, TextInput, KeyboardAvoidingView, Platform, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, Stack  } from "expo-router";
+import { useRouter, Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SPACING, BORDER_RADIUS } from "../../constants/theme";
 import * as ImagePicker from "expo-image-picker";
-// eslint-disable-next-line import/no-unresolved
-import { Audio } from "expo-av";
+import {
+  createAudioPlayer,
+  requestRecordingPermissionsAsync,
+  RecordingPresets,
+  setAudioModeAsync,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from "expo-audio";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type Message = {
@@ -33,13 +39,14 @@ const INITIAL_MESSAGES: Message[] = [
 export default function ChatConversation() {
   const router = useRouter();
   const flatListRef = useRef<FlatList>(null);
+  const playerRef = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(recorder);
 
   // ─── State ───────────────────────────────────────────────────────────────
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [recording, setRecording] = useState<any>(null);
-  const [isRecording, setIsRecording] = useState(false);
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
   const getTime = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -70,45 +77,66 @@ export default function ChatConversation() {
 
   const [dotVisible, setDotVisible] = useState(true);
   useEffect(() => {
-    if (!isRecording) return;
+    if (!recorderState.isRecording) return;
     const interval = setInterval(() => setDotVisible((v) => !v), 500);
     return () => clearInterval(interval);
-  }, [isRecording]);
+  }, [recorderState.isRecording]);
+
+  useEffect(() => {
+    return () => {
+      playerRef.current?.remove();
+    };
+  }, []);
+
   const startRecording = async () => {
     try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== "granted") return;
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-      setRecording(recording);
-      setIsRecording(true);
+      const { granted } = await requestRecordingPermissionsAsync();
+      if (!granted) return;
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await recorder.prepareToRecordAsync();
+      recorder.record();
     } catch (e) {
       console.log(e);
     }
   };
 
   const stopRecording = async () => {
-    if (!recording) return;
-    setIsRecording(false);
-    await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
-    setRecording(null);
-    if (uri) {
-      setMessages((prev) => [...prev, { id: String(Date.now()), audio: uri, mine: true, time: getTime() }]);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+    if (!recorderState.isRecording) return;
+    try {
+      await recorder.stop();
+      await setAudioModeAsync({
+        allowsRecording: false,
+        playsInSilentMode: true,
+      });
+      const uri = recorder.uri ?? recorder.getStatus().url;
+      if (uri) {
+        setMessages((prev) => [...prev, { id: String(Date.now()), audio: uri, mine: true, time: getTime() }]);
+        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      }
+    } catch (e) {
+      console.log(e);
     }
   };
 
   // ─── Play audio ──────────────────────────────────────────────────────────
   const playAudio = async (uri: string) => {
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      playsInSilentModeIOS: true,
-      shouldDuckAndroid: false,
-      playThroughEarpieceAndroid: false,
+    await setAudioModeAsync({
+      allowsRecording: false,
+      playsInSilentMode: true,
+      shouldRouteThroughEarpiece: false,
     });
-    const { sound } = await Audio.Sound.createAsync({ uri }, { volume: 1.0 });
-    await sound.playAsync();
+    playerRef.current?.remove();
+    const player = createAudioPlayer({ uri });
+    playerRef.current = player;
+    player.addListener("playbackStatusUpdate", (status) => {
+      if (status.didJustFinish) {
+        player.remove();
+        if (playerRef.current === player) {
+          playerRef.current = null;
+        }
+      }
+    });
+    player.play();
   };
 
   // ─── Render ──────────────────────────────────────────────────────────────
@@ -209,8 +237,8 @@ export default function ChatConversation() {
           />
 
           {/* ── Input bar ── */}
-          <View style={[styles.inputRow, isRecording && styles.inputRowRecording]}>
-            {isRecording ? (
+          <View style={[styles.inputRow, recorderState.isRecording && styles.inputRowRecording]}>
+            {recorderState.isRecording ? (
               <View style={styles.recordingIndicator}>
                 <View style={[styles.recordingDot, { opacity: dotVisible ? 1 : 0 }]} />
                 <Text style={styles.recordingText}>Recording...</Text>
@@ -233,11 +261,11 @@ export default function ChatConversation() {
                     <Ionicons name="image-outline" size={22} color={COLORS.textMuted} />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.inputIcon, isRecording && styles.recordingBtn]}
+                    style={[styles.inputIcon, recorderState.isRecording && styles.recordingBtn]}
                     onPressIn={startRecording}
                     onPressOut={stopRecording}
                   >
-                    <Ionicons name="mic-outline" size={22} color={isRecording ? COLORS.emergencyRed : COLORS.textMuted} />
+                    <Ionicons name="mic-outline" size={22} color={recorderState.isRecording ? COLORS.emergencyRed : COLORS.textMuted} />
                   </TouchableOpacity>
                 </>
               )}
