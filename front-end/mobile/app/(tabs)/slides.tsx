@@ -1,1 +1,1 @@
-export { default } from '../(Screens)/HomeScreen';
+export { default } from './HomeScreen';

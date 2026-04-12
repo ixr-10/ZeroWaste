@@ -8,11 +8,13 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import api from '../../constants/axios';
 
 const COLORS = {
   primary: '#4A6741',
@@ -24,17 +26,33 @@ const COLORS = {
   textMuted: '#999999',
   border: '#D5DED0',
   red: '#D94F4F',
+  error: '#D94F4F',
 };
 
 export default function DeleteAccountScreen() {
   const router = useRouter();
   const [confirmText, setConfirmText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const isConfirmed = confirmText === 'DELETE';
 
   const handleDelete = async () => {
     if (!isConfirmed) return;
-    await AsyncStorage.clear();
-    router.replace('/auth/login');
+    setError('');
+    setLoading(true);
+    try {
+      // ✅ Call backend to permanently delete account
+      await api.delete('/delete-account/');
+
+      // ✅ Wipe all local storage and go to login
+      await AsyncStorage.clear();
+      router.replace('/auth/login');
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Failed to delete account. Please try again.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -65,10 +83,7 @@ export default function DeleteAccountScreen() {
             <View style={styles.confirmCard}>
               <Text style={styles.confirmLabel}>Type DELETE to confirm</Text>
               <TextInput
-                style={[
-                  styles.confirmInput,
-                  isConfirmed && styles.confirmInputActive,
-                ]}
+                style={[styles.confirmInput, isConfirmed && styles.confirmInputActive]}
                 value={confirmText}
                 onChangeText={setConfirmText}
                 placeholder="Type DELETE"
@@ -76,18 +91,27 @@ export default function DeleteAccountScreen() {
                 autoCapitalize="characters"
               />
             </View>
+
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
           </View>
 
-          {/* Delete button — only active when confirmed */}
+          {/* Delete button */}
           <TouchableOpacity
-            style={[styles.deleteBtn, isConfirmed && styles.deleteBtnActive]}
+            style={[
+              styles.deleteBtn,
+              isConfirmed && styles.deleteBtnActive,
+              loading && { opacity: 0.7 },
+            ]}
             onPress={handleDelete}
             activeOpacity={isConfirmed ? 0.85 : 1}
-            disabled={!isConfirmed}
+            disabled={!isConfirmed || loading}
           >
-            <Text style={[styles.deleteBtnText, isConfirmed && styles.deleteBtnTextActive]}>
-              DELETE
-            </Text>
+            {loading
+              ? <ActivityIndicator color={COLORS.white} />
+              : <Text style={[styles.deleteBtnText, isConfirmed && styles.deleteBtnTextActive]}>
+                  DELETE
+                </Text>
+            }
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.cancelBtn} onPress={() => router.back()} activeOpacity={0.7}>
@@ -116,24 +140,11 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
   content: { padding: 16, paddingBottom: 40, gap: 12 },
-
   outerCard: { backgroundColor: COLORS.sectionBg, borderRadius: 20, padding: 16, gap: 12 },
-
-  warningCard: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-  },
+  warningCard: { backgroundColor: COLORS.cardBg, borderRadius: 16, padding: 20, alignItems: 'center' },
   warningTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 10 },
-  warningDesc: {
-    fontSize: 14,
-    color: COLORS.textMuted,
-    textAlign: 'center',
-    lineHeight: 21,
-  },
+  warningDesc: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', lineHeight: 21 },
   warningBold: { fontWeight: '700', color: COLORS.textPrimary },
-
   confirmCard: { backgroundColor: COLORS.cardBg, borderRadius: 16, padding: 16 },
   confirmLabel: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 12 },
   confirmInput: {
@@ -146,10 +157,8 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     backgroundColor: COLORS.cardBg,
   },
-  confirmInputActive: {
-    borderColor: COLORS.red,
-  },
-
+  confirmInputActive: { borderColor: COLORS.red },
+  errorText: { fontSize: 13, color: COLORS.error, textAlign: 'center' },
   deleteBtn: {
     backgroundColor: COLORS.cardBg,
     borderRadius: 14,
@@ -158,20 +167,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: COLORS.border,
   },
-  deleteBtnActive: {
-    backgroundColor: COLORS.red,
-    borderColor: COLORS.red,
-  },
-  deleteBtnText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.textMuted,
-    letterSpacing: 1.5,
-  },
-  deleteBtnTextActive: {
-    color: COLORS.white,
-  },
-
+  deleteBtnActive: { backgroundColor: COLORS.red, borderColor: COLORS.red },
+  deleteBtnText: { fontSize: 15, fontWeight: '700', color: COLORS.textMuted, letterSpacing: 1.5 },
+  deleteBtnTextActive: { color: COLORS.white },
   cancelBtn: {
     backgroundColor: COLORS.cardBg,
     borderRadius: 14,

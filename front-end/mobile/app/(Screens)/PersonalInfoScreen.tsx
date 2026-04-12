@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,12 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import api from '../../constants/axios';
 
 const COLORS = {
   primary: '#4A6741',
@@ -20,6 +22,7 @@ const COLORS = {
   textPrimary: '#1A1A1A',
   textMuted: '#999999',
   border: '#E0E7DC',
+  error: '#D94F4F',
 };
 
 interface InfoRowProps {
@@ -34,13 +37,31 @@ const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value, isLast }) => (
     <Ionicons name={icon as any} size={22} color={COLORS.textPrimary} style={styles.infoIcon} />
     <View>
       <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
+      <Text style={styles.infoValue}>{value || '—'}</Text>
     </View>
   </View>
 );
 
 export default function PersonalInfoScreen() {
   const router = useRouter();
+
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const { data } = await api.get('/profile/');
+        setUser(data);
+      } catch (err: any) {
+        setError('Failed to load profile. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -53,34 +74,58 @@ export default function PersonalInfoScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.outerCard}>
-          {/* Avatar card */}
-          <View style={styles.avatarCard}>
-            <View style={styles.avatarCircle}>
-              <Image
-                source={{ uri: 'https://i.pravatar.cc/150?img=47' }}
-                style={styles.avatarImage}
-                
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : error ? (
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.outerCard}>
+
+            {/* Avatar */}
+            <View style={styles.avatarCard}>
+              <View style={styles.avatarCircle}>
+                {user?.profile_picture ? (
+                  <Image source={{ uri: user.profile_picture }} style={styles.avatarImage} />
+                ) : (
+                  <View style={[styles.avatarImage, styles.avatarPlaceholder]}>
+                    <Ionicons name="person" size={40} color={COLORS.primary} />
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Info rows */}
+            <View style={styles.infoCard}>
+              <InfoRow
+                icon="person-outline"
+                label="Username"
+                value={user?.username}
+              />
+              <InfoRow
+                icon="mail-outline"
+                label="Email"
+                value={user?.email}
+              />
+              <InfoRow
+                icon="call-outline"
+                label="Phone number"
+                value={user?.phone_number}
+              />
+              <InfoRow
+                icon="location-outline"
+                label="Address"
+                value={user?.address}
+                isLast
               />
             </View>
           </View>
-          
-        
-          {/* Info rows */}
-          <View style={styles.infoCard}>
-            <InfoRow icon="person-outline" label="Username" value="Username" />
-            <InfoRow icon="mail-outline" label="Email" value="name.name@gmail.com" />
-            <InfoRow icon="call-outline" label="Phone number" value="+213 655 655 655" />
-            <InfoRow
-              icon="location-outline"
-              label="Address"
-              value="Esi sba , sidi bel abbes, algeria"
-              isLast
-            />
-          </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -96,52 +141,26 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 40, height: 40, borderRadius: 10,
     backgroundColor: COLORS.sectionBg,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
   content: { padding: 16, paddingBottom: 40 },
-  outerCard: {
-    backgroundColor: COLORS.sectionBg,
-    borderRadius: 20,
-    padding: 16,
-    gap: 12,
-  },
-  avatarCard: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-  },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  errorText: { fontSize: 14, color: COLORS.error, textAlign: 'center', paddingHorizontal: 24 },
+  outerCard: { backgroundColor: COLORS.sectionBg, borderRadius: 20, padding: 16, gap: 12 },
+  avatarCard: { backgroundColor: COLORS.cardBg, borderRadius: 16, padding: 20, alignItems: 'center' },
   avatarCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    borderWidth: 2.5,
-    borderColor: COLORS.primary,
-    overflow: 'hidden',
-    backgroundColor: '#B8D4E8',
+    width: 90, height: 90, borderRadius: 45,
+    borderWidth: 2.5, borderColor: COLORS.primary,
+    overflow: 'hidden', backgroundColor: '#B8D4E8',
   },
   avatarImage: { width: '100%', height: '100%' },
-  infoCard: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  infoRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
+  avatarPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8EEE5' },
+  infoCard: { backgroundColor: COLORS.cardBg, borderRadius: 16, overflow: 'hidden' },
+  infoRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16 },
+  infoRowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
   infoIcon: { marginRight: 14 },
   infoLabel: { fontSize: 12, color: COLORS.textMuted },
   infoValue: { fontSize: 15, fontWeight: '600', color: COLORS.textPrimary, marginTop: 2 },

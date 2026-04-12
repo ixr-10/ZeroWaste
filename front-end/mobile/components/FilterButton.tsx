@@ -9,7 +9,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { CATEGORIES, DISTANCE_OPTIONS } from '../constants/data';
-
+const CATEGORY_LABELS: Record<string, string> = {
+  fruits: 'Fruits',
+  legumes: 'Légumes',
+  pain: 'Pain',
+  conserves: 'Conserves',
+  produits_laitiers: 'Produits Laitiers',
+  autre: 'Autre',
+};
 export type FilterType = 'Category' | 'Emergency' | 'Distance' | 'Filter By';
 
 interface FilterButtonProps {
@@ -147,7 +154,7 @@ export const FilterButton: React.FC<FilterButtonProps> = ({
                     numberOfLines={1}
                     adjustsFontSizeToFit
                   >
-                    {cat}
+                    {CATEGORY_LABELS[cat] ?? cat}
                   </Text>
                 </TouchableOpacity>
               ))}

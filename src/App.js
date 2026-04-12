@@ -14,7 +14,7 @@ import AdminExportPage from './pages/AdminExportPage';
 import AdminReportsPage from './pages/AdminReportsPage'; 
 
 // راني درت كومونتير للـ ProtectedRoute باش ما تخدمش درك
-// import ProtectedRoute from './components/ProtectedRoute';
+ import ProtectedRoute from './components/ProtectedRoute';
 
 function AppRoutes() {
   const navigate = useNavigate();
@@ -25,14 +25,20 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage onNavigateToReset={() => navigate('/reset-password')} />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/set-password" element={<SetPasswordPage />} />
-
+     
       {/* 👇 نحينا الحماية مؤقتا باش يفتحولك ديريكت بلا مشاكل */}
-      <Route path="/admin/users" element={<AdminUsersPage />} />
-      <Route path="/admin/statistics" element={<AdminStatisticsPage />} />
-      <Route path="/admin/export" element={<AdminExportPage />} />
-      
-      {/* 👇 2. Zedt la route jdida ta3 Reports */}
-      <Route path="/admin/reports" element={<AdminReportsPage />} />
+       {/* 👇 2. Zedt la route jdida ta3 Reports */}
+         {/*
+          <Route path="/admin/users" element={<AdminUsersPage />} />
+          <Route path="/admin/statistics" element={<AdminStatisticsPage />} />
+          <Route path="/admin/export" element={<AdminExportPage />} />
+          <Route path="/admin/reports" element={<AdminReportsPage />} />
+      */ } 
+     
+    <Route path="/admin/users" element={<ProtectedRoute><AdminUsersPage /></ProtectedRoute>} />
+    <Route path="/admin/statistics" element={<ProtectedRoute><AdminStatisticsPage /></ProtectedRoute>} />
+    <Route path="/admin/export" element={<ProtectedRoute><AdminExportPage /></ProtectedRoute>} />
+    <Route path="/admin/reports" element={<ProtectedRoute><AdminReportsPage /></ProtectedRoute>} />
       
     </Routes>
   );

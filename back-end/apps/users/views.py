@@ -229,7 +229,7 @@ class AdminListUsersView(APIView):
 
     def get(self, request):
         role = request.query_params.get('role')
-        users = User.objects.all().order_by('-created_at')
+        users = User.objects.exclude(role='admin').order_by('-created_at')
         if role:
             users = users.filter(role=role)
         serializer = UserSerializer(users, many=True)
@@ -300,4 +300,35 @@ class SetPasswordView(APIView):
 
         except User.DoesNotExist:
             return Response({'error': 'User not found.'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+class AdminDeleteUserView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def delete(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+            user.delete()
+            return Response({'message': 'User deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND) 
+
+class DemoteFromFoodSaverView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def post(self, request, user_id):
+        try:
+            user_to_demote = User.objects.get(id=user_id)
+
+            if user_to_demote.role != 'food_saver':
+                return Response({'error': 'User is not a Food Saver.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if user_to_demote.role == 'collectivite':
+                return Response({'error': 'Cannot change role of a Collectivite account.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            user_to_demote.role = 'user'
+            user_to_demote.save()
+
+            return Response({'message': f'{user_to_demote.username} is no longer a Food Saver.'})
+
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)

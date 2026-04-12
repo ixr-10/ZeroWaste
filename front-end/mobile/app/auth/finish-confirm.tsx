@@ -37,7 +37,7 @@ export default function ConfirmationPage() {
 
     setIsLoading(true);
     try {
-      const { data } = await api.post('/verify-email/', { email, code: fullCode });
+      const { data } = await api.post('/users/verify-email/', { email, code: fullCode });
       Alert.alert('Success', data.message ?? 'Email verified successfully!', [
         { text: 'Login', onPress: () => router.replace('/auth/login') },
       ]);
@@ -58,7 +58,7 @@ export default function ConfirmationPage() {
 
     setIsResending(true);
     try {
-      await api.post('/forgot-password/', { email });
+      await api.post('/users/forgot-password/', { email });
       Alert.alert('Code Sent', `A new verification code has been sent to ${email}.`);
       setCode(['', '', '', '', '', '']);
     } catch (error: any) {

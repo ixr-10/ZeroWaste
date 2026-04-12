@@ -4,6 +4,7 @@ from django.utils import timezone
 
 User = get_user_model()
 
+
 class Donation(models.Model):
     CATEGORY_CHOICES = [
         ('fruits', 'Fruits'),
@@ -37,16 +38,18 @@ class Donation(models.Model):
     latitude = models.FloatField()
     longitude = models.FloatField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
-    urgency = models.CharField(max_length=10, choices=URGENCY_CHOICES, default='green')  # ← NEW
+    urgency = models.CharField(max_length=10, choices=URGENCY_CHOICES, default='green')
     image = models.ImageField(upload_to='donations/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
+        # Set available_quantity only when creating a new donation
         if not self.pk:
             self.available_quantity = self.quantity
         super().save(*args, **kwargs)
 
     def is_expired(self):
+        """Check if donation has passed its expiry date"""
         return self.expiry_date < timezone.now().date()
 
     def __str__(self):
@@ -57,7 +60,9 @@ class Reservation(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('confirmed', 'Confirmed'),
-        ('cancelled', 'Cancelled'),
+        ('rejected', 'Rejected'),      # Better than just 'cancelled'
+        ('expired', 'Expired'),        # NEW - for timeout after 2 hours
+        ('cancelled', 'Cancelled'),    # For when beneficiary cancels
         ('completed', 'Completed'),
     ]
 
@@ -67,8 +72,21 @@ class Reservation(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     pickup_date = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
-    confirmation_deadline = models.DateTimeField(null=True, blank=True)  # ← NEW
+    confirmation_deadline = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        # Auto-set confirmation_deadline when creating a new pending reservation
+        if not self.pk and self.status == 'pending' and not self.confirmation_deadline:
+            self.confirmation_deadline = timezone.now() + timezone.timedelta(hours=2)
+        super().save(*args, **kwargs)
+
+    @property
+    def is_expired(self):
+        """Check if the 2-hour confirmation deadline has passed"""
+        if self.confirmation_deadline:
+            return timezone.now() > self.confirmation_deadline
+        return False
 
     def __str__(self):
         return f"{self.beneficiary.username} reserved {self.quantity_requested} of {self.donation.title}"

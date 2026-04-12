@@ -8,11 +8,13 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import api from '../../constants/axios';
 
 const COLORS = {
   primary: '#588157',
@@ -24,15 +26,31 @@ const COLORS = {
   textMuted: '#999999',
   border: '#D5DED0',
   orange: '#F5A623',
+  error: '#D94F4F',
 };
 
 export default function DeactivateAccountScreen() {
   const router = useRouter();
   const [reason, setReason] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleDeactivate = async () => {
-    await AsyncStorage.removeItem('isLoggedIn');
-    router.replace('/auth/login');
+    setError('');
+    setLoading(true);
+    try {
+      // ✅ Call backend to deactivate
+      await api.post('/deactivate/', { reason });
+
+      // ✅ Clear local storage and redirect to login
+      await AsyncStorage.multiRemove(['access', 'refresh', 'user', 'isLoggedIn']);
+      router.replace('/auth/login');
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Failed to deactivate account. Please try again.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -62,7 +80,7 @@ export default function DeactivateAccountScreen() {
 
             {/* Reason card */}
             <View style={styles.reasonCard}>
-              <Text style={styles.reasonLabel}>Reason(optional)</Text>
+              <Text style={styles.reasonLabel}>Reason (optional)</Text>
               <TextInput
                 style={styles.reasonInput}
                 value={reason}
@@ -70,13 +88,24 @@ export default function DeactivateAccountScreen() {
                 multiline
                 textAlignVertical="top"
                 placeholderTextColor={COLORS.textMuted}
+                placeholder="Tell us why you're leaving..."
               />
             </View>
+
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
           </View>
 
           {/* Buttons */}
-          <TouchableOpacity style={styles.deactivateBtn} onPress={handleDeactivate} activeOpacity={0.85}>
-            <Text style={styles.deactivateBtnText}>Deactivate</Text>
+          <TouchableOpacity
+            style={[styles.deactivateBtn, loading && { opacity: 0.7 }]}
+            onPress={handleDeactivate}
+            activeOpacity={0.85}
+            disabled={loading}
+          >
+            {loading
+              ? <ActivityIndicator color={COLORS.white} />
+              : <Text style={styles.deactivateBtnText}>Deactivate</Text>
+            }
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.cancelBtn} onPress={() => router.back()} activeOpacity={0.7}>
@@ -106,45 +135,16 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
   content: { padding: 16, paddingBottom: 40, gap: 12 },
   outerCard: { backgroundColor: COLORS.sectionBg, borderRadius: 20, padding: 16, gap: 12 },
-
-  infoCard: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-  },
+  infoCard: { backgroundColor: COLORS.cardBg, borderRadius: 16, padding: 20, alignItems: 'center' },
   iconCircle: { marginBottom: 12 },
   infoTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 10 },
-  infoDesc: {
-    fontSize: 14,
-    color: COLORS.textMuted,
-    textAlign: 'center',
-    lineHeight: 21,
-  },
-
+  infoDesc: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', lineHeight: 21 },
   reasonCard: { backgroundColor: COLORS.cardBg, borderRadius: 16, padding: 16 },
   reasonLabel: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 10 },
-  reasonInput: {
-    height: 160,
-    fontSize: 14,
-    color: COLORS.textPrimary,
-  },
-
-  deactivateBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
+  reasonInput: { height: 160, fontSize: 14, color: COLORS.textPrimary },
+  errorText: { fontSize: 13, color: COLORS.error, textAlign: 'center' },
+  deactivateBtn: { backgroundColor: COLORS.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   deactivateBtnText: { color: COLORS.white, fontSize: 15, fontWeight: '700' },
-
-  cancelBtn: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
+  cancelBtn: { backgroundColor: COLORS.cardBg, borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
   cancelBtnText: { color: COLORS.textMuted, fontSize: 15, fontWeight: '600' },
 });
