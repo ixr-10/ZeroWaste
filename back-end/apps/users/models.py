@@ -22,6 +22,7 @@ class User(AbstractUser):
     is_verified = models.BooleanField(default=False)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    push_token = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f"{self.username} ({self.role})"

@@ -12,6 +12,7 @@ from .views import (
     DonationReservationsView,
     CancelReservationView,
     MyReservationsView,
+    DeleteDonationView,
 )
 
 urlpatterns = [
@@ -42,4 +43,7 @@ urlpatterns = [
 
     # Cancel reservation (by beneficiary)
     path('reservations/<int:reservation_id>/cancel/', CancelReservationView.as_view(), name='cancel_reservation'),
-]
+    # Delete donation (by donor, only if no active reservations)
+    path('<int:donation_id>/delete/', DeleteDonationView.as_view(), name='delete_donation'),
+]  
+   
