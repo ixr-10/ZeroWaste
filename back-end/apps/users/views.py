@@ -26,14 +26,16 @@ class RegisterView(APIView):
                 message_prefix="Welcome to ZeroWaste!"
             )
             refresh = RefreshToken.for_user(user)
+
             return Response({
                 'user': UserSerializer(user).data,
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
+                'role': user.role,
+                'redirect_to': 'user_home',   
                 'message': 'Account created! Please verify your email.',
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -56,13 +58,28 @@ class LoginView(APIView):
         if not user.is_verified:
             return Response({'error': 'Please verify your email first.'}, status=status.HTTP_403_FORBIDDEN)
 
+        # Generate tokens
         refresh = RefreshToken.for_user(user)
+
+       
         return Response({
             'user': UserSerializer(user).data,
             'refresh': str(refresh),
             'access': str(refresh.access_token),
+            'role': user.role,                    # Important for frontend
+            'redirect_to': self.get_redirect_screen(user.role),
+            'message': 'Login successful.'
         })
 
+    def get_redirect_screen(self, role):
+        """Helper to tell frontend which screen to show first"""
+        if role == 'admin':
+            return 'admin_dashboard'          # Web only
+        elif role == 'food_saver':
+            return 'food_saver_home'          # Food Saver mobile interface
+        else:
+            return 'user_home'                # Normal user mobile interface
+        
 
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
