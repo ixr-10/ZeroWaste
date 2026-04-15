@@ -28,6 +28,13 @@ STATUS_CHOICES = [
     ('dismissed', 'Dismissed'),
 ]
 
+ACTION_CHOICES = [
+    ('delete_post', 'Post Deleted'),
+    ('deactivate_account', 'Account Deactivated'),
+    ('send_warning', 'Warning Sent'),
+    ('ignore', 'Ignored'),
+]
+
 
 class Report(models.Model):
     reporter = models.ForeignKey(
@@ -51,6 +58,14 @@ class Report(models.Model):
     description = models.TextField(blank=True)
     screenshot = models.ImageField(upload_to='report_screenshots/', null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+
+    
+    action_taken = models.CharField(
+        max_length=50, choices=ACTION_CHOICES, null=True, blank=True
+    )
+   
+    treated_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

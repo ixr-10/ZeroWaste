@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -13,7 +14,7 @@ User = get_user_model()
 
 class CreateReportView(APIView):
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser, JSONParser]  # supports file upload
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request):
         serializer = ReportSerializer(data=request.data)
@@ -43,6 +44,20 @@ class ListReportsView(APIView):
         return Response({'count': reports.count(), 'reports': serializer.data})
 
 
+class ReportDetailView(APIView):
+   
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get(self, request, pk):
+        try:
+            report = Report.objects.get(pk=pk)
+        except Report.DoesNotExist:
+            return Response({'error': 'Report not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ReportSerializer(report, context={'request': request})
+        return Response(serializer.data)
+
+
 class ReportActionView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 
@@ -53,31 +68,63 @@ class ReportActionView(APIView):
             return Response({'error': 'Report not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         action = request.data.get('action')
-        # actions: delete_post / deactivate_account / send_warning / ignore
 
         if action == 'delete_post':
-            if report.reported_donation:
-                report.reported_donation.delete()
+           
+            if not report.reported_donation:
+                return Response(
+                    {'error': 'This report is not about a donation post.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            report.reported_donation.delete()
             report.status = 'treated'
+            report.action_taken = 'delete_post'
+            report.treated_at = timezone.now()
             report.save()
             return Response({'message': 'Post deleted and report treated.'})
 
         elif action == 'deactivate_account':
-            if report.reported_user:
-                report.reported_user.is_active = False
-                report.reported_user.save()
+            
+            if not report.reported_user:
+                return Response(
+                    {'error': 'This report is not about a user.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            report.reported_user.is_active = False
+            report.reported_user.save()
             report.status = 'treated'
+            report.action_taken = 'deactivate_account'
+            report.treated_at = timezone.now()
             report.save()
             return Response({'message': 'Account deactivated and report treated.'})
 
         elif action == 'send_warning':
-            # Email logic can be added here later
+            
+            if report.reported_user:
+                from django.core.mail import send_mail
+                from django.conf import settings
+                send_mail(
+                    subject='ZeroWaste - Warning Notice',
+                    message=(
+                        f'Dear {report.reported_user.username},\n\n'
+                        f'You have received a warning from the ZeroWaste admin team.\n'
+                        f'Reason: {report.get_reason_display()}\n\n'
+                        f'Please review our community guidelines to avoid further action.'
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[report.reported_user.email],
+                    fail_silently=True,
+                )
             report.status = 'treated'
+            report.action_taken = 'send_warning'
+            report.treated_at = timezone.now()
             report.save()
             return Response({'message': 'Warning sent and report treated.'})
 
         elif action == 'ignore':
             report.status = 'dismissed'
+            report.action_taken = 'ignore'
+            report.treated_at = timezone.now()
             report.save()
             return Response({'message': 'Report dismissed.'})
 
