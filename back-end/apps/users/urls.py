@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (PromoteToFoodSaverView,AdminListUsersView, RegisterView, ProfileView, LogoutView, ChangePasswordView,LoginView,
-                    VerifyUserView, ForgotPasswordView, ResetPasswordView, VerifyEmailView , AdminCreateUserView,SetPasswordView,AdminDeleteUserView,DemoteFromFoodSaverView)
+                    VerifyUserView, ForgotPasswordView, ResetPasswordView, VerifyEmailView , AdminCreateUserView,SetPasswordView,AdminDeleteUserView,DemoteFromFoodSaverView,ResendOTPView, PublicProfileView,BlockUserView, UnblockUserView, BlockedUsersListView,DeactivateAccountView, DeleteAccountView,ChangeEmailRequestView, ChangeEmailConfirmView,AdminUserStatsView, FoodSaverThresholdView,)
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -20,4 +20,15 @@ urlpatterns = [
     path('promote/<int:user_id>/', PromoteToFoodSaverView.as_view(), name='promote-food-saver'),
     path('admin/users/<int:user_id>/delete/', AdminDeleteUserView.as_view(), name='admin-delete-user'),
     path('demote/<int:user_id>/', DemoteFromFoodSaverView.as_view(), name='demote-food-saver'),
+    path('resend-otp/', ResendOTPView.as_view(), name='resend_otp'),
+    path('users/<int:user_id>/', PublicProfileView.as_view(), name='public_profile'),
+    path('block/<int:user_id>/', BlockUserView.as_view(), name='block_user'),
+    path('unblock/<int:user_id>/', UnblockUserView.as_view(), name='unblock_user'),
+    path('blocked/', BlockedUsersListView.as_view(), name='blocked_users'),
+    path('deactivate-account/', DeactivateAccountView.as_view(), name='deactivate_account'),
+    path('delete-account/', DeleteAccountView.as_view(), name='delete_account'),
+    path('change-email/request/', ChangeEmailRequestView.as_view(), name='change_email_request'),
+    path('change-email/confirm/', ChangeEmailConfirmView.as_view(), name='change_email_confirm'),
+    path('admin/users/stats/', AdminUserStatsView.as_view(), name='admin_user_stats'),
+    path('admin/food-saver-threshold/', FoodSaverThresholdView.as_view(), name='food_saver_threshold'),
 ]

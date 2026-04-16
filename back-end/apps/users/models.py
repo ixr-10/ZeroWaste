@@ -11,7 +11,7 @@ class User(AbstractUser):
         ('donateur', 'Donateur'),
         ('beneficiaire', 'Bénéficiaire'),
         ('admin', 'Administrateur'),
-        ('collectivite', 'Collectivité Locale'),
+        ('localauthority', 'Local Authority'),
         ('food_saver', 'Food Saver'),
         ('user', 'Utilisateur Standard'),
     ]
@@ -55,3 +55,30 @@ class OTPCode(models.Model):
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[self.user.email],
         )
+
+class BlockedUser(models.Model):
+    """Stores which users a person has blocked"""
+    blocker = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='blocking'
+    )
+    blocked = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='blocked_by'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('blocker', 'blocked')
+
+    def __str__(self):
+        return f"{self.blocker.username} blocked {self.blocked.username}"
+
+
+class SystemSettings(models.Model):
+    """Global settings configurable by admin"""
+    food_saver_score_threshold = models.IntegerField(default=100)
+
+    class Meta:
+        verbose_name = "System Settings"
+
+    def __str__(self):
+        return f"System Settings (FoodSaver threshold: {self.food_saver_score_threshold})"
