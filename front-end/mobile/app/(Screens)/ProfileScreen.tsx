@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Image,
   Pressable,
-  
   Modal,
   TextInput,
   KeyboardAvoidingView,
@@ -261,10 +260,12 @@ const PostItem = ({
   item,
   showEdit,
   onDelete,
+  onEdit,              // ← new prop
 }: {
   item: Post;
   showEdit: boolean;
   onDelete: () => void;
+  onEdit: () => void;  // ← new prop
 }) => {
   const isDonated = item.status === 'donated';
 
@@ -294,7 +295,11 @@ const PostItem = ({
       </View>
       <View style={postStyles.actions}>
         {showEdit && !isDonated && (
-          <TouchableOpacity style={postStyles.actionBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={postStyles.actionBtn}
+            activeOpacity={0.7}
+            onPress={onEdit}   // ← wired up
+          >
             <Ionicons name="create-outline" size={22} color={COLORS.primary} />
           </TouchableOpacity>
         )}
@@ -445,7 +450,6 @@ const resStyles = StyleSheet.create({
 export default function ProfileScreen() {
   const router = useRouter();
 
-  // ── Load username from AsyncStorage on mount ──
   const [username, setUsername] = useState('');
 
   useEffect(() => {
@@ -471,7 +475,6 @@ export default function ProfileScreen() {
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
   const [reservations, setReservations] = useState<Reservation[]>(INITIAL_RESERVATIONS);
 
-  // Confirm modal state
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState('');
   const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
@@ -522,6 +525,14 @@ export default function ProfileScreen() {
     setReservations((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: 'rejected' } : r))
     );
+  };
+
+  // ── Navigate to EditPostScreen ──────────────────────────────────────────────
+  const handleEditPost = (item: Post) => {
+    router.push({
+      pathname: '/(Screens)/EditPostScreen',
+      params: { post: JSON.stringify(item) },
+    });
   };
 
   const handleLogout = async () => {
@@ -607,7 +618,6 @@ export default function ProfileScreen() {
 
         {/* ── Content Card ── */}
         <View style={styles.contentCard}>
-          {/* Main tabs */}
           <View style={styles.mainTabs}>
             {(['posts', 'reservations'] as MainTab[]).map((tab) => (
               <TouchableOpacity key={tab} style={[styles.mainTab, mainTab === tab && styles.mainTabActive]} onPress={() => setMainTab(tab)}>
@@ -637,6 +647,7 @@ export default function ProfileScreen() {
                     key={`${item.id}-${i}`}
                     item={item}
                     showEdit={postFilter === 'actif'}
+                    onEdit={() => handleEditPost(item)}
                     onDelete={() =>
                       showConfirm(
                         `Delete "${item.title}"?`,

@@ -1,3 +1,4 @@
+import { WS_URL } from '../../constants/config';
 import React, { useState, useRef, useEffect } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet, FlatList, StatusBar,
@@ -66,9 +67,9 @@ export default function ChatConversation() {
         await markMessagesRead(Number(conversationId));
       }
 
-      ws = new WebSocket(
-        `ws://192.168.43.100:8000/ws/chat/${conversationId}/?token=${token}`
-      );
+     ws = new WebSocket(
+  `${WS_URL}/ws/chat/${conversationId}/?token=${token}`
+);
       wsRef.current = ws;
 
       ws.onmessage = (e) => {

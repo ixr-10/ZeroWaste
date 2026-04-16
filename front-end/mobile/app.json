@@ -54,7 +54,8 @@
           "locationWhenInUsePermission": "ZeroWaste uses your location to show nearby food listings."
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

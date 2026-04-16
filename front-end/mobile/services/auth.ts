@@ -1,7 +1,8 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '../constants/config';
 
-const API_URL = 'http://192.168.1.XX:8000/api/accounts'; // ← replace XX with your IP
+const API_URL = BASE_URL + 'accounts';
 
 export const register = async (username: string, email: string, password: string, phone?: string) => {
   const res = await axios.post(`${API_URL}/register/`, { username, email, password, phone });
