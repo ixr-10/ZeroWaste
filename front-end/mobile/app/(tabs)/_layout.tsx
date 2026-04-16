@@ -22,7 +22,7 @@ const TAB_ITEMS = [
   { screen: '/(tabs)/HomeScreen',   icon: 'home',          label: 'Home' },
   { screen: '/(tabs)/ChatList',     icon: 'chatbubble',    label: 'Chat' },
   { screen: '/(tabs)/Picture',      icon: 'add',           label: '' },
-  { screen: '/(tabs)/Notificationss', icon: 'notifications', label: 'Notification' }, // ← lowercase
+  { screen: '/(tabs)/notifications', icon: 'notifications', label: 'Notification' },
   { screen: '/(tabs)/ProfileScreen', icon: 'person',        label: 'Profile' },
 ];
 
@@ -104,6 +104,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="ChatList" />
       <Tabs.Screen name="Picture" />
       <Tabs.Screen name="notifications" />
+      <Tabs.Screen name="Notificationss" />
       <Tabs.Screen name="ProfileScreen" />
       <Tabs.Screen name="slides" />
       <Tabs.Screen name="Profile" />

@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
-  SafeAreaView, Image, ActivityIndicator, Alert,
+  SafeAreaView,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';

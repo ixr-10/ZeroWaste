@@ -18,7 +18,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';   // ← added useFocusEffect
 import { BottomNavBar } from '../../components/ButtomNavBar';
 import api from '../../constants/axios';
 
@@ -41,7 +41,7 @@ type MainTab   = 'posts' | 'reservations';
 type PostFilter = 'available' | 'reserved' | 'completed' | 'expired';
 type ResFilter  = 'pending' | 'confirmed' | 'rejected';
 
-// Confirm Modal
+// ─── Confirm Modal ────────────────────────────────────────────────────────────
 const ConfirmModal = ({
   visible, message, confirmLabel = 'Delete', confirmColor = COLORS.red, onConfirm, onCancel,
 }: {
@@ -85,7 +85,7 @@ const cStyles = StyleSheet.create({
   confirmText:{ fontSize: 14, fontWeight: '700', color: COLORS.white },
 });
 
-// Edit Username Modal
+// ─── Edit Username Modal ──────────────────────────────────────────────────────
 const EditUsernameModal = ({
   visible, currentUsername, onSave, onClose,
 }: {
@@ -146,8 +146,16 @@ const eStyles = StyleSheet.create({
   input: { borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: COLORS.textPrimary, marginBottom: 20, backgroundColor: '#F7FAF5' },
 });
 
-// PostItem
-const PostItem = ({ item, onDelete }: { item: any; onDelete: () => void; }) => {
+// ─── PostItem ─────────────────────────────────────────────────────────────────
+const PostItem = ({
+  item,
+  onDelete,
+  onEdit,
+}: {
+  item: any;
+  onDelete: () => void;
+  onEdit: () => void;
+}) => {
   const getStatusColor = () => {
     switch (item.status) {
       case 'available': return COLORS.primary;
@@ -167,6 +175,8 @@ const PostItem = ({ item, onDelete }: { item: any; onDelete: () => void; }) => {
       default:          return item.status;
     }
   };
+
+  const canEdit = item.status === 'available';
 
   return (
     <View style={pStyles.card}>
@@ -192,6 +202,11 @@ const PostItem = ({ item, onDelete }: { item: any; onDelete: () => void; }) => {
         </View>
       </View>
       <View style={pStyles.actions}>
+        {canEdit && (
+          <TouchableOpacity style={pStyles.actionBtn} onPress={onEdit} activeOpacity={0.7}>
+            <Ionicons name="create-outline" size={22} color={COLORS.primary} />
+          </TouchableOpacity>
+        )}
         {item.status !== 'completed' && (
           <TouchableOpacity style={pStyles.actionBtn} onPress={onDelete} activeOpacity={0.7}>
             <Ionicons name="trash-outline" size={22} color={COLORS.red} />
@@ -214,7 +229,7 @@ const pStyles = StyleSheet.create({
   actionBtn:    { padding: 4 },
 });
 
-// ReservationItem
+// ─── ReservationItem ──────────────────────────────────────────────────────────
 const ReservationItem = ({ 
   item, 
   onAction 
@@ -282,23 +297,10 @@ const ReservationItem = ({
 };
 
 const rStyles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-  },
+  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardBg, borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1.5, borderColor: COLORS.border },
   cardConfirmed: { borderColor: COLORS.primary },
   cardRejected:  { borderColor: COLORS.red },
-  avatar: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#F5C6C6',
-    alignItems: 'center', justifyContent: 'center', marginRight: 10,
-  },
+  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F5C6C6', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   textContainer: { flex: 1 },
   notifText: { fontSize: 13, color: COLORS.textPrimary, lineHeight: 18 },
   bold: { fontWeight: '700' },
@@ -306,18 +308,13 @@ const rStyles = StyleSheet.create({
   quantity: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
   confirmedBadge: { fontSize: 12, color: COLORS.primary, fontWeight: '700' },
   rejectedBadge:  { fontSize: 12, color: COLORS.red, fontWeight: '600' },
-  menu: {
-    position: 'absolute', right: 0, top: 40,
-    backgroundColor: COLORS.white, borderRadius: 10,
-    elevation: 8, zIndex: 999, minWidth: 110,
-    borderWidth: 1, borderColor: COLORS.border,
-  },
+  menu: { position: 'absolute', right: 0, top: 40, backgroundColor: COLORS.white, borderRadius: 10, elevation: 8, zIndex: 999, minWidth: 110, borderWidth: 1, borderColor: COLORS.border },
   menuItem: { paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center' },
   menuConfirm: { fontSize: 14, color: COLORS.primary, fontWeight: '600' },
   menuReject:  { fontSize: 14, color: COLORS.red, fontWeight: '600' },
 });
 
-// Main Screen
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function ProfileScreen() {
   const router = useRouter();
   const [username, setUsername] = useState('');
@@ -345,6 +342,7 @@ export default function ProfileScreen() {
     setConfirmVisible(true);
   };
 
+  // ── loadData: called on mount AND every time screen comes back into focus ──
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -356,7 +354,7 @@ export default function ProfileScreen() {
 
       const [donRes, resRes] = await Promise.all([
         api.get('/donations/my-donations/'),
-        api.get('/donations/reservations/received/'),   // Received reservations (others requesting from me)
+        api.get('/donations/reservations/received/'),
       ]);
 
       setDonations(donRes.data || []);
@@ -368,7 +366,13 @@ export default function ProfileScreen() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  // ── useFocusEffect: re-fetches donations every time screen is focused ──────
+  // This means: edit post → save → go back → profile auto-refreshes ✓
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const pickProfileImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -389,7 +393,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // Confirm / Reject Reservation + Update Donation Status
   const handleReservationAction = async (id: number, action: 'confirm' | 'reject') => {
     try {
       const endpoint = action === 'confirm' 
@@ -398,7 +401,6 @@ export default function ProfileScreen() {
 
       await api.post(endpoint);
 
-      // Update reservation status
       setReservations((prev) =>
         prev.map((r) =>
           r.id === id 
@@ -407,24 +409,20 @@ export default function ProfileScreen() {
         )
       );
 
-      // If confirmed → mark the related donation as completed
       if (action === 'confirm') {
-  const updatedReservation = reservations.find(r => r.id === id);
-
-  setDonations((prev) =>
-    prev.map((d) => {
-      if (d.id !== updatedReservation?.donation) return d;
-
-      const newAvailable = d.available_quantity - updatedReservation.quantity_requested;
-
-      return {
-        ...d,
-        available_quantity: newAvailable,
-        status: newAvailable <= 0 ? 'completed' : 'available',
-      };
-    })
-  );
-}
+        const updatedReservation = reservations.find(r => r.id === id);
+        setDonations((prev) =>
+          prev.map((d) => {
+            if (d.id !== updatedReservation?.donation) return d;
+            const newAvailable = d.available_quantity - updatedReservation.quantity_requested;
+            return {
+              ...d,
+              available_quantity: newAvailable,
+              status: newAvailable <= 0 ? 'completed' : 'available',
+            };
+          })
+        );
+      }
 
       Alert.alert('Success', `Reservation ${action}ed successfully!`);
     } catch (err: any) {
@@ -446,6 +444,16 @@ export default function ProfileScreen() {
         }
       }
     );
+  };
+
+  // ── Navigate to EditPostScreen — pass the full donation object ─────────────
+  const handleEditPost = (item: any) => {
+    router.push({
+      pathname: '/(Screens)/EditPostScreen',
+      params: { post: JSON.stringify(item) },
+    });
+    // No need to manually update donations here —
+    // useFocusEffect will re-fetch from the API when we return ✓
   };
 
   const handleLogout = () => {
@@ -578,7 +586,12 @@ export default function ProfileScreen() {
                 <Text style={styles.emptyText}>No {postFilter} donations found</Text>
               ) : (
                 filteredDonations.map((item) => (
-                  <PostItem key={item.id} item={item} onDelete={() => handleDeletePost(item.id)} />
+                  <PostItem
+                    key={item.id}
+                    item={item}
+                    onDelete={() => handleDeletePost(item.id)}
+                    onEdit={() => handleEditPost(item)}
+                  />
                 ))
               )}
             </>
