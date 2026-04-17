@@ -18,6 +18,7 @@ urlpatterns = [
     path('admin/create-user/', AdminCreateUserView.as_view(), name='admin_create_user'),   
     path('admin/users/', AdminListUsersView.as_view(), name='admin-list-users'),
     path('promote/<int:user_id>/', PromoteToFoodSaverView.as_view(), name='promote-food-saver'),
+    path('admin/users/stats/', AdminUserStatsView.as_view(), name='admin_user_stats'), 
     path('admin/users/<int:user_id>/delete/', AdminDeleteUserView.as_view(), name='admin-delete-user'),
     path('demote/<int:user_id>/', DemoteFromFoodSaverView.as_view(), name='demote-food-saver'),
     path('resend-otp/', ResendOTPView.as_view(), name='resend_otp'),
@@ -29,6 +30,5 @@ urlpatterns = [
     path('delete-account/', DeleteAccountView.as_view(), name='delete_account'),
     path('change-email/request/', ChangeEmailRequestView.as_view(), name='change_email_request'),
     path('change-email/confirm/', ChangeEmailConfirmView.as_view(), name='change_email_confirm'),
-    path('admin/users/stats/', AdminUserStatsView.as_view(), name='admin_user_stats'),
     path('admin/food-saver-threshold/', FoodSaverThresholdView.as_view(), name='food_saver_threshold'),
 ]

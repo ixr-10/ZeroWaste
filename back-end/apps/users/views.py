@@ -55,12 +55,14 @@ class LoginView(APIView):
         if not check_password(password, user.password):
             return Response({'error': 'Invalid credentials.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        if not user.is_verified:
-         return Response({'error': 'Please verify your email first.'}, status=status.HTTP_403_FORBIDDEN)
-
+        if not user.is_email_confirmed:
+            return Response({'error': 'Please confirm your email first.'}, status=status.HTTP_403_FORBIDDEN)
 
         if not user.is_active:
-          return Response({'error': 'Your account has been deactivated.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': 'Your account has been deactivated.'}, status=status.HTTP_403_FORBIDDEN)
+
+        #  allow login, but pass verified status so frontend can limit features
+        # is_verified = False means limited (2 donations, 2 reservations max)
 
         refresh = RefreshToken.for_user(user)
 
@@ -148,11 +150,12 @@ class VerifyEmailView(APIView):
             if not otp or not otp.is_valid():
                 return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            user.is_verified = True
-            user.save()
+           
+            user.is_email_confirmed = True   
+            user.is_active = True            
             otp.is_used = True
             otp.save()
-            return Response({'message': 'Email verified successfully!'})
+            return Response({'message': 'Email confirmed! You can now login. Your account will be fully verified by a Food Saver.'})
 
         except User.DoesNotExist:
             return Response({'error': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -363,7 +366,7 @@ class ResendOTPView(APIView):
         email = request.data.get('email')
         try:
             user = User.objects.get(email=email)
-            if user.is_verified:
+            if user.is_email_confiremed:
                 return Response({'message': 'Account is already verified.'})
             otp = OTPCode.objects.create(user=user)
             otp.send_to_email(
@@ -532,3 +535,4 @@ class FoodSaverThresholdView(APIView):
             serializer.save()
             return Response({'message': 'Threshold updated.', **serializer.data})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    

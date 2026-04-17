@@ -49,9 +49,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop('password2')
         user = User.objects.create_user(**validated_data)
+        user.is_active = False          
+        user.is_email_confirmed = False  
+        user.is_verified = False        
+        user.save()
         return user
 
-
+ 
 class UserSerializer(serializers.ModelSerializer):
     donation_count = serializers.IntegerField(
         source='donations.count', read_only=True
@@ -61,7 +65,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'role', 'phone',
                   'address', 'reputation_score', 'is_verified',
-                  'avatar', 'created_at', 'is_active', 'donation_count']
+                  'avatar', 'created_at', 'is_active', 'is_email_confirmed','donation_count']
         
 class AdminCreateUserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True)

@@ -19,7 +19,9 @@ class User(AbstractUser):
     phone = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
     reputation_score = models.IntegerField(default=0)
-    is_verified = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False)  # verified by food saver
+    is_email_confirmed = models.BooleanField(default=False)  # confirmed via OTP email
+    is_active = models.BooleanField(default=False)  #  inactive until email confirmed
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     push_token = models.CharField(max_length=255, blank=True, null=True)

@@ -13,14 +13,22 @@ from .serializers import DonationSerializer, ReservationSerializer
 
 
 class CreateDonationView(APIView):
+   
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = DonationSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save(donor=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+         if not request.user.is_verified:
+            donation_count = Donation.objects.filter(donor=request.user).count()
+            if donation_count >= 2:
+                return Response(
+                    {'error': 'Unverified users can only make 2 donations. Get verified by a Food Saver to unlock full access.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            serializer = DonationSerializer(data=request.data, context={'request': request})
+            if serializer.is_valid():
+                serializer.save(donor=request.user)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class MyDonationsView(APIView):
@@ -93,6 +101,15 @@ class ReserveDonationView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, donation_id):
+        if not request.user.is_verified:
+            reservation_count = Reservation.objects.filter(
+                beneficiary=request.user
+            ).exclude(status__in=['cancelled', 'rejected', 'expired']).count()
+            if reservation_count >= 2:
+                return Response(
+                    {'error': 'Unverified users can only make 2 reservations. Get verified by a Food Saver to unlock full access.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         try:
             with transaction.atomic():
                 donation = Donation.objects.select_for_update().get(id=donation_id, status='available')
