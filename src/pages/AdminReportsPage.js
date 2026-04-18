@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import '../styles/AdminUsersPage.css';
@@ -6,7 +6,6 @@ import '../styles/AdminReportsPage.css';
 
 import SimpleBar from 'simplebar-react';
 import 'simplebar-react/dist/simplebar.min.css';
-
 
 import berriesImg from '../assets/berries.jpg';
 import adminIcon from '../assets/admin.png';
@@ -22,52 +21,84 @@ import {
   FiChevronRight
 } from 'react-icons/fi';
 
+
+// import { fetchAdminReports, processReportAction } from '../services/api';
+
 const AdminReportsPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [statusTab, setStatusTab] = useState('Pending');
   const [categoryTab, setCategoryTab] = useState('All');
   
   const [selectedReport, setSelectedReport] = useState(null);
-
+  
+  const [reports, setReports] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  const mockReports = [
-    { 
-      id: 1, type: 'post', title: 'Whole Milk', reason: 'Dangerous or unsafe food', author: 'Username', date: 'Mar 28, 2025', imageEmoji: '🥛',
-      postDesc: 'This milk smells very bad and the expiration date is passed.', category: 'Dairy', weight: '1 L', expireDate: '25/03/2025',
-      imgUrl: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&q=80&w=200'
-    },
-    { 
-      id: 2, type: 'post', title: 'Mixed Berries', reason: 'Expired product posted as fresh', author: 'Username', date: 'Mar 28, 2025', imageEmoji: '🫐',
-      postDesc: 'Freshly picked mixed berries, sweet and juicy. Perfect for smoothies, yogurt, or eating as a snack', 
-      category: 'Fruit & Vegetables', weight: '2 Kg', expireDate: '04/04/2026',
-      imgUrl: berriesImg 
-    },
-    { 
-      id: 3, type: 'user', title: 'Username_1', reason: 'Fake account', author: 'Username', date: 'Mar 28, 2025', 
-      imageEmoji: null, 
-      userImg: adminIcon, 
-      email: 'username.1@gmail.com', donations: 3, score: 2.1
-    },
-    { 
-      id: 4, type: 'user', title: 'Username_02', reason: 'Spam', author: 'Username', date: 'Mar 28, 2025', 
-      imageEmoji: null,
-      userImg: user2Img, 
-      email: 'user02@gmail.com', donations: 0, score: 0.5
-    },
-    { id: 5, type: 'post', title: 'Extra Item', reason: 'Test', author: 'User', date: 'Mar 29, 2025', imageEmoji: '🍎' }
-  ];
+  useEffect(() => {
+    const loadReports = async () => {
+      setIsLoading(true);
+      try {
+        
+        const dummyDataFromBackend = [
+          { id: 1, type: 'post', title: 'Whole Milk', reason: 'Dangerous or unsafe food', author: 'Username', date: 'Mar 28, 2025', imageEmoji: '🥛', postDesc: 'This milk smells very bad...', category: 'Dairy', weight: '1 L', expireDate: '25/03/2025', imgUrl: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&q=80&w=200', status: 'Pending' },
+          { id: 2, type: 'post', title: 'Mixed Berries', reason: 'Expired product posted as fresh', author: 'Username', date: 'Mar 28, 2025', imageEmoji: '🫐', postDesc: 'Freshly picked mixed berries...', category: 'Fruit & Vegetables', weight: '2 Kg', expireDate: '04/04/2026', imgUrl: berriesImg, status: 'Pending' },
+          { id: 3, type: 'user', title: 'Username_1', reason: 'Fake account', author: 'Username', date: 'Mar 28, 2025', imageEmoji: null, userImg: adminIcon, email: 'username.1@gmail.com', donations: 3, score: 2.1, status: 'Pending' },
+          { id: 4, type: 'user', title: 'Username_02', reason: 'Spam', author: 'Username', date: 'Mar 28, 2025', imageEmoji: null, userImg: user2Img, email: 'user02@gmail.com', donations: 0, score: 0.5, status: 'Pending' },
+          { id: 5, type: 'post', title: 'Extra Item', reason: 'Test', author: 'User', date: 'Mar 29, 2025', imageEmoji: '🍎', status: 'Treated' }
+        ];
+        
+        // setReports(data);
+        setReports(dummyDataFromBackend);
+      } catch (error) {
+        console.error("Failed to load reports", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const filteredReports = mockReports.filter((report) => {
-    if (categoryTab === 'All') return true;
-    if (categoryTab === 'Posts') return report.type === 'post';
-    if (categoryTab === 'Users') return report.type === 'user';
-    return true;
+    loadReports();
+  }, []);
+
+  
+  const handleAction = async (actionType) => {
+    if (!selectedReport) return;
+
+    const confirmAction = window.confirm(`Are you sure you want to ${actionType.replace('_', ' ')}?`);
+    if (!confirmAction) return;
+
+    try {
+      // ـPI تاjango:
+      // await processReportAction(selectedReport.id, actionType);
+
+      
+      setReports((prevReports) => 
+        prevReports.map((r) => 
+          r.id === selectedReport.id ? { ...r, status: 'Treated' } : r
+        )
+      );
+
+      
+      setSelectedReport(null);
+      
+      
+    } catch (error) {
+      console.error(`Error performing action ${actionType}`, error);
+      alert("Something went wrong with the backend.");
+    }
+  };
+
+  
+  const filteredReports = reports.filter((report) => {
+    const matchesStatus = report.status === statusTab;
+    let matchesCategory = true;
+    if (categoryTab === 'Posts') matchesCategory = report.type === 'post';
+    if (categoryTab === 'Users') matchesCategory = report.type === 'user';
+    return matchesStatus && matchesCategory;
   });
 
   return (
     <div className={`admin-dashboard ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-
       {/* ===== SIDEBAR ===== */}
       <aside className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
@@ -105,15 +136,22 @@ const AdminReportsPage = () => {
         </div>
       </aside>
 
-      {/* ===== MAIN CONTENT (Wrapped with SimpleBar) ===== */}
+      {/* ===== MAIN CONTENT ===== */}
       <SimpleBar className="main-content" style={{ height: '100vh' }}>
         <div className="reports-layout-wrapper">
           
           {/* ===== 1. REPORTS LIST ===== */}
           <div className={`reports-left-column ${!selectedReport ? 'full-width' : ''}`}>
+            
             <div className="status-tabs">
-              <button className={`pill-btn status-btn ${statusTab === 'Pending' ? 'active-sage' : ''}`} onClick={() => setStatusTab('Pending')}>Pending</button>
-              <button className={`pill-btn status-btn ${statusTab === 'Treated' ? 'active-sage' : ''}`} onClick={() => setStatusTab('Treated')}>Treated</button>
+              <button 
+                className={`pill-btn status-btn ${statusTab === 'Pending' ? 'active-sage' : ''}`} 
+                onClick={() => { setStatusTab('Pending'); setSelectedReport(null); }}
+              >Pending</button>
+              <button 
+                className={`pill-btn status-btn ${statusTab === 'Treated' ? 'active-sage' : ''}`} 
+                onClick={() => { setStatusTab('Treated'); setSelectedReport(null); }}
+              >Treated</button>
             </div>
 
             <div className="filter-tabs">
@@ -123,33 +161,38 @@ const AdminReportsPage = () => {
             </div>
 
             <div className="reports-list">
-              {filteredReports.map((report) => (
-                <div 
-                  className={`report-card ${selectedReport?.id === report.id ? 'active-report-card' : ''}`} 
-                  key={report.id}
-                  onClick={() => setSelectedReport(report)}
-                >
-                  <div className="report-image-placeholder">
-                   
-                    {report.type === 'post' && report.imgUrl ? (
-                      <img src={report.imgUrl} alt={report.title} className="card-mini-img" />
-                    ) : report.type === 'user' && report.userImg ? (
-                      <img src={report.userImg} alt={report.title} className="card-mini-img" />
-                    ) : (
-                      report.imageEmoji
-                    )}
+              {isLoading ? (
+                <div style={{ textAlign: 'center', padding: '20px' }}>Loading reports...</div>
+              ) : filteredReports.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>No reports found.</div>
+              ) : (
+                filteredReports.map((report) => (
+                  <div 
+                    className={`report-card ${selectedReport?.id === report.id ? 'active-report-card' : ''}`} 
+                    key={report.id}
+                    onClick={() => setSelectedReport(report)}
+                  >
+                    <div className="report-image-placeholder">
+                      {report.type === 'post' && report.imgUrl ? (
+                        <img src={report.imgUrl} alt={report.title} className="card-mini-img" />
+                      ) : report.type === 'user' && report.userImg ? (
+                        <img src={report.userImg} alt={report.title} className="card-mini-img" />
+                      ) : (
+                        report.imageEmoji
+                      )}
+                    </div>
+                    <div className="report-details-info">
+                      <h4 className="report-title">{report.title}</h4>
+                      <p className="report-reason">{report.reason}</p>
+                      <p className="report-meta">By {report.author} . {report.date}</p>
+                    </div>
                   </div>
-                  <div className="report-details-info">
-                    <h4 className="report-title">{report.title}</h4>
-                    <p className="report-reason">{report.reason}</p>
-                    <p className="report-meta">By {report.author} . {report.date}</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
-          {/* ===== 2. REPORT DETAILS PANEL (Right Side) ===== */}
+          {/* ===== 2. REPORT DETAILS PANEL ===== */}
           {selectedReport && (
             <div className="reports-right-column">
               <div className="report-details-panel">
@@ -164,31 +207,17 @@ const AdminReportsPage = () => {
 
                 <div className="details-section">
                   <h4 className="section-title">Reported {selectedReport.type === 'user' ? 'account' : 'post'}</h4>
-                  
                   {selectedReport.type === 'user' ? (
                     <div className="reported-user-card">
                       <div className="user-avatar-large">
-                       
                         {selectedReport.userImg ? (
                           <img src={selectedReport.userImg} alt="avatar" style={{width: '100%', height: '100%', borderRadius: '10px', objectFit: 'cover'}} />
-                        ) : (
-                          selectedReport.imageEmoji
-                        )}
+                        ) : selectedReport.imageEmoji}
                       </div>
                       <div className="user-info">
                         <div className="user-header">
                           <p className="user-name">{selectedReport.title}</p>
                           <p className="user-email">{selectedReport.email}</p>
-                        </div>
-                        <div className="user-stats">
-                          <div className="stat-item">
-                            <strong>{selectedReport.donations}</strong>
-                            <span>Donations</span>
-                          </div>
-                          <div className="stat-item">
-                            <strong>{selectedReport.score}</strong>
-                            <span>Score</span>
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -196,20 +225,13 @@ const AdminReportsPage = () => {
                     <div className="reported-post-card">
                       {selectedReport.imgUrl ? (
                         <img src={selectedReport.imgUrl} alt="post" className="post-cover-image" />
-                      ) : (
-                        <div className="post-cover-placeholder">{selectedReport.imageEmoji}</div>
-                      )}
+                      ) : <div className="post-cover-placeholder">{selectedReport.imageEmoji}</div>}
                       <div className="post-card-body">
                         <div className="post-card-header">
                           <h5>{selectedReport.title}</h5>
                           <span className="post-category">{selectedReport.category}</span>
                         </div>
                         <p className="post-desc">{selectedReport.postDesc}</p>
-                        <div className="post-tags">
-                          <span className="tag-pill">{selectedReport.weight}</span>
-                          <span className="tag-pill">{selectedReport.expireDate}</span>
-                        </div>
-                        <p className="post-author">posted by <strong>{selectedReport.author}</strong></p>
                       </div>
                     </div>
                   )}
@@ -220,55 +242,49 @@ const AdminReportsPage = () => {
                   <div className="readonly-box">{selectedReport.reason}</div>
                 </div>
 
-                <div className="details-section">
-                  <h4 className="section-title">Additional Details</h4>
-                  <div className="readonly-box large-box"></div>
-                </div>
+                {selectedReport.status === 'Pending' && (
+                  <div className="details-section actions-section">
+                    <h4 className="section-title">Admin actions</h4>
+                    <div className="admin-actions-list">
+                      
+                      {selectedReport.type === 'post' && (
+                        <button className="action-btn delete-btn" onClick={() => handleAction('delete_post')}>
+                          <div className="action-btn-icon">🗑️</div>
+                          <div className="action-btn-text">
+                            <span className="action-btn-title">Delete Post</span>
+                            <span className="action-btn-desc">delete this donation from the platform</span>
+                          </div>
+                        </button>
+                      )}
 
-                {selectedReport.type === 'user' && (
-                  <div className="details-section">
-                    <h4 className="section-title">Attached screenshot</h4>
-                    <div className="readonly-box screenshot-box">
-                      <span className="icon-img">🖼️</span> screenshot
+                      <button className="action-btn delete-acc-btn" onClick={() => handleAction('delete_account')}>
+                        <div className="action-btn-icon">👤</div>
+                        <div className="action-btn-text">
+                          <span className="action-btn-title">Delete Account</span>
+                          <span className="action-btn-desc">permanently delete the poster's account</span>
+                        </div>
+                      </button>
+
+                      <button className="action-btn warning-btn" onClick={() => handleAction('send_warning')}>
+                        <div className="action-btn-icon">⚠️</div>
+                        <div className="action-btn-text">
+                          <span className="action-btn-title">Send Warning</span>
+                          <span className="action-btn-desc">notify the user about the violation</span>
+                        </div>
+                      </button>
+
+                      <button className="action-btn ignore-btn" onClick={() => handleAction('ignore_report')}>
+                        <div className="action-btn-icon">🚫</div>
+                        <div className="action-btn-text">
+                          <span className="action-btn-title">Ignore Report</span>
+                          <span className="action-btn-desc">dismiss - no action needed</span>
+                        </div>
+                      </button>
+
                     </div>
                   </div>
                 )}
 
-                <div className="details-section actions-section">
-                  <h4 className="section-title">Admin actions</h4>
-                  <div className="admin-actions-list">
-                    {selectedReport.type === 'post' && (
-                      <button className="action-btn delete-btn">
-                        <div className="action-btn-icon">🗑️</div>
-                        <div className="action-btn-text">
-                          <span className="action-btn-title">Delete Post</span>
-                          <span className="action-btn-desc">delete this donation from the platform</span>
-                        </div>
-                      </button>
-                    )}
-                    <button className="action-btn delete-acc-btn">
-                      <div className="action-btn-icon">👤</div>
-                      <div className="action-btn-text">
-                        <span className="action-btn-title">Delete Account</span>
-                        <span className="action-btn-desc">permanently delete the poster's account</span>
-                      </div>
-                    </button>
-                    <button className="action-btn warning-btn">
-                      <div className="action-btn-icon">⚠️</div>
-                      <div className="action-btn-text">
-                        <span className="action-btn-title">Send Warning</span>
-                        <span className="action-btn-desc">notify the user about the violation</span>
-                      </div>
-                    </button>
-                    <button className="action-btn ignore-btn">
-                      <div className="action-btn-icon">🚫</div>
-                      <div className="action-btn-text">
-                        <span className="action-btn-title">Ignore Report</span>
-                        <span className="action-btn-desc">dismiss - no action needed</span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
               </div>
             </div>
           )}

@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/AdminUsersPage.css';
 
-// نحينا لي زيكون تاع الموني القدام، وخلينا غير لي نحتاجوهم للبحث والأسهم
 import {
   FiLogOut,
   FiChevronLeft,
   FiChevronRight,
-  FiSearch
+  FiSearch,
+  FiPlus,
+  FiRefreshCw
 } from 'react-icons/fi';
 
-import { FaTrashAlt, FaStar, FaRegStar } from 'react-icons/fa';
+import { FaStar, FaRegStar, FaUserCheck, FaPauseCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { logoutUser } from '../services/api';
-import { adminListUsers, promoteToFoodSaver,demoteFromFoodSaver,  adminDeleteUser } from '../services/api';
+import { logoutUser, adminListUsers, promoteToFoodSaver, demoteFromFoodSaver } from '../services/api';
+
 const AdminUsersPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,63 +24,69 @@ const AdminUsersPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const handleLogout = async () => {
-  await logoutUser();
-  navigate('/login');
-};
- useEffect(() => {
-  const fetchData = async () => {
-    setIsLoading(true);
+    await logoutUser();
+    navigate('/login');
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await adminListUsers();
+        
+        console.log("🔥 Users from Django Backend:", data);
+
+        const mapped = data.users.map((user, index) => ({
+          id: user.id,
+          rank: index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`,
+          username: user.username,
+          email: user.email,
+          donations: ((user.reputation_score ?? 0) / 10).toFixed(1),
+          score: user.reputation_score ?? 0,
+          status: user.is_verified ? 'Active' : 'Inactive',
+          isFoodSaver: user.role === 'food_saver',
+        }));
+        setUsers(mapped);
+      } catch (err) {
+        console.error('Failed to fetch users:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const toggleStar = async (userId) => {
+    const user = users.find(u => u.id === userId);
     try {
-      const data = await adminListUsers();
-      const mapped = data.users.map((user, index) => ({
-        id: user.id,
-        rank: index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`,
-        username: user.username,
-        email: user.email,
-        donations: ((user.reputation_score ?? 0) / 10).toFixed(1),
-        score: user.reputation_score ?? 0,
-        status: user.is_verified ? 'Active' : 'Inactive',
-        isFoodSaver: user.role === 'food_saver',
-      }));
-      setUsers(mapped);
+      if (user.isFoodSaver) {
+        await demoteFromFoodSaver(userId);
+        setUsers(prev => prev.map(u =>
+          u.id === userId ? { ...u, isFoodSaver: false } : u
+        ));
+      } else {
+        await promoteToFoodSaver(userId);
+        setUsers(prev => prev.map(u =>
+          u.id === userId ? { ...u, isFoodSaver: true } : u
+        ));
+      }
     } catch (err) {
-      console.error('Failed to fetch users:', err);
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to update Food Saver status:', err);
     }
   };
-  fetchData();
-}, []);
 
-const toggleStar = async (userId) => {
-  const user = users.find(u => u.id === userId);
-  try {
-    if (user.isFoodSaver) {
-      await demoteFromFoodSaver(userId);
-      setUsers(prev => prev.map(u =>
-        u.id === userId ? { ...u, isFoodSaver: false } : u
-      ));
-    } else {
-      await promoteToFoodSaver(userId);
-      setUsers(prev => prev.map(u =>
-        u.id === userId ? { ...u, isFoodSaver: true } : u
-      ));
-    }
-  } catch (err) {
-    console.error('Failed to update Food Saver status:', err);
-  }
-};
-const deleteUser = async (userId) => {
-  if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+  const toggleUserStatus = async (userId, currentStatus) => {
     try {
-      await adminDeleteUser(userId);
-      setUsers(prev => prev.filter(user => user.id !== userId));
+     
+      setUsers(prev => prev.map(user =>
+        user.id === userId 
+          ? { ...user, status: currentStatus === 'Active' ? 'Inactive' : 'Active' } 
+          : user
+      ));
     } catch (err) {
-      console.error('Failed to delete user:', err);
+      console.error('Failed to update user status:', err);
     }
-  }
-};
-
+  };
 
   const filteredUsers = users.filter(user =>
     user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -107,8 +114,6 @@ const deleteUser = async (userId) => {
         </div>
 
         <nav className="sidebar-menu">
-          
-          {/* 🔴 أيقونة Statistics (Pie Chart) */}
           <div className="menu-item" onClick={() => navigate('/admin/statistics')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
@@ -118,7 +123,6 @@ const deleteUser = async (userId) => {
             {isSidebarOpen && <span className="menu-text">Statistics</span>}
           </div>
 
-          {/* 🔴 أيقونة Reports (Document) */}
           <div className="menu-item" onClick={() => navigate('/admin/reports')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
@@ -129,7 +133,6 @@ const deleteUser = async (userId) => {
             {isSidebarOpen && <span className="menu-text">Reports</span>}
           </div>
 
-          {/* 🔴 أيقونة Users (Team/Group) - درتها Active */}
           <div className="menu-item active" style={{ cursor: 'pointer' }}>
             <span className="admin-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
@@ -139,7 +142,6 @@ const deleteUser = async (userId) => {
             {isSidebarOpen && <span className="menu-text">Users</span>}
           </div>
 
-          {/* 🔴 أيقونة Export (Download) */}
           <div className="menu-item" onClick={() => navigate('/admin/export')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
@@ -148,7 +150,6 @@ const deleteUser = async (userId) => {
             </span>
             {isSidebarOpen && <span className="menu-text">Export data</span>}
           </div>
-
         </nav>
 
         <div className="sidebar-footer">
@@ -156,7 +157,7 @@ const deleteUser = async (userId) => {
             <div className="avatar">👩‍💼</div>
             {isSidebarOpen && <span className="admin-name">{adminName}</span>}
           </div>
-          <FiLogOut className="logout-icon"  onClick={handleLogout} style={{ cursor: 'pointer' }}  />
+          <FiLogOut className="logout-icon" onClick={handleLogout} style={{ cursor: 'pointer' }} />
         </div>
       </aside>
 
@@ -167,7 +168,15 @@ const deleteUser = async (userId) => {
         <div className="stats-container">
           <div className="stat-card">
             <div className="stat-title">👥 Total Users</div>
-            <div className="stat-value">{isLoading ? "..." : totalUsersCount}</div>
+            <div className="stat-content">
+              <div className="stat-value">{isLoading ? "..." : totalUsersCount}</div>
+              <button 
+                className="stat-action-btn" 
+                onClick={() => navigate('/admin/users/create')} 
+              >
+                <FiPlus />
+              </button>
+            </div>
           </div>
 
           <div className="stat-card">
@@ -182,7 +191,15 @@ const deleteUser = async (userId) => {
 
           <div className="stat-card">
             <div className="stat-title">👑 Food Savers</div>
-            <div className="stat-value">{isLoading ? "..." : foodSaversCount}</div>
+            <div className="stat-content">
+              <div className="stat-value">{isLoading ? "..." : foodSaversCount}</div>
+              <button 
+                className="stat-action-btn" 
+                onClick={() => navigate('/admin/promotion-criteria')}
+              >
+                <FiRefreshCw />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -243,11 +260,15 @@ const deleteUser = async (userId) => {
                         </button>
 
                         <button
-                          className="action-btn delete-btn"
-                          data-tooltip="Delete account"
-                          onClick={() => deleteUser(user.id)}
+                          className="action-btn status-btn"
+                          data-tooltip={user.status === 'Active' ? "Deactivate this account" : "Activate this account"}
+                          onClick={() => toggleUserStatus(user.id, user.status)}
                         >
-                          <FaTrashAlt color="#dc3545" />
+                          {user.status === 'Active' ? (
+                            <FaPauseCircle color="#f4a261" />
+                          ) : (
+                            <FaUserCheck color="#588157" /> 
+                          )}
                         </button>
                       </td>
                     </tr>
