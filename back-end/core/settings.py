@@ -117,8 +117,13 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.1.37:8081",
     "http://192.168.43.100:8081",
     "http://172.26.33.147:8081",  
+    "http://192.168.1.34:8081",  
+    
 ]
-
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://192.168.1.34:3000",
+]
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
