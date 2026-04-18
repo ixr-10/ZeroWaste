@@ -11,6 +11,7 @@ urlpatterns = [
     path('api/gamification/', include('apps.gamification.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
     path('api/moderation/', include('apps.moderation.urls')),
+    path('api/notifications/', include('apps.notifications.urls')),
 ]
 
 # Serve media files in development (This is the correct place)

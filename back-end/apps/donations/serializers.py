@@ -11,7 +11,7 @@ class DonationSerializer(serializers.ModelSerializer):
             'id', 'donor', 'donor_username', 'title', 'description',
             'category', 'quantity', 'available_quantity', 'unit',
             'expiry_date', 'pickup_address', 'latitude', 'longitude',
-            'status', 'urgency',  # ← added
+            'status', 'urgency',  
             'image', 'created_at', 'distance_km'
         ]
         read_only_fields = ['donor', 'available_quantity', 'status', 'created_at']
@@ -42,6 +42,6 @@ class ReservationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'donation', 'donation_title', 'beneficiary',
             'beneficiary_username', 'quantity_requested', 'status',
-            'pickup_date', 'notes', 'confirmation_deadline', 'created_at'  # ← added confirmation_deadline
+            'pickup_date', 'notes', 'confirmation_deadline', 'created_at' 
         ]
         read_only_fields = ['beneficiary', 'status', 'created_at', 'confirmation_deadline']

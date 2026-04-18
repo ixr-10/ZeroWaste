@@ -7,9 +7,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import OTPCode
+from .models import OTPCode, BlockedUser, SystemSettings
 from .permissions import IsFoodSaver, IsAdmin, IsCollectivite, IsAdminOrFoodSaver
-from .serializers import RegisterSerializer, UserSerializer, AdminCreateUserSerializer
+from .serializers import RegisterSerializer, UserSerializer, AdminCreateUserSerializer,BlockedUserSerializer, PublicUserSerializer, SystemSettingsSerializer
 
 User = get_user_model()
 
@@ -26,14 +26,16 @@ class RegisterView(APIView):
                 message_prefix="Welcome to ZeroWaste!"
             )
             refresh = RefreshToken.for_user(user)
+
             return Response({
                 'user': UserSerializer(user).data,
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
+                'role': user.role,
+                'redirect_to': 'user_home',   
                 'message': 'Account created! Please verify your email.',
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -53,16 +55,39 @@ class LoginView(APIView):
         if not check_password(password, user.password):
             return Response({'error': 'Invalid credentials.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        if not user.is_verified:
-            return Response({'error': 'Please verify your email first.'}, status=status.HTTP_403_FORBIDDEN)
+        if not user.is_email_confirmed:
+            return Response({'error': 'Please confirm your email first.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if not user.is_active:
+            return Response({'error': 'Your account has been deactivated.'}, status=status.HTTP_403_FORBIDDEN)
+
+        #  allow login, but pass verified status so frontend can limit features
+        # is_verified = False means limited (2 donations, 2 reservations max)
 
         refresh = RefreshToken.for_user(user)
+
+        # Generate tokens
+        refresh = RefreshToken.for_user(user)
+
+       
         return Response({
             'user': UserSerializer(user).data,
             'refresh': str(refresh),
             'access': str(refresh.access_token),
+            'role': user.role,                    # Important for frontend
+            'redirect_to': self.get_redirect_screen(user.role),
+            'message': 'Login successful.'
         })
 
+    def get_redirect_screen(self, role):
+        """Helper to tell frontend which screen to show first"""
+        if role == 'admin':
+            return 'admin_dashboard'          # Web only
+        elif role == 'food_saver':
+            return 'food_saver_home'          # Food Saver mobile interface
+        else:
+            return 'user_home'                # Normal user mobile interface
+        
 
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
@@ -125,11 +150,12 @@ class VerifyEmailView(APIView):
             if not otp or not otp.is_valid():
                 return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            user.is_verified = True
-            user.save()
+           
+            user.is_email_confirmed = True   
+            user.is_active = True            
             otp.is_used = True
             otp.save()
-            return Response({'message': 'Email verified successfully!'})
+            return Response({'message': 'Email confirmed! You can now login. Your account will be fully verified by a Food Saver.'})
 
         except User.DoesNotExist:
             return Response({'error': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -248,7 +274,7 @@ class PromoteToFoodSaverView(APIView):
             if user_to_promote.role == 'food_saver':
                 return Response({'message': f'{user_to_promote.username} is already a Food Saver.'})
 
-            if user_to_promote.role == 'collectivite':
+            if user_to_promote.role == 'localauthority':
                 return Response({'error': 'Cannot change role of a Collectivite account.'}, status=status.HTTP_400_BAD_REQUEST)
 
             user_to_promote.role = 'food_saver'
@@ -322,7 +348,7 @@ class DemoteFromFoodSaverView(APIView):
             if user_to_demote.role != 'food_saver':
                 return Response({'error': 'User is not a Food Saver.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            if user_to_demote.role == 'collectivite':
+            if user_to_demote.role == 'localauthority':
                 return Response({'error': 'Cannot change role of a Collectivite account.'}, status=status.HTTP_400_BAD_REQUEST)
 
             user_to_demote.role = 'user'
@@ -332,3 +358,181 @@ class DemoteFromFoodSaverView(APIView):
 
         except User.DoesNotExist:
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+class ResendOTPView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        try:
+            user = User.objects.get(email=email)
+            if user.is_email_confiremed:
+                return Response({'message': 'Account is already verified.'})
+            otp = OTPCode.objects.create(user=user)
+            otp.send_to_email(
+                subject="ZeroWaste - New Verification Code",
+                message_prefix="You requested a new verification code."
+            )
+            return Response({'message': 'New verification code sent.'})
+        except User.DoesNotExist:
+            return Response({'message': 'If this email exists, a code was sent.'})
+
+
+
+class PublicProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = PublicUserSerializer(user)
+        return Response(serializer.data)
+
+
+class BlockUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+        if request.user.id == user_id:
+            return Response({'error': 'You cannot block yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            target = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        _, created = BlockedUser.objects.get_or_create(
+            blocker=request.user, blocked=target
+        )
+        if not created:
+            return Response({'message': f'{target.username} is already blocked.'})
+        return Response({'message': f'{target.username} has been blocked.'})
+
+
+class UnblockUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+        try:
+            block = BlockedUser.objects.get(blocker=request.user, blocked_id=user_id)
+            block.delete()
+            return Response({'message': 'User unblocked successfully.'})
+        except BlockedUser.DoesNotExist:
+            return Response({'error': 'This user is not blocked.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class BlockedUsersListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        blocked = BlockedUser.objects.filter(blocker=request.user).order_by('-created_at')
+        serializer = BlockedUserSerializer(blocked, many=True)
+        return Response(serializer.data)
+
+
+
+class DeactivateAccountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        user.is_active = False
+        user.save()
+        return Response({'message': 'Your account has been deactivated.'})
+
+
+class DeleteAccountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        user = request.user
+        user.delete()
+        return Response({'message': 'Your account has been deleted.'}, status=status.HTTP_204_NO_CONTENT)
+
+
+class ChangeEmailRequestView(APIView):
+    """Step 1: user requests email change, sends OTP to new email"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        new_email = request.data.get('new_email')
+        if not new_email:
+            return Response({'error': 'New email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if User.objects.filter(email=new_email).exists():
+            return Response({'error': 'This email is already in use.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Temporarily store new email in session-like way via OTP
+        # We create OTP on current user but send to new email
+        otp = OTPCode.objects.create(user=request.user)
+        otp.code = OTPCode.generate_code()
+        otp.save()
+
+        from django.core.mail import send_mail
+        send_mail(
+            subject='ZeroWaste - Confirm New Email',
+            message=f'Your email change code is: {otp.code}\nExpires in 10 minutes.',
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[new_email],
+        )
+        return Response({'message': 'Verification code sent to your new email.'})
+
+
+class ChangeEmailConfirmView(APIView):
+    """Step 2: user confirms with OTP, email gets updated"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        new_email = request.data.get('new_email')
+        code = request.data.get('code')
+
+        if not new_email or not code:
+            return Response({'error': 'New email and code are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if User.objects.filter(email=new_email).exists():
+            return Response({'error': 'This email is already in use.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp = OTPCode.objects.filter(user=request.user, code=code, is_used=False).last()
+        if not otp or not otp.is_valid():
+            return Response({'error': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        request.user.email = new_email
+        request.user.save()
+        otp.is_used = True
+        otp.save()
+        return Response({'message': 'Email updated successfully.'})
+
+
+
+class AdminUserStatsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        total = User.objects.exclude(role='admin').count()
+        active = User.objects.exclude(role='admin').filter(is_active=True).count()
+        inactive = User.objects.exclude(role='admin').filter(is_active=False).count()
+        food_savers = User.objects.filter(role='food_saver').count()
+        return Response({
+            'total': total,
+            'active': active,
+            'inactive': inactive,
+            'food_savers': food_savers,
+        })
+
+
+
+class FoodSaverThresholdView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        obj, _ = SystemSettings.objects.get_or_create(id=1)
+        serializer = SystemSettingsSerializer(obj)
+        return Response(serializer.data)
+
+    def post(self, request):
+        obj, _ = SystemSettings.objects.get_or_create(id=1)
+        serializer = SystemSettingsSerializer(obj, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'message': 'Threshold updated.', **serializer.data})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    

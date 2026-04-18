@@ -35,8 +35,12 @@ useEffect(() => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       let params = {};
       if (status === 'granted') {
-        const loc = await Location.getCurrentPositionAsync({});
-        params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+        try {
+          const loc = await Location.getCurrentPositionAsync({});
+          params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+        } catch (locationError) {
+          console.warn('Location unavailable, loading donations without distance.', locationError);
+        }
       }
       const res = await axios.get('/donations/available/', { params });
       setDonations(res.data);
