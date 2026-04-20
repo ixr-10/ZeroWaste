@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Donation, Reservation
 
+
 class DonationSerializer(serializers.ModelSerializer):
     donor_username = serializers.CharField(source='donor.username', read_only=True)
     distance_km = serializers.SerializerMethodField()
@@ -11,7 +12,7 @@ class DonationSerializer(serializers.ModelSerializer):
             'id', 'donor', 'donor_username', 'title', 'description',
             'category', 'quantity', 'available_quantity', 'unit',
             'expiry_date', 'pickup_address', 'latitude', 'longitude',
-            'status', 'urgency',  # ← added
+            'status', 'urgency',
             'image', 'created_at', 'distance_km'
         ]
         read_only_fields = ['donor', 'available_quantity', 'status', 'created_at']
@@ -36,12 +37,15 @@ class DonationSerializer(serializers.ModelSerializer):
 class ReservationSerializer(serializers.ModelSerializer):
     beneficiary_username = serializers.CharField(source='beneficiary.username', read_only=True)
     donation_title = serializers.CharField(source='donation.title', read_only=True)
+    donation_image = serializers.ImageField(source='donation.image', read_only=True)
+    donor_username = serializers.CharField(source='donation.donor.username', read_only=True)
 
     class Meta:
         model = Reservation
         fields = [
-            'id', 'donation', 'donation_title', 'beneficiary',
-            'beneficiary_username', 'quantity_requested', 'status',
-            'pickup_date', 'notes', 'confirmation_deadline', 'created_at'  # ← added confirmation_deadline
+            'id', 'donation', 'donation_title', 'donation_image',
+            'donor_username', 'beneficiary', 'beneficiary_username',
+            'quantity_requested', 'status',
+            'pickup_date', 'notes', 'confirmation_deadline', 'created_at',
         ]
         read_only_fields = ['beneficiary', 'status', 'created_at', 'confirmation_deadline']

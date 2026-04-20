@@ -12,6 +12,7 @@ from .views import (
     DonationReservationsView,
     CancelReservationView,
     MyReservationsView,
+    EditDonationView,
 )
 
 urlpatterns = [
@@ -42,4 +43,5 @@ urlpatterns = [
 
     # Cancel reservation (by beneficiary)
     path('reservations/<int:reservation_id>/cancel/', CancelReservationView.as_view(), name='cancel_reservation'),
+     path('<int:donation_id>/edit/', EditDonationView.as_view(), name='edit_donation'),
 ]
