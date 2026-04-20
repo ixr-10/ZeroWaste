@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Header2 from '../../components/Header2';
+import Header from '../../components/Header';
 import api from '../../constants/axios';
 
 export default function RegisterScreen() {
@@ -60,7 +60,7 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', marginTop: 0 }}>
-      <Header2 showBack={true} />
+      <Header showBack={true} />
       <ScrollView contentContainerStyle={styles.container}>
 
         <Image source={require('../../assets/images/register.png')} style={styles.image} />
@@ -69,79 +69,42 @@ export default function RegisterScreen() {
         <Text style={styles.label}>Email</Text>
         <View style={styles.inputRow}>
           <Ionicons margin={10} left={2} top={5} position={'absolute'} name="mail-outline" size={20} color="black" />
-          <TextInput
-            style={[styles.input, { flex: 1 }]}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+          <TextInput style={[styles.input, { flex: 1 }]} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
         </View>
 
         <Text style={styles.label}>Username</Text>
         <View style={styles.inputRow}>
           <Ionicons margin={10} left={2} top={5} position={'absolute'} name="person-outline" size={20} color="black" />
-          <TextInput
-            style={[styles.input, { flex: 1 }]}
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-          />
+          <TextInput style={[styles.input, { flex: 1 }]} value={username} onChangeText={setUsername} autoCapitalize="none" />
         </View>
 
         <Text style={styles.label}>Phone Number</Text>
         <View style={styles.inputRow}>
           <Ionicons margin={10} left={2} top={5} position={'absolute'} name="call-outline" size={20} color="black" />
-          <TextInput
-            style={[styles.input, { flex: 1 }]}
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            autoCapitalize="none"
-          />
+          <TextInput style={[styles.input, { flex: 1 }]} value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoCapitalize="none" />
         </View>
 
         <Text style={styles.label}>Adresse</Text>
         <View style={styles.inputRow}>
           <Ionicons margin={10} left={2} top={5} position={'absolute'} name="location-outline" size={20} color="black" />
-          <TextInput
-            style={[styles.input, { flex: 1 }]}
-            value={adresse}
-            onChangeText={setAdresse}
-            keyboardType="default"
-            autoCapitalize="none"
-          />
+          <TextInput style={[styles.input, { flex: 1 }]} value={adresse} onChangeText={setAdresse} autoCapitalize="none" />
         </View>
 
         <Text style={styles.label}>Password</Text>
         <View style={styles.inputRow}>
           <Ionicons margin={10} left={2} top={5} position={'absolute'} name="lock-closed-outline" size={20} color="black" />
-          <TextInput
-            style={[styles.input, { flex: 1 }]}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-          />
+          <TextInput style={[styles.input, { flex: 1 }]} value={password} onChangeText={setPassword} secureTextEntry={!showPassword} />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-            {showPassword
-              ? <Ionicons name="eye" size={24} color="black" />
-              : <Ionicons name="eye-off-outline" size={24} color="black" />}
+            {showPassword ? <Ionicons name="eye" size={24} color="black" /> : <Ionicons name="eye-off-outline" size={24} color="black" />}
           </TouchableOpacity>
         </View>
 
         <Text style={styles.label}>Confirm Password</Text>
         <View style={styles.inputRow}>
           <Ionicons margin={10} left={2} top={5} position={'absolute'} name="lock-closed-outline" size={20} color="black" />
-          <TextInput
-            style={[styles.input, { flex: 1 }]}
-            value={confirmPass}
-            onChangeText={setConfirmPass}
-            secureTextEntry={!showConfirmPass}
-          />
+          <TextInput style={[styles.input, { flex: 1 }]} value={confirmPass} onChangeText={setConfirmPass} secureTextEntry={!showConfirmPass} />
           <TouchableOpacity onPress={() => setShowConfirmPass(!showConfirmPass)} style={styles.eyeBtn}>
-            {showConfirmPass
-              ? <Ionicons name="eye" size={24} color="black" />
-              : <Ionicons name="eye-off-outline" size={24} color="black" />}
+            {showConfirmPass ? <Ionicons name="eye" size={24} color="black" /> : <Ionicons name="eye-off-outline" size={24} color="black" />}
           </TouchableOpacity>
         </View>
 
@@ -155,7 +118,6 @@ export default function RegisterScreen() {
           Already have an account?{' '}
           <Text style={styles.link} onPress={() => router.push('/auth/login')}>Login</Text>
         </Text>
-
       </ScrollView>
     </SafeAreaView>
   );

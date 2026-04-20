@@ -1,19 +1,10 @@
 import { Stack } from 'expo-router';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import ReservationAcceptedModal from '../components/ReservationAcceptedModal';
 
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      {/*
-        ReservationAcceptedModal sits here at the root so it can appear
-        on top of ANY screen (tabs, slides, etc.) right after login.
-        It is self-contained: it checks AsyncStorage for a token,
-        fetches accepted reservations, and only shows if there's a new one.
-      */}
-      
-
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="auth" />
