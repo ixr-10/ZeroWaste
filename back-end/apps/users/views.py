@@ -152,7 +152,8 @@ class VerifyEmailView(APIView):
 
            
             user.is_email_confirmed = True   
-            user.is_active = True            
+            user.is_active = True   
+            user.save()         
             otp.is_used = True
             otp.save()
             return Response({'message': 'Email confirmed! You can now login. Your account will be fully verified by a Food Saver.'})

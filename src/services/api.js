@@ -174,3 +174,11 @@ export const processReportAction = async (reportId, actionType) => {
   if (!res.ok) throw new Error(data.detail || data.error || 'Failed to process action.');
   return data;
 };
+export const toggleUserActive = async (userId) => {
+  const res = await authFetch(`${BASE_URL}/users/${userId}/toggle-active/`, {
+    method: 'POST',
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(JSON.stringify(data));
+  return data;
+};

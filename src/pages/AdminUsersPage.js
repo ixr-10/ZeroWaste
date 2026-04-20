@@ -12,8 +12,7 @@ import {
 
 import { FaStar, FaRegStar, FaUserCheck, FaPauseCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { logoutUser, adminListUsers, promoteToFoodSaver, demoteFromFoodSaver } from '../services/api';
-
+import { logoutUser, adminListUsers, promoteToFoodSaver, demoteFromFoodSaver, toggleUserActive } from '../services/api';
 const AdminUsersPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,7 +42,7 @@ const AdminUsersPage = () => {
           email: user.email,
           donations: ((user.reputation_score ?? 0) / 10).toFixed(1),
           score: user.reputation_score ?? 0,
-          status: user.is_verified ? 'Active' : 'Inactive',
+          status: user.is_active ? 'Active' : 'Inactive',
           isFoodSaver: user.role === 'food_saver',
         }));
         setUsers(mapped);
@@ -75,18 +74,19 @@ const AdminUsersPage = () => {
     }
   };
 
-  const toggleUserStatus = async (userId, currentStatus) => {
-    try {
-     
-      setUsers(prev => prev.map(user =>
-        user.id === userId 
-          ? { ...user, status: currentStatus === 'Active' ? 'Inactive' : 'Active' } 
-          : user
-      ));
-    } catch (err) {
-      console.error('Failed to update user status:', err);
-    }
-  };
+ const toggleUserStatus = async (userId, currentStatus) => {
+  try {
+    await toggleUserActive(userId);
+    setUsers(prev => prev.map(u =>
+      u.id === userId
+        ? { ...u, status: currentStatus === 'Active' ? 'Inactive' : 'Active' }
+        : u
+    ));
+  } catch (err) {
+    console.error('Failed to toggle user status:', err);
+    alert(' Failed to update user status.');
+  }
+};
 
   const filteredUsers = users.filter(user =>
     user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
