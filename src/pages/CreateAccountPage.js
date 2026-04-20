@@ -138,8 +138,8 @@ const CreateAccountPage = () => {
                   </button>
                   <button 
                     type="button"
-                    className={`pill-btn ${role === 'local_authority' ? 'active' : ''}`}
-                    onClick={() => setRole('local_authority')}
+                    className={`pill-btn ${role === 'localauthority' ? 'active' : ''}`}
+                    onClick={() => setRole('localauthority')}
                   >
                     Local authority
                   </button>

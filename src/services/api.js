@@ -1,4 +1,4 @@
-const BASE_URL = 'http://10.89.206.228:8000/api';
+const BASE_URL = 'http://192.168.43.100:8000/api';
 
 // ── Token helpers ──
 export const saveTokens = (access, refresh) => {
@@ -105,15 +105,18 @@ export const promoteToFoodSaver = async (userId) => {
 export const adminCreateUser = async (userData) => {
   const completeUserData = {
     ...userData,
-    phone: "0555000000",      
-    address: "Not provided"   
+    phone: "0555000000",
+    address: "Not provided"
   };
 
   const res = await authFetch(`${BASE_URL}/users/admin/create-user/`, {
     method: 'POST',
     body: JSON.stringify(completeUserData),
   });
-  return res.json();
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(JSON.stringify(data)); 
+  return data;
 };
 
 export const adminDeleteUser = async (userId) => {

@@ -230,9 +230,15 @@ class AdminCreateUserView(APIView):
         serializer = AdminCreateUserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            
+            # ✅ Mark email as confirmed so they can log in after setting password
+            user.is_email_confirmed = True
+            user.is_active = True
+            user.save()
+            
             otp = OTPCode.objects.create(user=user)
             
-            frontend_url = settings.FRONTEND_URL  # e.g. "http://localhost:3000"
+            frontend_url = settings.FRONTEND_URL
             set_password_link = f"{frontend_url}/set-password"
             
             otp.send_to_email(
@@ -319,6 +325,8 @@ class SetPasswordView(APIView):
 
             user.set_password(new_password)
             user.is_verified = True
+            user.is_active = True            # ✅ ensure active
+            user.is_email_confirmed = True   # ✅ ensure can login
             user.save()
             otp.is_used = True
             otp.save()
@@ -326,7 +334,7 @@ class SetPasswordView(APIView):
 
         except User.DoesNotExist:
             return Response({'error': 'User not found.'}, status=status.HTTP_400_BAD_REQUEST)
-
+        
 class AdminDeleteUserView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 
