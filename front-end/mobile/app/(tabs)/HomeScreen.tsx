@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import ReservationAcceptedModal from '../../components/ReservationAcceptedModal';
 import {
   View, FlatList, StyleSheet, StatusBar,
   Text, TouchableOpacity, ActivityIndicator,
@@ -87,6 +88,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <ReservationAcceptedModal />
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
       <View style={styles.header}>

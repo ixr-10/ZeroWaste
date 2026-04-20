@@ -143,7 +143,7 @@ export default function Step4Localization() {
         formData.append('image', { uri: image, name: filename, type } as any);
       }
 
-      const response = await api.post('/donations/', formData, {
+      const response = await api.post('/donations/create_donation/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -160,10 +160,14 @@ export default function Step4Localization() {
         }]
       );
 
-    } catch (err: any) {
-      console.log('Publish error:', err.response?.data || err.message);
-      Alert.alert('Error', err.response?.data?.error || err.response?.data?.detail || 'Failed to publish donation. Please try again.');
-    } finally {
+      } catch (err: any) {
+  console.log('Publish error FULL:', JSON.stringify(err));
+  console.log('Publish error response:', err.response?.data);
+  console.log('Publish error message:', err.message);
+  console.log('Publish error code:', err.code);
+  Alert.alert('Error', err.response?.data?.error || err.response?.data?.detail || 'Failed to publish donation. Please try again.');
+}
+     finally {
       setPublishing(false);
     }
   };

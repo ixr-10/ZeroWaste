@@ -12,7 +12,7 @@ export default function RootLayout() {
         It is self-contained: it checks AsyncStorage for a token,
         fetches accepted reservations, and only shows if there's a new one.
       */}
-      <ReservationAcceptedModal />
+      
 
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />

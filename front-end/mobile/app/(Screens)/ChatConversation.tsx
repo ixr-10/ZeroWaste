@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, Stack, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SPACING, BORDER_RADIUS } from "../../constants/theme";
+import { WS_URL } from '../../constants/config';
 import * as ImagePicker from "expo-image-picker";
 import { Audio } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -56,7 +57,7 @@ export default function ChatConversation() {
       }
 
       ws = new WebSocket(
-        `ws://192.168.73.147:8000/ws/chat/${conversationId}/?token=${token}`
+        `${WS_URL}/ws/chat/${conversationId}/?token=${token}`
       );
       wsRef.current = ws;
 
@@ -112,10 +113,10 @@ export default function ChatConversation() {
   const sendMessage = () => {
     if (!message.trim()) return;
 
-    wsRef.current?.send(JSON.stringify({
-      type: "message",
-      content: message.trim()
-    }));
+   wsRef.current?.send(JSON.stringify({
+  type: "message",
+  content: message.trim(),
+}));
 
     setMessage("");
   };
