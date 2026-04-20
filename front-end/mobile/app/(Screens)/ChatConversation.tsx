@@ -23,9 +23,10 @@ type Message = {
 
 export default function ChatConversation() {
   const router = useRouter();
-  const { conversationId, otherUsername } = useLocalSearchParams<{
+  const { conversationId, otherUsername, otherUserId } = useLocalSearchParams<{
     conversationId: string;
     otherUsername: string;
+    otherUserId: string;
   }>();
 
   const flatListRef = useRef<FlatList>(null);
@@ -38,7 +39,7 @@ export default function ChatConversation() {
   const [isRecording, setIsRecording] = useState(false);
   const [dotVisible, setDotVisible] = useState(true);
 
-  // ✅ WebSocket
+  
   useEffect(() => {
     let ws: WebSocket;
 
@@ -56,7 +57,7 @@ export default function ChatConversation() {
       }
 
       ws = new WebSocket(
-        `ws://192.168.1.39:8000/ws/chat/${conversationId}/?token=${token}`
+        `ws://192.168.73.147:8000/ws/chat/${conversationId}/?token=${token}`
       );
       wsRef.current = ws;
 
@@ -157,7 +158,23 @@ export default function ChatConversation() {
           {menuVisible && (
             <View style={styles.menu}>
               {["View Profile", "Block", "Report"].map(opt => (
-                <TouchableOpacity key={opt} style={styles.menuItem}>
+                <TouchableOpacity 
+                  key={opt} 
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    if (opt === "View Profile") {
+                      if (!otherUserId) {
+                        console.error("Missing otherUserId in chat params");
+                        return;
+                      }
+                      router.push({ 
+                        pathname: "/(Screens)/UserProfile" as any, 
+                        params: { id: otherUserId } 
+                      });
+                    }
+                  }}
+                >
                   <Text style={styles.menuText}>{opt}</Text>
                 </TouchableOpacity>
               ))}
@@ -219,7 +236,7 @@ export default function ChatConversation() {
 }
 
 
-// ONLY showing CHANGES — everything else stays EXACTLY as your code
+
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "white" },
@@ -297,9 +314,9 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.full
   },
 
-  // ✅ FIXED (IMPORTANT)
+  
   bubble: {
-    maxWidth: "80%", // 🔥 fixes long text wrapping
+    maxWidth: "80%", 
     borderRadius: BORDER_RADIUS.lg,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md
@@ -316,12 +333,12 @@ const styles = StyleSheet.create({
     // ❌ removed alignSelf (it was breaking layout)
   },
 
-  // ✅ FIXED TEXT WRAP
+ 
   bubbleText: {
     fontSize: 14,
     color: COLORS.textPrimary,
     lineHeight: 20,
-    flexShrink: 1 // 🔥 prevents overflow + weird breaking
+    flexShrink: 1 
   },
 
   bubbleTextMine: {

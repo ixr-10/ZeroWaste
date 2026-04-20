@@ -18,11 +18,11 @@ const COLORS = {
 };
 
 const TABS = [
-  { label: 'Home',         icon: 'home',          route: '/(Screens)/HomeScreen'         },
-  { label: 'Chat',         icon: 'chatbubble',    route: '/(Screens)/ChatList'         },
-  { label: '',             icon: '',              route: '__add__'                       },
-  { label: 'Notification', icon: 'notifications', route: '/(Screens)/notifications' },
-  { label: 'Profile',      icon: 'person',        route: '/(Screens)/ProfileScreen'      },
+  { label: 'Home',         icon: 'home',          route: '/(tabs)/HomeScreen' },
+  { label: 'Chat',         icon: 'chatbubble',    route: '/(tabs)/ChatList' },
+  { label: '',             icon: '',              route: '__add__' },
+  { label: 'Notification', icon: 'notifications', route: '/(tabs)/notifications' },
+  { label: 'Profile',      icon: 'person',        route: '/(tabs)/ProfileScreen' },
 ];
 
 interface BottomNavBarProps {
@@ -34,7 +34,8 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ onAddPress }) => {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
 
-  const isActive = (route: string) => pathname.includes(route.replace('/(Screens)/', ''));
+  const isActive = (route: string) =>
+    route !== '__add__' && pathname.includes(route.split('/').pop() || '');
 
   return (
     <View style={[
@@ -47,7 +48,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ onAddPress }) => {
             <TouchableOpacity
               key="add"
               style={styles.addWrapper}
-              onPress={onAddPress ?? (() => router.push('/Picture' as any))}
+              onPress={onAddPress ?? (() => router.push('/(tabs)/Picture' as any))}
               activeOpacity={0.85}
             >
               <View style={styles.addCircle}>
@@ -82,14 +83,16 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ onAddPress }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+ container: {
     flexDirection: 'row',
     backgroundColor: COLORS.primaryLight,
     paddingTop: 8,
     paddingHorizontal: 4,
     alignItems: 'flex-end',
     borderTopWidth: 0,
-    borderRadius: 25,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    // Remove borderRadius: 25 — it was rounding bottom corners too
   },
   tabItem: {
     flex: 1,

@@ -98,7 +98,7 @@ const AdminStatisticsPage = () => {
             <span className="admin-icon"><FiPieChart /></span>
             {isSidebarOpen && <span className="menu-text">Statistics</span>}
           </div>
-          <div className="menu-item">
+          <div className="menu-item" onClick={() => navigate('/admin/reports')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FiFileText /></span>
             {isSidebarOpen && <span className="menu-text">Reports</span>}
           </div>
@@ -106,7 +106,7 @@ const AdminStatisticsPage = () => {
             <span className="admin-icon"><FiUsers /></span>
             {isSidebarOpen && <span className="menu-text">Users</span>}
           </div>
-          <div className="menu-item">
+          <div className="menu-item" onClick={() => navigate('/admin/export')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FiDownload /></span>
             {isSidebarOpen && <span className="menu-text">Export data</span>}
           </div>

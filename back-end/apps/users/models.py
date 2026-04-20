@@ -11,7 +11,7 @@ class User(AbstractUser):
         ('donateur', 'Donateur'),
         ('beneficiaire', 'Bénéficiaire'),
         ('admin', 'Administrateur'),
-        ('collectivite', 'Collectivité Locale'),
+        ('localauthority', 'Local Authority'),
         ('food_saver', 'Food Saver'),
         ('user', 'Utilisateur Standard'),
     ]
@@ -20,11 +20,18 @@ class User(AbstractUser):
     address = models.TextField(blank=True)
     reputation_score = models.IntegerField(default=0)
     is_verified = models.BooleanField(default=False)
+    is_email_confirmed = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=False)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    push_token = models.CharField(max_length=255, blank=True, null=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    last_location_update = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.username} ({self.role})"
+
 
 class OTPCode(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -51,14 +58,42 @@ class OTPCode(models.Model):
             recipient_list=[self.user.email],
         )
 
-    # ✅ indented inside the class — 4 spaces
     def send_to_email_address(self, email, subject, message_prefix):
-        self.code = OTPCode.generate_code()  # ✅ also generate + save the code
+        """Generate a code, save it, and send it to a specific email address."""
+        self.code = OTPCode.generate_code()
         self.save()
         message = f"{message_prefix}\nYour verification code is: {self.code}\nThis code expires in 10 minutes."
         send_mail(
             subject=subject,
             message=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],  # ✅ sends to new email, not user.email
+            recipient_list=[email],
         )
+
+
+class BlockedUser(models.Model):
+    """Stores which users a person has blocked"""
+    blocker = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='blocking'
+    )
+    blocked = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='blocked_by'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('blocker', 'blocked')
+
+    def __str__(self):
+        return f"{self.blocker.username} blocked {self.blocked.username}"
+
+
+class SystemSettings(models.Model):
+    """Global settings configurable by admin"""
+    food_saver_score_threshold = models.IntegerField(default=100)
+
+    class Meta:
+        verbose_name = "System Settings"
+
+    def __str__(self):
+        return f"System Settings (FoodSaver threshold: {self.food_saver_score_threshold})"

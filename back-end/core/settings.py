@@ -1,23 +1,43 @@
 from datetime import timedelta
 from pathlib import Path
 import os
+import ssl
+import certifi
 from dotenv import load_dotenv
-import ssl, certifi # type: ignore
-EMAIL_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
-
 
 load_dotenv()
+# ====================== EMAIL CONFIG - FORCE RELAXED FOR PYTHON 3.14 ======================
+import ssl
+import certifi
 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 465
+EMAIL_USE_SSL = True
+EMAIL_USE_TLS = False
+
+EMAIL_HOST_USER = os.getenv('EMAIL_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD')
+DEFAULT_FROM_EMAIL = os.getenv('EMAIL_USER')
+
+# This is the strongest relaxation needed for Python 3.14
+EMAIL_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+EMAIL_SSL_CONTEXT.check_hostname = False
+EMAIL_SSL_CONTEXT.verify_mode = ssl.CERT_NONE
+
+# Explicitly disable the new strict Basic Constraints check
+if hasattr(ssl, 'VERIFY_X509_STRICT'):
+    EMAIL_SSL_CONTEXT.verify_flags &= ~ssl.VERIFY_X509_STRICT
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-*mla&@o&@8a+n^xf6qu@#*%8nd3^3lkrcw%&6#&(4@maq-@^7y'
 FRONTEND_URL = "http://localhost:3000"
 DEBUG = True
-CORS_ALLOW_ALL_ORIGINS = True
-ALLOWED_HOSTS = ['192.168.1.39', 'localhost', '127.0.0.1']
-EMAIL_SSL_CERTFILE = None
-EMAIL_SSL_KEYFILE = None
 
+ALLOWED_HOSTS = ['*']  # For development only
+
+# ====================== Rest of settings ======================
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -38,7 +58,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -69,12 +88,8 @@ ASGI_APPLICATION = 'core.asgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '3306'),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -90,22 +105,32 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
-ASGI_APPLICATION = 'core.asgi.application'
-
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-     "http://localhost:8081",  
-    "http://127.0.0.1:8081", 
-
+    "http://localhost:8081",
+    "http://127.0.0.1:8081",
     "http://192.168.1.38:8081",
     "http://192.168.1.37:8081",
-    "http://192.168.1.39:8081"
-
+    "http://192.168.43.100:8081",
+    "http://172.26.33.147:8081",  
+    "http://192.168.1.34:8081",  
+    "http://10.89.206.228:8081", 
+    "http://10.89.206.228:3000",
+    "http://192.168.1.34:8081",
+    "http://10.0.2.2:8081",
+    "http://192.168.73.147:8081",
+    
 ]
-# ✅ Allow all hosts during development
-ALLOWED_HOSTS = ['*']
-
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://192.168.1.34:3000",
+    "http://192.168.67.243:8081",
+    "http://192.168.86.147:8081",
+    "http://10.0.2.2:8000",
+    "http://10.89.206.228:8000",
+    "http://192.168.43.100:8000",
+    "http://192.168.73.147:8081",
+]
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
@@ -128,19 +153,8 @@ SIMPLE_JWT = {
 
 AUTH_USER_MODEL = 'users.User'
 
-import ssl, certifi # type: ignore
-
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 465
-EMAIL_USE_SSL = True
-EMAIL_USE_TLS = False
-EMAIL_HOST_USER = os.getenv('EMAIL_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD')
-DEFAULT_FROM_EMAIL = os.getenv('EMAIL_USER')
-
-EMAIL_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
-
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'

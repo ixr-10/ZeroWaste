@@ -10,7 +10,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPass, setShowConfirmPass] = useState(false); // ← fixed
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [phone, setPhone] = useState('');
   const [adresse, setAdresse] = useState('');
   const [username, setUsername] = useState('');
@@ -38,6 +38,7 @@ export default function RegisterScreen() {
       });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
      // replace the router.push after successful register:
 router.push({
   pathname: '/auth/verify-email' as any,
@@ -50,6 +51,12 @@ router.push({
         params: { email: data.user?.email || email },   // Use backend response or fallback to form email
       });
 >>>>>>> 4b91348b95f8d390f860bbbdbc27a7e3fa67e633
+=======
+      router.push({
+        pathname: '/auth/confirmationEmail' as any,
+        params: { email: data.user?.email || email },
+      });
+>>>>>>> a3a6bd829a4bee32f5db02bb08773b300ccce1b6
 
     } catch (err: any) {
       const errors = err.response?.data;
@@ -132,11 +139,9 @@ router.push({
             secureTextEntry={!showPassword}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-            <Text style={styles.eyeText}>
-              {showPassword
-                ? <Ionicons name="eye" size={24} color="black" />
-                : <Ionicons name="eye-off-outline" size={24} color="black" />}
-            </Text>
+            {showPassword
+              ? <Ionicons name="eye" size={24} color="black" />
+              : <Ionicons name="eye-off-outline" size={24} color="black" />}
           </TouchableOpacity>
         </View>
 
@@ -147,14 +152,12 @@ router.push({
             style={[styles.input, { flex: 1 }]}
             value={confirmPass}
             onChangeText={setConfirmPass}
-            secureTextEntry={!showConfirmPass} // ← fixed
+            secureTextEntry={!showConfirmPass}
           />
-          <TouchableOpacity onPress={() => setShowConfirmPass(!showConfirmPass)} style={styles.eyeBtn}> // ← fixed
-            <Text style={styles.eyeText}>
-              {showConfirmPass // ← fixed
-                ? <Ionicons name="eye" size={24} color="black" />
-                : <Ionicons name="eye-off-outline" size={24} color="black" />}
-            </Text>
+          <TouchableOpacity onPress={() => setShowConfirmPass(!showConfirmPass)} style={styles.eyeBtn}>
+            {showConfirmPass
+              ? <Ionicons name="eye" size={24} color="black" />
+              : <Ionicons name="eye-off-outline" size={24} color="black" />}
           </TouchableOpacity>
         </View>
 
@@ -178,6 +181,7 @@ const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 24, justifyContent: 'center', backgroundColor: '#fff' },
   title: { fontSize: 24, fontWeight: '700', textAlign: 'center', marginBottom: 32, color: '#1a1a1a' },
   label: { fontSize: 16, color: 'black', marginBottom: 6 },
+<<<<<<< HEAD
   input: {
 <<<<<<< HEAD
     borderWidth: 1, borderColor: '#588157', opacity: 0.5,
@@ -193,19 +197,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
 >>>>>>> 4b91348b95f8d390f860bbbdbc27a7e3fa67e633
   },
+=======
+  input: { borderWidth: 1, borderColor: '#588157', opacity: 0.5, borderRadius: 20, padding: 12, marginBottom: 16, fontSize: 14 },
+>>>>>>> a3a6bd829a4bee32f5db02bb08773b300ccce1b6
   inputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   eyeBtn: { position: 'absolute', right: 12, top: 12 },
   eyeText: { fontSize: 18 },
-  button: {
-    backgroundColor: '#588157', 
-    paddingHorizontal: 20, 
-    width: 96,
-    paddingVertical: 10, 
-    borderRadius: 25, 
-    alignItems: 'center',
-    marginBottom: 24, 
-    alignSelf: 'center',
-  },
+  button: { backgroundColor: '#588157', paddingHorizontal: 20, width: 96, paddingVertical: 10, borderRadius: 25, alignItems: 'center', marginBottom: 24, alignSelf: 'center' },
   buttonText: { color: 'black', fontWeight: '700', fontSize: 16 },
   bottomText: { textAlign: 'center', color: 'black', fontSize: 13 },
   link: { color: '#588157', fontWeight: '600', textDecorationLine: 'underline' },

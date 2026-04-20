@@ -73,7 +73,7 @@ export default function ConfirmationEmail() {
 
     try {
       setIsResending(true);
-      await api.post('/resend-otp/', { email: email.trim() });
+      await api.post('/users/resend-otp/', { email: email.trim() });
       Alert.alert("Code Sent", "A new verification code has been sent to your email.");
     } catch (error: any) {
       console.log("Resend error:", error.response?.data);

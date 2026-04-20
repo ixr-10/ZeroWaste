@@ -19,8 +19,8 @@ export default function SplashScreen() {
           // Seen onboarding but not logged in → Login
           router.replace('/auth/login');
         } else {
-          // Fully authenticated → Main app
-          router.replace('/(tabs)/slides');
+          // Fully authenticated → Main app (Home tab)
+          router.replace('/(tabs)/HomeScreen');
         }
       }, 500);
     };

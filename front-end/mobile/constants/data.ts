@@ -13,17 +13,15 @@ export interface FoodListing {
   avatarUrl?: string;
   isEmergency?: boolean;
 }
-
 export const CATEGORIES = [
-  'Fruit & Vegetables',
-  'Pastries',
-  'Milk Products',
-  'Meat & Fish',
-  'Preserved Food',
-  'Cooked Meals',
-  'Drinks',
-  'Other',
+  'fruits',
+  'legumes', 
+  'pain',
+  'conserves',
+  'produits_laitiers',
+  'autre',
 ];
+
 
 export const DISTANCE_OPTIONS = [
   { label: '< 500 m', value: 500 },

@@ -11,8 +11,8 @@ class DonationSerializer(serializers.ModelSerializer):
             'id', 'donor', 'donor_username', 'title', 'description',
             'category', 'quantity', 'available_quantity', 'unit',
             'expiry_date', 'pickup_address', 'latitude', 'longitude',
-            'status', 'urgency',  # ← added
-            'image', 'created_at', 'distance_km'
+            'status', 'urgency',  
+            'image', 'created_at','updated_at', 'distance_km'
         ]
         read_only_fields = ['donor', 'available_quantity', 'status', 'created_at']
 
@@ -36,12 +36,14 @@ class DonationSerializer(serializers.ModelSerializer):
 class ReservationSerializer(serializers.ModelSerializer):
     beneficiary_username = serializers.CharField(source='beneficiary.username', read_only=True)
     donation_title = serializers.CharField(source='donation.title', read_only=True)
+    donor = serializers.IntegerField(source='donation.donor.id', read_only=True)
+    donor_username = serializers.CharField(source='donation.donor.username', read_only=True)
 
     class Meta:
         model = Reservation
         fields = [
-            'id', 'donation', 'donation_title', 'beneficiary',
-            'beneficiary_username', 'quantity_requested', 'status',
-            'pickup_date', 'notes', 'confirmation_deadline', 'created_at'  # ← added confirmation_deadline
+            'id', 'donation', 'donation_title', 'donor', 'donor_username',
+            'beneficiary', 'beneficiary_username', 'quantity_requested', 
+            'status', 'pickup_date', 'notes', 'confirmation_deadline', 'created_at' 
         ]
         read_only_fields = ['beneficiary', 'status', 'created_at', 'confirmation_deadline']

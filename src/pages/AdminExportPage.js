@@ -45,7 +45,7 @@ const AdminExportPage = () => {
             <span className="admin-icon"><FiPieChart /></span>
             {isSidebarOpen && <span className="menu-text">Statistics</span>}
           </div>
-          <div className="menu-item">
+          <div className="menu-item" onClick={() => navigate('/admin/reports')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FiFileText /></span>
             {isSidebarOpen && <span className="menu-text">Reports</span>}
           </div>

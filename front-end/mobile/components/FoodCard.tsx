@@ -5,6 +5,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { CardMenu } from './CardMenu';
+import { useRouter } from 'expo-router';
 
 interface FoodCardProps {
   item: any;
@@ -12,6 +13,7 @@ interface FoodCardProps {
 }
 
 export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
+  const router = useRouter();
   const [menuVisible, setMenuVisible] = useState(false);
 
   const formatDistance = (km: number) => {
@@ -101,12 +103,15 @@ export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
         <View style={styles.divider} />
 
         <View style={styles.footer}>
-          <View style={styles.userInfo}>
+          <TouchableOpacity 
+            style={styles.userInfo} 
+            onPress={() => router.push({ pathname: "/(Screens)/UserProfile" as any, params: { id: item.donor } })}
+          >
             <View style={styles.avatar}>
               <Ionicons name="person" size={18} color={COLORS.primaryMedium} />
             </View>
             <Text style={styles.username}>{item.donor_username}</Text>
-          </View>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.reserveButton}
