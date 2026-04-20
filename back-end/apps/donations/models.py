@@ -41,15 +41,14 @@ class Donation(models.Model):
     urgency = models.CharField(max_length=10, choices=URGENCY_CHOICES, default='green')
     image = models.ImageField(upload_to='donations/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)  
 
     def save(self, *args, **kwargs):
-        # Set available_quantity only when creating a new donation
         if not self.pk:
             self.available_quantity = self.quantity
         super().save(*args, **kwargs)
 
     def is_expired(self):
-        """Check if donation has passed its expiry date"""
         return self.expiry_date < timezone.now().date()
 
     def __str__(self):
@@ -60,9 +59,9 @@ class Reservation(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('confirmed', 'Confirmed'),
-        ('rejected', 'Rejected'),      # Better than just 'cancelled'
-        ('expired', 'Expired'),        # NEW - for timeout after 2 hours
-        ('cancelled', 'Cancelled'),    # For when beneficiary cancels
+        ('rejected', 'Rejected'),
+        ('expired', 'Expired'),
+        ('cancelled', 'Cancelled'),
         ('completed', 'Completed'),
     ]
 
@@ -76,17 +75,26 @@ class Reservation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        # Auto-set confirmation_deadline when creating a new pending reservation
         if not self.pk and self.status == 'pending' and not self.confirmation_deadline:
             self.confirmation_deadline = timezone.now() + timezone.timedelta(hours=2)
         super().save(*args, **kwargs)
 
     @property
     def is_expired(self):
-        """Check if the 2-hour confirmation deadline has passed"""
         if self.confirmation_deadline:
             return timezone.now() > self.confirmation_deadline
         return False
 
     def __str__(self):
         return f"{self.beneficiary.username} reserved {self.quantity_requested} of {self.donation.title}"
+
+class NotInterested(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='not_interested')
+    donation = models.ForeignKey(Donation, on_delete=models.CASCADE, related_name='not_interested')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'donation')
+
+    def __str__(self):
+        return f"{self.user.username} not interested in {self.donation.title}"

@@ -1,4 +1,4 @@
-const BASE_URL = 'http://: 192.168.1.34:8000/api';
+const BASE_URL = 'http://10.89.206.228:8000/api';
 
 // ── Token helpers ──
 export const saveTokens = (access, refresh) => {
@@ -37,7 +37,6 @@ export const loginUser = async (username, password) => {
   if (!response.ok) throw new Error(data.detail || 'Login failed.');
   return data;
 };
-
 
 export const setPassword = async (username, code, new_password, confirm_password) => {
   const res = await fetch(`${BASE_URL}/users/set-password/`, {
@@ -99,14 +98,24 @@ export const promoteToFoodSaver = async (userId) => {
   });
   return res.json();
 };
+// fIXME: temporary workaround - the backend currently requires 'phone' and 'address' 
+// fields to be mandatory, but they are not yet included in the frontend design. 
+// These hardcoded values should be removed once the backend API is updated.
 
 export const adminCreateUser = async (userData) => {
+  const completeUserData = {
+    ...userData,
+    phone: "0555000000",      
+    address: "Not provided"   
+  };
+
   const res = await authFetch(`${BASE_URL}/users/admin/create-user/`, {
     method: 'POST',
-    body: JSON.stringify(userData),
+    body: JSON.stringify(completeUserData),
   });
   return res.json();
 };
+
 export const adminDeleteUser = async (userId) => {
   const res = await authFetch(`${BASE_URL}/users/admin/users/${userId}/delete/`, {
     method: 'DELETE',
@@ -114,12 +123,14 @@ export const adminDeleteUser = async (userId) => {
   if (res.status === 204) return { success: true };
   return res.json();
 };
+
 export const demoteFromFoodSaver = async (userId) => {
   const res = await authFetch(`${BASE_URL}/users/demote/${userId}/`, {
     method: 'POST',
   });
   return res.json();
 };
+
 export const logoutUser = async () => {
   const refresh = getRefreshToken();
   try {
@@ -133,4 +144,30 @@ export const logoutUser = async () => {
     removeTokens();
     localStorage.removeItem('user');
   }
+};
+
+// ── Admin Reports (Moderation) ──
+
+export const fetchAdminReports = async () => {
+  const res = await authFetch(`${BASE_URL}/reports/`); 
+  const data = await res.json();
+  
+  if (!res.ok) throw new Error(data.detail || 'Failed to fetch reports.');
+  
+  return data.reports ? data.reports : data; 
+};
+
+export const processReportAction = async (reportId, actionType) => {
+  let backendAction = actionType;
+  if (actionType === 'delete_account') backendAction = 'deactivate_account';
+  if (actionType === 'ignore_report') backendAction = 'ignore';
+
+  const res = await authFetch(`${BASE_URL}/reports/${reportId}/action/`, {
+    method: 'POST',
+    body: JSON.stringify({ action: backendAction }),
+  });
+  
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || data.error || 'Failed to process action.');
+  return data;
 };

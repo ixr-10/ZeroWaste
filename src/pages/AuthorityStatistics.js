@@ -11,7 +11,7 @@ const AuthorityStatistics = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
 
-  /
+  
   const [stats, setStats] = useState(null);
   const [donationsData, setDonationsData] = useState([]);
   const [foodSavedData, setFoodSavedData] = useState([]);
@@ -26,7 +26,7 @@ const AuthorityStatistics = () => {
         setIsLoading(true);
         
         
-        // مonst response = await fetch('http://localhost:5000/api/authority/stats');
+        // nst response = await fetch('http://localhost:5000/api/authority/stats');
         // const data = await response.json();
         
         // 
