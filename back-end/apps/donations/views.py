@@ -11,6 +11,8 @@ from apps.notifications.utils import create_notification
 from .models import Donation, Reservation, NotInterested
 from .serializers import DonationSerializer, ReservationSerializer
 
+from django.utils.timezone import now
+
 
 # ─────────────────────────────────────────────
 # DONATIONS
@@ -20,22 +22,31 @@ class CreateDonationView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        # BUG FIX: verified users were falling through with no response
+        today = now().date()
+        donations_today = Donation.objects.filter(
+            donor=request.user,
+            created_at__date=today
+        ).count()
+
         if not request.user.is_verified:
-            donation_count = Donation.objects.filter(donor=request.user).count()
-            if donation_count >= 2:
+            if donations_today >= 1:
                 return Response(
-                    {'error': 'Unverified users can only make 2 donations. Get verified to unlock full access.'},
+                    {'error': 'Unverified users can only make 1 donation per day. Get verified to unlock full access.'},
                     status=status.HTTP_403_FORBIDDEN
                 )
-        # both verified and under-limit unverified reach here
+        else:
+            if donations_today >= 5:
+                return Response(
+                    {'error': 'You have reached the maximum of 5 donations for today.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
         serializer = DonationSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save(donor=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
+    
 class EditDonationView(APIView):
     permission_classes = [IsAuthenticated]
 

@@ -19,7 +19,7 @@ from .views import (
 
 urlpatterns = [
     # ── Donations ──────────────────────────────────────
-    path('', CreateDonationView.as_view(), name='create_donation'),
+    path('create_donation/', CreateDonationView.as_view(), name='create_donation'),
     path('my-donations/', MyDonationsView.as_view(), name='my_donations'),          # GET=read, POST=sync
     path('<int:donation_id>/edit/', EditDonationView.as_view(), name='edit_donation'),
     path('<int:donation_id>/delete/', DeleteDonationView.as_view(), name='delete_donation'),
