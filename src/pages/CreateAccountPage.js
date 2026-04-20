@@ -14,14 +14,19 @@ import {
 import '../styles/AdminUsersPage.css'; 
 import '../styles/CreateAccountPage.css';
 
+
+import { adminCreateUser } from '../services/api'; 
+
 const CreateAccountPage = () => {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
-  // State 
+  // States
   const [role, setRole] = useState('admin'); 
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
+
+  const [isLoading, setIsLoading] = useState(false);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const adminName = user.username || 'Admin Name';
@@ -30,10 +35,32 @@ const CreateAccountPage = () => {
     navigate('/login');
   };
 
-  const handleSubmit = (e) => {
+  
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("🔥 New Account Data:", { role, email, username });
-    navigate('/admin/users');
+    setIsLoading(true); // 
+
+    try {
+      
+      const newUserData = { 
+        role: role, 
+        email: email, 
+        username: username 
+      };
+      
+      await adminCreateUser(newUserData);
+      
+      // إذا جاز كلش نورمال، نخرجو ميساج و نرجعو لباجة المستخدمين
+      alert('✅ Account created successfully!');
+      navigate('/admin/users');
+
+    } catch (err) {
+      
+      console.error("Error creating account:", err);
+      alert('❌ Failed to create account: ' + err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -82,7 +109,6 @@ const CreateAccountPage = () => {
       {/* MAIN CONTENT */}
       <main className="main-content form-page-layout">
         
-       
         <button type="button" className="back-button absolute-back" onClick={() => navigate(-1)}>
           &lt;
         </button>
@@ -94,7 +120,6 @@ const CreateAccountPage = () => {
             <h2>Create a new account</h2>
           </div>
 
-          
           <form onSubmit={handleSubmit} className="form-wrapper">
             
             {/* FORM CARD*/}
@@ -151,8 +176,9 @@ const CreateAccountPage = () => {
             </div>
 
             <div className="action-buttons-stacked">
-              <button type="submit" className="btn-create-full">
-                Create
+             
+              <button type="submit" className="btn-create-full" disabled={isLoading}>
+                {isLoading ? 'Creating...' : 'Create'}
               </button>
               <button type="button" className="btn-cancel-full" onClick={() => navigate(-1)}>
                 Cancel

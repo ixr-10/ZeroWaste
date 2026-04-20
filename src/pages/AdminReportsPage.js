@@ -21,8 +21,8 @@ import {
   FiChevronRight
 } from 'react-icons/fi';
 
-
-// import { fetchAdminReports, processReportAction } from '../services/api';
+// 
+import { fetchAdminReports, processReportAction } from '../services/api';
 
 const AdminReportsPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -35,21 +35,48 @@ const AdminReportsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
+  const getBadgeStyle = (actionType) => {
+    if (!actionType) return { backgroundColor: '#f2f4f4', color: '#bdc3c7' };
+    const lowerAction = actionType.toLowerCase();
+    
+    if (lowerAction.includes('delete') || lowerAction.includes('deactivate')) {
+      return { backgroundColor: '#fadbd8', color: '#e74c3c' }; 
+    } else if (lowerAction.includes('warning')) {
+      return { backgroundColor: '#fdebd0', color: '#e67e22' }; 
+    } else if (lowerAction.includes('ignore') || lowerAction.includes('dismiss')) {
+      return { backgroundColor: '#e5e7e9', color: '#7f8c8d' }; 
+    }
+    return { backgroundColor: '#f2f4f4', color: '#bdc3c7' };
+  };
+
   useEffect(() => {
     const loadReports = async () => {
       setIsLoading(true);
       try {
+        // 2. to get the data from the dserver 
+        const backendData = await fetchAdminReports(); 
         
-        const dummyDataFromBackend = [
-          { id: 1, type: 'post', title: 'Whole Milk', reason: 'Dangerous or unsafe food', author: 'Username', date: 'Mar 28, 2025', imageEmoji: '🥛', postDesc: 'This milk smells very bad...', category: 'Dairy', weight: '1 L', expireDate: '25/03/2025', imgUrl: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&q=80&w=200', status: 'Pending' },
-          { id: 2, type: 'post', title: 'Mixed Berries', reason: 'Expired product posted as fresh', author: 'Username', date: 'Mar 28, 2025', imageEmoji: '🫐', postDesc: 'Freshly picked mixed berries...', category: 'Fruit & Vegetables', weight: '2 Kg', expireDate: '04/04/2026', imgUrl: berriesImg, status: 'Pending' },
-          { id: 3, type: 'user', title: 'Username_1', reason: 'Fake account', author: 'Username', date: 'Mar 28, 2025', imageEmoji: null, userImg: adminIcon, email: 'username.1@gmail.com', donations: 3, score: 2.1, status: 'Pending' },
-          { id: 4, type: 'user', title: 'Username_02', reason: 'Spam', author: 'Username', date: 'Mar 28, 2025', imageEmoji: null, userImg: user2Img, email: 'user02@gmail.com', donations: 0, score: 0.5, status: 'Pending' },
-          { id: 5, type: 'post', title: 'Extra Item', reason: 'Test', author: 'User', date: 'Mar 29, 2025', imageEmoji: '🍎', status: 'Treated' }
-        ];
-        
-        // setReports(data);
-        setReports(dummyDataFromBackend);
+        // 3. tr
+        const formattedReports = backendData.map(r => {
+          const isPost = r.reported_donation !== null;
+          return {
+            id: r.id,
+            type: isPost ? 'post' : 'user',
+            title: isPost ? r.donation_title : r.reported_username,
+            reason: r.reason,
+            postDesc: r.description,
+            author: r.reporter_username,
+            date: new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            imgUrl: isPost ? r.donation_image : null,
+            userImg: !isPost ? r.reported_user_avatar : null,
+            imageEmoji: isPost ? '📦' : '👤',
+            status: r.status === 'pending' ? 'Pending' : 'Treated',
+            action: r.action_taken_display || r.action_taken,
+            actionDate: r.treated_at ? new Date(r.treated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
+          };
+        });
+
+        setReports(formattedReports);
       } catch (error) {
         console.error("Failed to load reports", error);
       } finally {
@@ -68,27 +95,34 @@ const AdminReportsPage = () => {
     if (!confirmAction) return;
 
     try {
-      // ـPI تاjango:
-      // await processReportAction(selectedReport.id, actionType);
+      // 4. send actions to the server 
+      await processReportAction(selectedReport.id, actionType);
 
+      const todayDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       
+      let formattedAction = '';
+      switch(actionType) {
+        case 'delete_post': formattedAction = 'Post deleted'; break;
+        case 'delete_account': formattedAction = 'Account deactivated'; break;
+        case 'send_warning': formattedAction = 'Warning sent'; break;
+        case 'ignore_report': formattedAction = 'Ignored'; break;
+        default: formattedAction = actionType;
+      }
+
       setReports((prevReports) => 
         prevReports.map((r) => 
-          r.id === selectedReport.id ? { ...r, status: 'Treated' } : r
+          r.id === selectedReport.id ? { ...r, status: 'Treated', action: formattedAction, actionDate: todayDate } : r
         )
       );
 
-      
       setSelectedReport(null);
-      
       
     } catch (error) {
       console.error(`Error performing action ${actionType}`, error);
-      alert("Something went wrong with the backend.");
+      alert("Something went wrong with the backend. Make sure you are an Admin.");
     }
   };
 
-  
   const filteredReports = reports.filter((report) => {
     const matchesStatus = report.status === statusTab;
     let matchesCategory = true;
@@ -171,21 +205,41 @@ const AdminReportsPage = () => {
                     className={`report-card ${selectedReport?.id === report.id ? 'active-report-card' : ''}`} 
                     key={report.id}
                     onClick={() => setSelectedReport(report)}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                   >
-                    <div className="report-image-placeholder">
-                      {report.type === 'post' && report.imgUrl ? (
-                        <img src={report.imgUrl} alt={report.title} className="card-mini-img" />
-                      ) : report.type === 'user' && report.userImg ? (
-                        <img src={report.userImg} alt={report.title} className="card-mini-img" />
-                      ) : (
-                        report.imageEmoji
-                      )}
+                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                      <div className="report-image-placeholder">
+                        {report.type === 'post' && report.imgUrl ? (
+                          <img src={`http://192.168.1.34:8000${report.imgUrl}`} alt={report.title} className="card-mini-img" />
+                        ) : report.type === 'user' && report.userImg ? (
+                          <img src={`http://192.168.1.34:8000${report.userImg}`} alt={report.title} className="card-mini-img" />
+                        ) : (
+                          report.imageEmoji
+                        )}
+                      </div>
+                      <div className="report-details-info">
+                        <h4 className="report-title">{report.title}</h4>
+                        <p className="report-reason">{report.reason}</p>
+                        <p className="report-meta">By {report.author} . {report.date}</p>
+                      </div>
                     </div>
-                    <div className="report-details-info">
-                      <h4 className="report-title">{report.title}</h4>
-                      <p className="report-reason">{report.reason}</p>
-                      <p className="report-meta">By {report.author} . {report.date}</p>
-                    </div>
+
+                    {report.status === 'Treated' && report.action && (
+                      <div className="report-action-badge" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px', paddingRight: '15px' }}>
+                        <span style={{
+                          ...getBadgeStyle(report.action),
+                          padding: '5px 15px',
+                          borderRadius: '20px',
+                          fontSize: '12px',
+                          fontWeight: 'bold'
+                        }}>
+                          {report.action}
+                        </span>
+                        <span style={{ fontSize: '10px', color: '#999' }}>
+                          on {report.actionDate}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 ))
               )}
@@ -211,25 +265,23 @@ const AdminReportsPage = () => {
                     <div className="reported-user-card">
                       <div className="user-avatar-large">
                         {selectedReport.userImg ? (
-                          <img src={selectedReport.userImg} alt="avatar" style={{width: '100%', height: '100%', borderRadius: '10px', objectFit: 'cover'}} />
+                          <img src={`http://192.168.1.34:8000${selectedReport.userImg}`} alt="avatar" style={{width: '100%', height: '100%', borderRadius: '10px', objectFit: 'cover'}} />
                         ) : selectedReport.imageEmoji}
                       </div>
                       <div className="user-info">
                         <div className="user-header">
                           <p className="user-name">{selectedReport.title}</p>
-                          <p className="user-email">{selectedReport.email}</p>
                         </div>
                       </div>
                     </div>
                   ) : (
                     <div className="reported-post-card">
                       {selectedReport.imgUrl ? (
-                        <img src={selectedReport.imgUrl} alt="post" className="post-cover-image" />
+                        <img src={`http://192.168.1.34:8000${selectedReport.imgUrl}`} alt="post" className="post-cover-image" />
                       ) : <div className="post-cover-placeholder">{selectedReport.imageEmoji}</div>}
                       <div className="post-card-body">
                         <div className="post-card-header">
                           <h5>{selectedReport.title}</h5>
-                          <span className="post-category">{selectedReport.category}</span>
                         </div>
                         <p className="post-desc">{selectedReport.postDesc}</p>
                       </div>
@@ -260,8 +312,8 @@ const AdminReportsPage = () => {
                       <button className="action-btn delete-acc-btn" onClick={() => handleAction('delete_account')}>
                         <div className="action-btn-icon">👤</div>
                         <div className="action-btn-text">
-                          <span className="action-btn-title">Delete Account</span>
-                          <span className="action-btn-desc">permanently delete the poster's account</span>
+                          <span className="action-btn-title">Deactivate Account</span>
+                          <span className="action-btn-desc">deactivate the poster's account</span>
                         </div>
                       </button>
 
@@ -284,7 +336,6 @@ const AdminReportsPage = () => {
                     </div>
                   </div>
                 )}
-
               </div>
             </div>
           )}
