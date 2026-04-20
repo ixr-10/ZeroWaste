@@ -27,31 +27,29 @@ export default function HomeScreen() {
   const [donations, setDonations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-
-
-useEffect(() => {
-  const fetchDonations = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      let params = {};
-      if (status === 'granted') {
-        try {
-          const loc = await Location.getCurrentPositionAsync({});
-          params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
-        } catch (locationError) {
-          console.warn('Location unavailable, loading donations without distance.', locationError);
+  useEffect(() => {
+    const fetchDonations = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        let params = {};
+        if (status === 'granted') {
+          try {
+            const loc = await Location.getCurrentPositionAsync({});
+            params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+          } catch (locationError) {
+            console.warn('Location unavailable, loading donations without distance.', locationError);
+          }
         }
+        const res = await axios.get('/donations/available/', { params });
+        setDonations(res.data);
+      } catch (err) {
+        console.log('Error fetching donations:', err);
+      } finally {
+        setLoading(false);
       }
-      const res = await axios.get('/donations/available/', { params });
-      setDonations(res.data);
-    } catch (err) {
-      console.log('Error fetching donations:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-  fetchDonations();
-}, []);
+    };
+    fetchDonations();
+  }, []);
 
   const filteredDonations = useMemo(() => {
     return donations.filter((item) => {
@@ -68,21 +66,19 @@ useEffect(() => {
     });
   }, [searchQuery, selectedCategory, selectedDistance, emergencyOnly, donations]);
 
-  // ✅ This is the only place navigation to ReservationScreen happens
   const handleReserve = (donationId: string) => {
     const item = donations.find((d) => String(d.id) === donationId);
     if (!item) return;
-
     router.push({
       pathname: '/(Screens)/ReservationScreen' as any,
       params: {
-        donationId:   String(item.id),           // ✅ key is "donationId"
-        title:        item.title,
-        category:     item.category,
-        date:         item.expiry_date,           // ✅ API field name
-        postedBy:     item.donor_username,        // ✅ API field name
-        imageUrl:     item.image ?? '',           // ✅ API field name
-        maxQuantity:  String(item.available_quantity),
+        donationId:  String(item.id),
+        title:       item.title,
+        category:    item.category,
+        date:        item.expiry_date,
+        postedBy:    item.donor_username,
+        imageUrl:    item.image ?? '',
+        maxQuantity: String(item.available_quantity),
       },
     });
   };
@@ -148,7 +144,7 @@ useEffect(() => {
           renderItem={({ item }) => (
             <FoodCard
               item={item}
-              onReserve={handleReserve}  // ✅ FoodCard calls this with item.id
+              onReserve={handleReserve}
             />
           )}
           contentContainerStyle={styles.listContent}
