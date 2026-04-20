@@ -88,6 +88,8 @@ class AdminCreateUserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User(**validated_data)
         user.set_unusable_password()
+        user.is_active = False         
+        user.is_email_confirmed = False  
         user.save()
         return user
 
