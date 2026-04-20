@@ -9,12 +9,16 @@ import AdminStatisticsPage from './pages/AdminStatisticsPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import SetPasswordPage from './pages/SetPasswordPage'; 
 import AdminExportPage from './pages/AdminExportPage'; 
-
-// 👇 1. Zedt l'importation ta3 la page jdida ta3 Reports hna
 import AdminReportsPage from './pages/AdminReportsPage'; 
 
-// راني درت كومونتير للـ ProtectedRoute باش ما تخدمش درك
- import ProtectedRoute from './components/ProtectedRoute';
+import PromotionCriteria from './pages/PromotionCriteria'; 
+import CreateAccountPage from './pages/CreateAccountPage'; 
+
+import ProtectedRoute from './components/ProtectedRoute';
+
+
+import AuthorityStatistics from './pages/AuthorityStatistics';
+import AuthorityExport from './pages/AuthorityExport';
 
 function AppRoutes() {
   const navigate = useNavigate();
@@ -25,20 +29,18 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage onNavigateToReset={() => navigate('/reset-password')} />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/set-password" element={<SetPasswordPage />} />
+      
+      {/* Protected Admin Routes */} 
+      <Route path="/admin/users" element={<ProtectedRoute><AdminUsersPage /></ProtectedRoute>} />
+      <Route path="/admin/statistics" element={<ProtectedRoute><AdminStatisticsPage /></ProtectedRoute>} />
+      <Route path="/admin/export" element={<ProtectedRoute><AdminExportPage /></ProtectedRoute>} />
+      <Route path="/admin/reports" element={<ProtectedRoute><AdminReportsPage /></ProtectedRoute>} />
+      <Route path="/admin/promotion-criteria" element={<ProtectedRoute><PromotionCriteria /></ProtectedRoute>} />
+      <Route path="/admin/users/create" element={<ProtectedRoute><CreateAccountPage /></ProtectedRoute>} />
+      
      
-      {/* 👇 نحينا الحماية مؤقتا باش يفتحولك ديريكت بلا مشاكل */}
-       {/* 👇 2. Zedt la route jdida ta3 Reports */}
-         {/*
-          <Route path="/admin/users" element={<AdminUsersPage />} />
-          <Route path="/admin/statistics" element={<AdminStatisticsPage />} />
-          <Route path="/admin/export" element={<AdminExportPage />} />
-          <Route path="/admin/reports" element={<AdminReportsPage />} />
-      */ } 
-     
-    <Route path="/admin/users" element={<ProtectedRoute><AdminUsersPage /></ProtectedRoute>} />
-    <Route path="/admin/statistics" element={<ProtectedRoute><AdminStatisticsPage /></ProtectedRoute>} />
-    <Route path="/admin/export" element={<ProtectedRoute><AdminExportPage /></ProtectedRoute>} />
-    <Route path="/admin/reports" element={<ProtectedRoute><AdminReportsPage /></ProtectedRoute>} />
+      <Route path="/authority/statistics" element={<AuthorityStatistics />} />
+      <Route path="/authority/export" element={<AuthorityExport />} />
       
     </Routes>
   );

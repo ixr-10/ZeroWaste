@@ -14,7 +14,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
         self.room_group_name = f'conversation_{self.conversation_id}'
 
-        # Authenticate user from token
         token = self.scope['query_string'].decode().split('token=')[-1]
         self.user = await self.get_user_from_token(token)
 
@@ -22,20 +21,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        # Check user is part of this conversation
         allowed = await self.is_participant(self.conversation_id, self.user)
         if not allowed:
             await self.close()
             return
 
-        # Join room group
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
         )
         await self.accept()
 
-        # Send message history on connect
         messages = await self.get_message_history(self.conversation_id)
         await self.send(text_data=json.dumps({
             'type': 'history',
@@ -57,14 +53,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
             if not content:
                 return
 
-            # Save message to DB
             message = await self.save_message(
                 self.conversation_id,
                 self.user,
                 content
             )
 
-            # Broadcast to group
+            # ← Send notification to other user
+            await self.notify_other_user(
+                self.conversation_id,
+                self.user,
+                content
+            )
+
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
@@ -86,7 +87,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'message': event['message']
         }))
 
-    # ── DB helpers ──
+    @database_sync_to_async
+    def notify_other_user(self, conversation_id, sender, content):
+        from apps.notifications.utils import create_notification
+        from .models import Conversation
+        try:
+            conv = Conversation.objects.get(id=conversation_id)
+            recipient = conv.beneficiary if sender == conv.donor else conv.donor
+            create_notification(
+                recipient=recipient,
+                notification_type='new_message',
+                title=f'New message from {sender.username} 💬',
+                message=content[:100],
+                related_object_id=conversation_id
+            )
+        except Exception as e:
+            print(f'Notification failed: {e}')
 
     @database_sync_to_async
     def get_user_from_token(self, token):
@@ -130,7 +146,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             sender=sender,
             content=content
         )
-        # Update conversation updated_at
         conv.save()
         return {
             'id': message.id,

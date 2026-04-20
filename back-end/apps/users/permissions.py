@@ -14,7 +14,7 @@ class IsFoodSaver(BasePermission):
 
 class IsCollectivite(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'collectivite'
+        return request.user.is_authenticated and request.user.role == 'localauthority'
 
 class IsAdminOrFoodSaver(BasePermission):
    

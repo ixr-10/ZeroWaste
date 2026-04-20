@@ -13,7 +13,7 @@ class DonationSerializer(serializers.ModelSerializer):
             'category', 'quantity', 'available_quantity', 'unit',
             'expiry_date', 'pickup_address', 'latitude', 'longitude',
             'status', 'urgency',
-            'image', 'created_at', 'distance_km'
+            'image', 'created_at', 'updated_at', 'distance_km'
         ]
         read_only_fields = ['donor', 'available_quantity', 'status', 'created_at']
 

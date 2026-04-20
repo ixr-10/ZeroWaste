@@ -1,0 +1,239 @@
+/* ----------------------------------------
+   CreateAccountPage.css
+---------------------------------------- */
+
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden; 
+}
+
+.admin-dashboard {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden; 
+}
+
+
+.form-page-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center; 
+  justify-content: center; 
+  height: 100vh;
+  background-color: #fbfbfb;
+  box-sizing: border-box;
+  padding: 10px 20px; 
+  position: relative !important; 
+}
+
+.form-page-container {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.header-section {
+  display: flex;
+  align-items: center;
+  justify-content: center !important; 
+  margin-bottom: 20px; 
+  width: 100%;
+}
+
+
+.back-button.absolute-back {
+  position: absolute !important;
+  top: 40px !important;  
+  left: 40px !important; 
+  margin: 0 !important;
+  z-index: 100; 
+}
+
+.back-button {
+  background-color: #E4E9D9;
+  border: none;
+  color: #2c3e2c;
+  font-size: 18px;
+  font-weight: bold;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  background-color: #588157;
+  color: white;
+  transform: scale(1.05);
+}
+
+.header-section h2 {
+  color: #2c3e2c;
+  font-size: 22px; 
+  margin: 0;
+  font-weight: 700;
+  pointer-events: none;
+  position: static !important; 
+  transform: none !important;
+}
+
+/* Form Card */
+.create-card {
+  background-color: #f6f7f6;
+  border: 1px solid #d4ddd5;
+  border-radius: 16px;
+  padding: 30px; 
+  margin-bottom: 20px; 
+  animation: slideUpFade 0.6s ease-out forwards; 
+}
+
+.input-group {
+  margin-bottom: 20px; 
+}
+
+.section-label {
+  display: block;
+  font-size: 1rem;
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 0.95rem;
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 8px;
+  margin-left: 5px;
+}
+
+/* Role Pills */
+.role-pills {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.pill-btn {
+  flex: 1;
+  max-width: 200px;
+  padding: 10px 20px;
+  border-radius: 30px;
+  border: 1px solid #ccc;
+  background-color: white;
+  color: #333;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pill-btn.active {
+  background-color: #d7e2d7;
+  border-color: #7d9c7d;
+  color: #2b402b;
+}
+
+/* Input Boxes */
+.input-box {
+  display: flex;
+  align-items: center;
+  background-color: white;
+  border: 1px solid #bcc9bc;
+  border-radius: 12px;
+  padding: 0 15px;
+  height: 48px;
+  position: relative; 
+}
+
+.input-box:focus-within {
+  border-color: #588157;
+  box-shadow: 0 0 0 2px rgba(88, 129, 87, 0.1);
+}
+
+.input-icon {
+  color: #666;
+  font-size: 1.2rem;
+  margin-right: 12px;
+  position: static !important; 
+  transform: none !important;  
+}
+
+.input-box input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  color: #333;
+  height: 100%;
+  outline: none;
+}
+
+
+.action-buttons-stacked {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  opacity: 0; 
+  animation: slideUpFade 0.5s ease-out 0.2s forwards; 
+}
+
+.btn-create-full {
+  width: 100%;
+  background-color: #588157;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-create-full:hover {
+  background-color: #4a6d4a;
+}
+
+.btn-cancel-full {
+  width: 100%;
+  background-color: #f0f0f0;
+  color: #666;
+  border: 1px solid #e0e0e0;
+  border-radius: 24px;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-cancel-full:hover {
+  background-color: #e4e4e4;
+  color: #333;
+}
+
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

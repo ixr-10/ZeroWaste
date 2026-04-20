@@ -1,4 +1,3 @@
-import { WS_URL } from '../../constants/config';
 import React, { useState, useRef, useEffect } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet, FlatList, StatusBar,
@@ -9,16 +8,9 @@ import { useRouter, Stack, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SPACING, BORDER_RADIUS } from "../../constants/theme";
 import * as ImagePicker from "expo-image-picker";
+import { Audio } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { markMessagesRead } from "../../constants/axios";
-import {
-  createAudioPlayer,
-  requestRecordingPermissionsAsync,
-  RecordingPresets,
-  setAudioModeAsync,
-  useAudioRecorder,
-  useAudioRecorderState,
-} from "expo-audio";
 
 type Message = {
   id: string;
@@ -38,19 +30,15 @@ export default function ChatConversation() {
 
   const flatListRef = useRef<FlatList>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const playerRef = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const recorderState = useAudioRecorderState(recorder);
 
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [recording, setRecording] = useState<any>(null);
+  const [isRecording, setIsRecording] = useState(false);
   const [dotVisible, setDotVisible] = useState(true);
 
-  const getTime = () =>
-    new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-  // ✅ WebSocket
+  
   useEffect(() => {
     let ws: WebSocket;
 
@@ -67,9 +55,9 @@ export default function ChatConversation() {
         await markMessagesRead(Number(conversationId));
       }
 
-     ws = new WebSocket(
-  `${WS_URL}/ws/chat/${conversationId}/?token=${token}`
-);
+      ws = new WebSocket(
+        `ws://192.168.73.147:8000/ws/chat/${conversationId}/?token=${token}`
+      );
       wsRef.current = ws;
 
       ws.onmessage = (e) => {
@@ -116,150 +104,61 @@ export default function ChatConversation() {
 
   // recording animation
   useEffect(() => {
-    if (!recorderState.isRecording) return;
-    const interval = setInterval(() => setDotVisible((v) => !v), 500);
-    return () => clearInterval(interval);
-  }, [recorderState.isRecording]);
-
-  useEffect(() => {
-    return () => {
-      wsRef.current?.close();
-      playerRef.current?.remove();
-    };
-  }, []);
+    if (!isRecording) return;
+    const i = setInterval(() => setDotVisible(v => !v), 500);
+    return () => clearInterval(i);
+  }, [isRecording]);
 
   const sendMessage = () => {
     if (!message.trim()) return;
 
-    wsRef.current?.send(
-      JSON.stringify({
-        type: "message",
-        content: message.trim(),
-      })
-    );
+    wsRef.current?.send(JSON.stringify({
+      type: "message",
+      content: message.trim()
+    }));
 
     setMessage("");
   };
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") return;
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `local-image-${Date.now()}`,
-          image: result.assets[0].uri,
-          mine: true,
-          time: getTime(),
-        },
-      ]);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+    const res = await ImagePicker.launchImageLibraryAsync({});
+    if (!res.canceled) {
+      setMessages(prev => [...prev, {
+        id: `local-${Date.now()}`,
+        image: res.assets[0].uri,
+        mine: true,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      }]);
     }
   };
 
-  const startRecording = async () => {
-    try {
-      const { granted } = await requestRecordingPermissionsAsync();
-      if (!granted) return;
-      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
-      await recorder.prepareToRecordAsync();
-      recorder.record();
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
-  const stopRecording = async () => {
-    if (!recorderState.isRecording) return;
-    try {
-      await recorder.stop();
-      await setAudioModeAsync({
-        allowsRecording: false,
-        playsInSilentMode: true,
-      });
-      const uri = recorder.uri ?? recorder.getStatus().url;
-      if (uri) {
-        setMessages((prev) => [...prev, { id: String(Date.now()), audio: uri, mine: true, time: getTime() }]);
-        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-      }
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
-  const playAudio = async (uri: string) => {
-    await setAudioModeAsync({
-      allowsRecording: false,
-      playsInSilentMode: true,
-      shouldRouteThroughEarpiece: false,
-    });
-    playerRef.current?.remove();
-    const player = createAudioPlayer({ uri });
-    playerRef.current = player;
-    player.addListener("playbackStatusUpdate", (status) => {
-      if (status.didJustFinish) {
-        player.remove();
-        if (playerRef.current === player) {
-          playerRef.current = null;
-        }
-      }
-    });
-    player.play();
-  };
   return (
     <SafeAreaView style={styles.safe}>
       <Stack.Screen options={{ headerShown: false }} />
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
 
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
 
-        <View style={styles.avatar}>
-          <TouchableOpacity onPress={() => router.push("/UserProfile" as any)}>
-            <Image
-              style={{ width: 38, height: 38 }}
-              source={require("../../assets/images/avatar.png")}
-            />
-          </TouchableOpacity>
-        </View>
+        <Image
+          style={styles.avatar}
+          source={require('../../assets/images/avatar.png')}
+        />
+
         <Text style={styles.headerName}>{otherUsername || "Chat"}</Text>
 
         <View style={styles.menuWrapper}>
-          <TouchableOpacity
-            onPress={() => setMenuVisible(!menuVisible)}
-            style={styles.menuTrigger}
-          >
-            <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textPrimary} />
+          <TouchableOpacity onPress={() => setMenuVisible(!menuVisible)}>
+            <Ionicons name="ellipsis-vertical" size={20} />
           </TouchableOpacity>
+
           {menuVisible && (
             <View style={styles.menu}>
-              {["View Profile", "Block", "Report"].map((option, index) => (
-                <TouchableOpacity
-                  key={option}
-                  style={[styles.menuItem, index < 2 && styles.menuItemBorder]}
-                  onPress={() => {
-                    setMenuVisible(false);
-                    if (option === "View Profile") router.push("/UserProfile" as any);
-                    if (option === "Report") router.push("/ReportProfile" as any);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.menuText,
-                      option === "Report" && { color: COLORS.emergencyRed },
-                    ]}
-                  >
-                    {option}
-                  </Text>
+              {["View Profile", "Block", "Report"].map(opt => (
+                <TouchableOpacity key={opt} style={styles.menuItem}>
+                  <Text style={styles.menuText}>{opt}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -267,49 +166,22 @@ export default function ChatConversation() {
         </View>
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: "#E8EBE1" }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? -3 : 0}
-      >
+      {/* MESSAGES */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <FlatList
           ref={flatListRef}
           data={messages}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messagesList}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
           renderItem={({ item }) => (
             <View style={[styles.messageRow, item.mine && styles.messageRowMine]}>
               {!item.mine && (
                 <Image style={styles.avatarSmall} source={require('../../assets/images/avatar.png')} />
               )}
 
-              <View
-                style={{
-                  alignItems: item.mine ? "flex-end" : "flex-start",
-                  flexShrink: 1,
-                }}
-              >
+              <View style={{ alignItems: item.mine ? "flex-end" : "flex-start" }}>
                 {item.image ? (
                   <Image source={{ uri: item.image }} style={styles.imageBubble} />
-                ) : item.audio ? (
-                  <TouchableOpacity
-                    style={[
-                      styles.bubble,
-                      item.mine ? styles.bubbleMine : styles.bubbleOther,
-                      styles.audioBubble,
-                    ]}
-                    onPress={() => playAudio(item.audio!)}
-                  >
-                    <Ionicons
-                      name="play-circle"
-                      size={24}
-                      color={item.mine ? COLORS.white : COLORS.primary}
-                    />
-                    <Text style={[styles.bubbleText, item.mine && styles.bubbleTextMine]}>
-                      Voice message
-                    </Text>
-                  </TouchableOpacity>
                 ) : (
                   <View style={[styles.bubble, item.mine ? styles.bubbleMine : styles.bubbleOther]}>
                     <Text style={[styles.bubbleText, item.mine && styles.bubbleTextMine]}>
@@ -323,72 +195,31 @@ export default function ChatConversation() {
           )}
         />
 
-        <View
-          style={[
-            styles.inputRow,
-            recorderState.isRecording && styles.inputRowRecording,
-          ]}
-        >
-          {recorderState.isRecording ? (
-            <View style={styles.recordingIndicator}>
-              <View style={[styles.recordingDot, { opacity: dotVisible ? 1 : 0 }]} />
-              <Text style={styles.recordingText}>Recording...</Text>
-            </View>
-          ) : (
-            <TextInput
-              style={styles.input}
-              placeholder="Type a message..."
-              placeholderTextColor={COLORS.textMuted}
-              value={message}
-              onChangeText={setMessage}
-              multiline
-              onSubmitEditing={sendMessage}
-            />
-          )}
+        {/* INPUT */}
+        <View style={styles.inputRow}>
+          <TextInput
+            style={styles.input}
+            value={message}
+            onChangeText={setMessage}
+            placeholder="Type a message..."
+            multiline
+          />
 
-          <View style={styles.inputActions}>
-            {message.trim().length === 0 && (
-              <>
-                <TouchableOpacity style={styles.inputIcon} onPress={pickImage}>
-                  <Ionicons name="image-outline" size={22} color={COLORS.textMuted} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.inputIcon,
-                    recorderState.isRecording && styles.recordingBtn,
-                  ]}
-                  onPressIn={startRecording}
-                  onPressOut={stopRecording}
-                >
-                  <Ionicons
-                    name="mic-outline"
-                    size={22}
-                    color={
-                      recorderState.isRecording
-                        ? COLORS.emergencyRed
-                        : COLORS.textMuted
-                    }
-                  />
-                </TouchableOpacity>
-              </>
-            )}
+          <TouchableOpacity onPress={pickImage}>
+            <Ionicons name="image-outline" size={22} />
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.sendBtn, message.trim().length > 0 && styles.sendBtnActive]}
-              onPress={sendMessage}
-            >
-              <Ionicons
-                name="send"
-                size={18}
-                color={message.trim().length > 0 ? COLORS.white : COLORS.textMuted}
-              />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity onPress={sendMessage}>
+            <Ionicons name="send" size={20} color={COLORS.primary} />
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
+
+
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "white" },
