@@ -19,7 +19,7 @@ import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useDonationStore } from '../../store/useDonationStore';
 import api from '../../constants/axios';
-import axios from "../../constants/axios";
+import axios from "axios";
 
 const UNIT_MAP: Record<string, string> = {
   'Kg': 'kg', 'g': 'g', 'L': 'L', 'Pieces': 'pieces'
@@ -143,7 +143,7 @@ export default function Step4Localization() {
         formData.append('image', { uri: image, name: filename, type } as any);
       }
 
-      const response = await api.post('/donations/', formData, {
+      const response = await api.post('/donations/create_donation/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -162,7 +162,25 @@ export default function Step4Localization() {
 
     } catch (err: any) {
       console.log('Publish error:', err.response?.data || err.message);
-      Alert.alert('Error', err.response?.data?.error || err.response?.data?.detail || 'Failed to publish donation. Please try again.');
+      
+      let errorMsg = 'Failed to publish donation. Please try again.';
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (typeof data === 'string') {
+          errorMsg = data;
+        } else if (data.error || data.detail) {
+          errorMsg = data.error || data.detail;
+        } else {
+          // Handle validation errors like { "title": ["This field is required"] }
+          const firstKey = Object.keys(data)[0];
+          if (firstKey) {
+            const val = data[firstKey];
+            errorMsg = Array.isArray(val) ? `${firstKey}: ${val[0]}` : `${firstKey}: ${val}`;
+          }
+        }
+      }
+      
+      Alert.alert('Error', errorMsg);
     } finally {
       setPublishing(false);
     }

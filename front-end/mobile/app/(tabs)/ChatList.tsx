@@ -80,11 +80,15 @@ export default function ChatList() {
   }, []); // ✅ Run only once on mount, no need for currentUserId dependency
 
   const getOtherUser = (conv: any) => {
-    if (!currentUserId) return { id: "", username: "Unknown" };
-    if (conv.donor === currentUserId) {
-      return { id: conv.beneficiary, username: conv.beneficiary_username || "User" };
+    if (!currentUserId) return { id: "", username: "User" };
+    const myId = String(currentUserId);
+    const donorId = String(conv.donor);
+    const beneficiaryId = String(conv.beneficiary);
+
+    if (donorId === myId) {
+      return { id: beneficiaryId, username: conv.beneficiary_username || "User" };
     }
-    return { id: conv.donor, username: conv.donor_username || "User" };
+    return { id: donorId, username: conv.donor_username || "User" };
   };
 
   const filteredConversations = conversations.filter((c) => {
@@ -150,6 +154,7 @@ export default function ChatList() {
                       params: {
                         conversationId: item.id.toString(),
                         otherUsername: otherUser.username,
+                        otherUserId: otherUser.id.toString(),
                       },
                     });
                   }}

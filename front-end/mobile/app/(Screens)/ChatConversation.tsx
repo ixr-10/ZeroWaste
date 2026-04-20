@@ -23,9 +23,10 @@ type Message = {
 
 export default function ChatConversation() {
   const router = useRouter();
-  const { conversationId, otherUsername } = useLocalSearchParams<{
+  const { conversationId, otherUsername, otherUserId } = useLocalSearchParams<{
     conversationId: string;
     otherUsername: string;
+    otherUserId: string;
   }>();
 
   const flatListRef = useRef<FlatList>(null);
@@ -157,7 +158,23 @@ export default function ChatConversation() {
           {menuVisible && (
             <View style={styles.menu}>
               {["View Profile", "Block", "Report"].map(opt => (
-                <TouchableOpacity key={opt} style={styles.menuItem}>
+                <TouchableOpacity 
+                  key={opt} 
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    if (opt === "View Profile") {
+                      if (!otherUserId) {
+                        console.error("Missing otherUserId in chat params");
+                        return;
+                      }
+                      router.push({ 
+                        pathname: "/(Screens)/UserProfile" as any, 
+                        params: { id: otherUserId } 
+                      });
+                    }
+                  }}
+                >
                   <Text style={styles.menuText}>{opt}</Text>
                 </TouchableOpacity>
               ))}
