@@ -18,34 +18,19 @@ from django.utils.timezone import now
 # DONATIONS
 # ─────────────────────────────────────────────
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+
+
 class CreateDonationView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response({'message': 'GET works'})
 
     def post(self, request):
-        today = now().date()
-        donations_today = Donation.objects.filter(
-            donor=request.user,
-            created_at__date=today
-        ).count()
-
-        if not request.user.is_verified:
-            if donations_today >= 1:
-                return Response(
-                    {'error': 'Unverified users can only make 1 donation per day. Get verified to unlock full access.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-        else:
-            if donations_today >= 5:
-                return Response(
-                    {'error': 'You have reached the maximum of 5 donations for today.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-        serializer = DonationSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save(donor=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        print("DEBUG: POST hit at CreateDonationView class")
+        return Response({'message': 'POST works'}, status=status.HTTP_201_CREATED)
     
 class EditDonationView(APIView):
     permission_classes = [IsAuthenticated]
@@ -435,7 +420,7 @@ class CancelReservationView(APIView):
 
 class CreateDonationView(APIView):
     permission_classes = [IsAuthenticated]
-def post(self, request):
+    def post(self, request):
         serializer = DonationSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             donation = serializer.save(donor=request.user)
