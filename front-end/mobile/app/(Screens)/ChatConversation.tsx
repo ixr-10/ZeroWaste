@@ -56,7 +56,7 @@ export default function ChatConversation() {
       }
 
       ws = new WebSocket(
-        `ws://10.0.2.2:8000/ws/chat/${conversationId}/?token=${token}`
+        `ws://192.168.73.147:8000/ws/chat/${conversationId}/?token=${token}`
       );
       wsRef.current = ws;
 

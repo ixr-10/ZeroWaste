@@ -120,6 +120,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.1.34:8081",  
     "http://10.89.206.228:8081", 
     "http://10.89.206.228:3000",
+    "http://192.168.1.34:8081",
+    "http://10.0.2.2:8081",
+    "http://192.168.73.147:8081",
+    
 ]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
@@ -134,6 +138,7 @@ CSRF_TRUSTED_ORIGINS = [
 
     
 
+    "http://192.168.73.147:8081",
 ]
 CHANNEL_LAYERS = {
     'default': {
