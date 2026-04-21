@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   Pressable,
-  SafeAreaView,
   Modal,
   TextInput,
   KeyboardAvoidingView,
@@ -22,7 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect,router } from 'expo-router';
 import { BottomNavBar } from '../../components/ButtomNavBar';
 import api from '../../constants/axios';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const COLORS = {
   primary: '#4A6741',
   primaryMedium: '#7A9B71',
@@ -378,15 +377,18 @@ export default function ProfileScreen() {
   };
 
   const handleDeletePost = (id: number) => {
-    showConfirm('Delete this donation? This cannot be undone.', async () => {
-      try {
-        await api.delete(`/donations/${id}/`);
-        loadData();
-      } catch (err: any) {
-        Alert.alert('Error', err.response?.data?.error || 'Failed to delete');
-      }
-    });
-  };
+  showConfirm('Delete this donation? This cannot be undone.', async () => {
+    try {
+      await api.delete(`/donations/${id}/delete/`);
+      // ✅ Remove from local state immediately without waiting for reload
+      setActiveDonations(prev => prev.filter(d => d.id !== id));
+      setExpiredDonations(prev => prev.filter(d => d.id !== id));
+      setDonatedDonations(prev => prev.filter(d => d.id !== id));
+    } catch (err: any) {
+      Alert.alert('Error', err.response?.data?.error || 'Failed to delete');
+    }
+  });
+};
 
   const handleEditPost = (item: any) => {
     router.push({ pathname: '/(Screens)/EditPostScreen' as any, params: { post: JSON.stringify(item) } });

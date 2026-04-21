@@ -316,7 +316,7 @@ export default function EditPostScreen() {
 
     setLoading(true);
     try {
-     await api.put(`/donations/${post.id}/edit/`, {
+     await api.patch(`/donations/${post.id}/edit/`, {
         category,
         quantity:        parsedQty,
         unit,
