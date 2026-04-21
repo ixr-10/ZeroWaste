@@ -43,10 +43,20 @@ class CreateDonationView(APIView):
 
         serializer = DonationSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(donor=request.user)
+            donation = serializer.save(donor=request.user)
+
+            # ✅ Notify nearby users and food savers
+            from apps.notifications.utils import (
+                notify_nearby_users_new_donation,
+                notify_nearby_food_savers,
+                notify_urgent_donation
+            )
+            notify_nearby_users_new_donation(donation)
+            notify_nearby_food_savers(donation)
+            notify_urgent_donation(donation)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 class EditDonationView(APIView):
     permission_classes = [IsAuthenticated]
 
