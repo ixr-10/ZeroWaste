@@ -370,6 +370,11 @@ class ConfirmReservationView(APIView):
         reservation.status = 'confirmed'
         reservation.save()
 
+        
+        donor = reservation.donation.donor
+        donor.reputation_score += 10
+        donor.save()
+
         create_notification(
             recipient=reservation.beneficiary,
             notification_type='reservation_confirmed',
@@ -379,8 +384,6 @@ class ConfirmReservationView(APIView):
         )
 
         return Response({'message': 'Reservation confirmed successfully.'})
-
-
 class RejectReservationView(APIView):
     permission_classes = [IsAuthenticated]
 

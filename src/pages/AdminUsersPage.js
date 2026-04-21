@@ -40,8 +40,8 @@ const AdminUsersPage = () => {
           rank: index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`,
           username: user.username,
           email: user.email,
-          donations: ((user.reputation_score ?? 0) / 10).toFixed(1),
-          score: user.reputation_score ?? 0,
+          donations: user.donations_count ?? 0, 
+          score: ((user.reputation_score ?? 0?? 0) / 10).toFixed(1),
           status: user.is_active ? 'Active' : 'Inactive',
           isFoodSaver: user.role === 'food_saver',
         }));
