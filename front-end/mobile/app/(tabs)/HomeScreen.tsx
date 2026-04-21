@@ -9,8 +9,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SearchBar } from '../../components/SearchBar';
 import { FilterButton } from '../../components/FilterButton';
 import { FoodCard } from '../../components/FoodCard';
-import axios from '../../constants/axios';
+import api from '../../constants/axios';
 import * as Location from 'expo-location';
+
 const COLORS = {
   primary: '#588157BF', secondary: '#588157',
   primaryLight: '#D1D8C4', background: '#F8F8F6',
@@ -27,31 +28,29 @@ export default function HomeScreen() {
   const [donations, setDonations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-
-
-useEffect(() => {
-  const fetchDonations = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      let params = {};
-      if (status === 'granted') {
-        try {
-          const loc = await Location.getCurrentPositionAsync({});
-          params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
-        } catch (locationError) {
-          console.warn('Location unavailable, loading donations without distance.', locationError);
+  useEffect(() => {
+    const fetchDonations = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        let params = {};
+        if (status === 'granted') {
+          try {
+            const loc = await Location.getCurrentPositionAsync({});
+            params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+          } catch (locationError) {
+            console.warn('Location unavailable, loading donations without distance.', locationError);
+          }
         }
+        const res = await api.get('donations/available/', { params });
+        setDonations(res.data);
+      } catch (err) {
+        console.log('Error fetching donations:', err);
+      } finally {
+        setLoading(false);
       }
-      const res = await axios.get('/donations/available/', { params });
-      setDonations(res.data);
-    } catch (err) {
-      console.log('Error fetching donations:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-  fetchDonations();
-}, []);
+    };
+    fetchDonations();
+  }, []);
 
   const filteredDonations = useMemo(() => {
     return donations.filter((item) => {
@@ -68,21 +67,35 @@ useEffect(() => {
     });
   }, [searchQuery, selectedCategory, selectedDistance, emergencyOnly, donations]);
 
-  // ✅ This is the only place navigation to ReservationScreen happens
+  const handleNotInterested = async (donationId: string) => {
+    try {
+      await api.post(`donations/available/${donationId}/not-interested/`);
+      setDonations(prev => prev.filter(d => String(d.id) !== donationId));
+    } catch (err: any) {
+      console.error('Not interested failed:', err.response?.data);
+    }
+  };
+
+  const handleReport = (donationId: string, donationTitle: string) => {
+    router.push({
+      pathname: '/(Screens)/ReportPost' as any,
+      params: { donationId, donationTitle },
+    });
+  };
+
   const handleReserve = (donationId: string) => {
     const item = donations.find((d) => String(d.id) === donationId);
     if (!item) return;
-
     router.push({
       pathname: '/(Screens)/ReservationScreen' as any,
       params: {
-        donationId:   String(item.id),           // ✅ key is "donationId"
-        title:        item.title,
-        category:     item.category,
-        date:         item.expiry_date,           // ✅ API field name
-        postedBy:     item.donor_username,        // ✅ API field name
-        imageUrl:     item.image ?? '',           // ✅ API field name
-        maxQuantity:  String(item.available_quantity),
+        donationId:  String(item.id),
+        title:       item.title,
+        category:    item.category,
+        date:        item.expiry_date,
+        postedBy:    item.donor_username,
+        imageUrl:    item.image ?? '',
+        maxQuantity: String(item.available_quantity),
       },
     });
   };
@@ -148,7 +161,9 @@ useEffect(() => {
           renderItem={({ item }) => (
             <FoodCard
               item={item}
-              onReserve={handleReserve}  // ✅ FoodCard calls this with item.id
+              onReserve={handleReserve}
+              onNotInterested={handleNotInterested}
+              onReport={handleReport}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -166,16 +181,16 @@ useEffect(() => {
 }
 
 const styles = StyleSheet.create({
-  safeArea:        { flex: 1, backgroundColor: COLORS.background },
-  centered:        { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header:          { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, zIndex: 100, gap: 8 },
-  mapBtn:          { width: 44, height: 44, borderRadius: 999, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  activeFilterRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
-  activeFilterTag: { backgroundColor: '#C8D5C0', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  emergencyTag:    { backgroundColor: '#F5C6C6' },
-  activeFilterText:{ fontSize: 12, color: COLORS.secondary, fontWeight: '600' },
-  listContent:     { paddingTop: 8, paddingBottom: 80 },
-  emptyState:      { alignItems: 'center', paddingTop: 80 },
-  emptyText:       { fontSize: 18, fontWeight: '600', color: COLORS.textSecondary, marginBottom: 8 },
-  emptySubText:    { fontSize: 14, color: COLORS.textMuted },
+  safeArea:         { flex: 1, backgroundColor: COLORS.background },
+  centered:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  header:           { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, zIndex: 100, gap: 8 },
+  mapBtn:           { width: 44, height: 44, borderRadius: 999, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  activeFilterRow:  { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
+  activeFilterTag:  { backgroundColor: '#C8D5C0', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  emergencyTag:     { backgroundColor: '#F5C6C6' },
+  activeFilterText: { fontSize: 12, color: COLORS.secondary, fontWeight: '600' },
+  listContent:      { paddingTop: 8, paddingBottom: 80 },
+  emptyState:       { alignItems: 'center', paddingTop: 80 },
+  emptyText:        { fontSize: 18, fontWeight: '600', color: COLORS.textSecondary, marginBottom: 8 },
+  emptySubText:     { fontSize: 14, color: COLORS.textMuted },
 });

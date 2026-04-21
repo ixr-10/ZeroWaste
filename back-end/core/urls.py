@@ -10,7 +10,7 @@ urlpatterns = [
     path('api/chat/', include('apps.chat.urls')),
     path('api/gamification/', include('apps.gamification.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
-    path('api/', include('apps.moderation.urls')), 
+    path('api/moderation/', include('apps.moderation.urls')), 
 ]
 
 # Serve media files in development

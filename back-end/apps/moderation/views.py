@@ -68,14 +68,15 @@ class ReportActionView(APIView):
             return Response({'error': 'Report not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         action = request.data.get('action')
-
         if action == 'delete_post':
-           
             if not report.reported_donation:
                 return Response(
                     {'error': 'This report is not about a donation post.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+            donor = report.reported_donation.donor
+            donor.reputation_score = max(0, donor.reputation_score - 10)
+            donor.save()
             report.reported_donation.delete()
             report.status = 'treated'
             report.action_taken = 'delete_post'
@@ -84,13 +85,13 @@ class ReportActionView(APIView):
             return Response({'message': 'Post deleted and report treated.'})
 
         elif action == 'deactivate_account':
-            
             if not report.reported_user:
                 return Response(
                     {'error': 'This report is not about a user.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             report.reported_user.is_active = False
+            report.reported_user.reputation_score = max(0, report.reported_user.reputation_score - 10)
             report.reported_user.save()
             report.status = 'treated'
             report.action_taken = 'deactivate_account'
@@ -99,8 +100,9 @@ class ReportActionView(APIView):
             return Response({'message': 'Account deactivated and report treated.'})
 
         elif action == 'send_warning':
-            
             if report.reported_user:
+                report.reported_user.reputation_score = max(0, report.reported_user.reputation_score - 5)
+                report.reported_user.save()
                 from django.core.mail import send_mail
                 from django.conf import settings
                 send_mail(
@@ -120,7 +122,6 @@ class ReportActionView(APIView):
             report.treated_at = timezone.now()
             report.save()
             return Response({'message': 'Warning sent and report treated.'})
-
         elif action == 'ignore':
             report.status = 'dismissed'
             report.action_taken = 'ignore'
