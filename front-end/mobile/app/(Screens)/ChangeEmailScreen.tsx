@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../constants/axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const COLORS = {
   primary: '#588157',
@@ -69,7 +70,7 @@ export default function ChangeEmailScreen() {
     }
     setSendingCode(true);
     try {
-      await api.post('/change-email/request/', { new_email: newEmail });
+      await api.post('users/change-email/request/', { new_email: newEmail });
       setCodeSent(true);
     } catch (err: any) {
       const msg = err.response?.data?.error || 'Failed to send code. Please try again.';
@@ -88,11 +89,15 @@ export default function ChangeEmailScreen() {
     }
     setLoading(true);
     try {
-      await api.post('/change-email/confirm/', {
+      await api.post('users/change-email/confirm/', {
         new_email: newEmail,
         code: confirmCode,
       });
       setSuccess(true);
+      const refresh = await AsyncStorage.getItem('refresh');
+      if (refresh) await api.post('users/logout/', { refresh });
+      await AsyncStorage.multiRemove(['access', 'refresh', 'user', 'isLoggedIn']);
+router.replace('/auth/login');
     } catch (err: any) {
       const msg = err.response?.data?.error || 'Invalid or expired code. Please try again.';
       setError(msg);

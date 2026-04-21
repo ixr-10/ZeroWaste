@@ -40,7 +40,7 @@ export default function DeactivateAccountScreen() {
     setLoading(true);
     try {
       // ✅ Call backend to deactivate
-      await api.post('/users/deactivate-account/', { reason });
+      await api.post('/users/deactivate-account/');
 
       // ✅ Clear local storage and redirect to login
       await AsyncStorage.multiRemove(['access', 'refresh', 'user', 'isLoggedIn']);

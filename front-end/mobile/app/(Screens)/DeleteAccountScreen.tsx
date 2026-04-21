@@ -42,7 +42,7 @@ export default function DeleteAccountScreen() {
     setLoading(true);
     try {
       // ✅ Call backend to permanently delete account
-      await api.delete('/users/delete-account/');
+      await api.delete('users/delete-account/');
 
       // ✅ Wipe all local storage and go to login
       await AsyncStorage.clear();

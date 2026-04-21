@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../constants/axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 const COLORS = {
   primary: '#588157',
@@ -78,11 +80,17 @@ export default function ChangePasswordScreen() {
 
     setLoading(true);
     try {
-      await api.post('/change-password/', {
+      await api.post('users/change-password/', {
         old_password: current,
         new_password: newPass,
       });
       setSuccess(true);
+      setTimeout(async () => {
+        const refresh = await AsyncStorage.getItem('refresh');
+        if (refresh) await api.post('users/logout/', { refresh });
+        await AsyncStorage.multiRemove(['access', 'refresh', 'user', 'isLoggedIn']);
+        router.replace('/auth/login');
+      }, 1500);
       setCurrent('');
       setNewPass('');
       setConfirm('');
