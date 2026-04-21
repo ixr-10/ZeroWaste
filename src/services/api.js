@@ -175,7 +175,7 @@ export const processReportAction = async (reportId, actionType) => {
   return data;
 };
 export const toggleUserActive = async (userId) => {
-  const res = await authFetch(`${BASE_URL}/users/${userId}/toggle-active/`, {
+  const res = await authFetch(`${BASE_URL}/moderation/users/${userId}/toggle-active/`, {
     method: 'POST',
   });
   const data = await res.json();

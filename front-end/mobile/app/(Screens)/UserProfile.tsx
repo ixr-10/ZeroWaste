@@ -22,6 +22,7 @@ export default function UserProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   useEffect(() => {
+    console.log("UserProfile opened with id:", id);
     const loadData = async () => {
       setLoading(true);
       setUser(null);
