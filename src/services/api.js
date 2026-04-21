@@ -152,7 +152,7 @@ export const logoutUser = async () => {
 // ── Admin Reports (Moderation) ──
 
 export const fetchAdminReports = async () => {
-  const res = await authFetch(`${BASE_URL}/reports/`); 
+  const res = await authFetch(`${BASE_URL}/moderation/reports/`); 
   const data = await res.json();
   
   if (!res.ok) throw new Error(data.detail || 'Failed to fetch reports.');
@@ -165,7 +165,7 @@ export const processReportAction = async (reportId, actionType) => {
   if (actionType === 'delete_account') backendAction = 'deactivate_account';
   if (actionType === 'ignore_report') backendAction = 'ignore';
 
-  const res = await authFetch(`${BASE_URL}/reports/${reportId}/action/`, {
+  const res = await authFetch(`${BASE_URL}/moderation/reports/${reportId}/action/`, {
     method: 'POST',
     body: JSON.stringify({ action: backendAction }),
   });
@@ -175,7 +175,7 @@ export const processReportAction = async (reportId, actionType) => {
   return data;
 };
 export const toggleUserActive = async (userId) => {
-  const res = await authFetch(`${BASE_URL}/users/${userId}/toggle-active/`, {
+  const res = await authFetch(`${BASE_URL}/moderation/users/${userId}/toggle-active/`, {
     method: 'POST',
   });
   const data = await res.json();

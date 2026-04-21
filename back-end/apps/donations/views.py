@@ -195,9 +195,9 @@ class AvailableDonationsView(APIView):
         # Base: only available donations
         donations = Donation.objects.filter(status='available')
 
-        # BUG FIX: exclude own donations
+        #  exclude own donations
         donations = donations.exclude(donor=request.user)
-# BUG FIX: exclude donations user already has an active reservation on
+        #exclude donations user already has an active reservation on
         reserved_ids = Reservation.objects.filter(
             beneficiary=request.user
         ).exclude(status__in=['cancelled', 'rejected']).values_list('donation_id', flat=True)

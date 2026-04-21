@@ -150,13 +150,14 @@ export default function ChatList() {
                     }
 
                     router.push({
-                      pathname: "/../(Screens)/ChatConversation" as any,
-                      params: {
-                        conversationId: item.id.toString(),
-                        otherUsername: otherUser.username,
-                        otherUserId: otherUser.id.toString(),
-                      },
-                    });
+                    pathname: "/(Screens)/ChatConversation",
+                    params: {
+                      conversationId: item.id.toString(),
+                      otherUsername: otherUser.username,
+                      otherUserId: otherUser.id.toString(),
+                    },
+                  });
+
                   }}
                   activeOpacity={0.7}
                 >

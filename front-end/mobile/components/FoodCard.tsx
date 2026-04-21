@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View, Text, Image, StyleSheet, TouchableOpacity,
-} from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { CardMenu } from './CardMenu';
@@ -10,9 +8,11 @@ import { useRouter } from 'expo-router';
 interface FoodCardProps {
   item: any;
   onReserve: (id: string) => void;
+  onNotInterested: (id: string) => void;
+  onReport: (id: string, title: string) => void;
 }
 
-export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
+export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve, onNotInterested, onReport }) => {
   const router = useRouter();
   const [menuVisible, setMenuVisible] = useState(false);
 
@@ -23,13 +23,11 @@ export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
   };
 
   const handleReserve = () => {
-    // ✅ Just call the prop — HomeScreen handles navigation
     onReserve(String(item.id));
   };
 
   return (
     <View style={styles.card}>
-      {/* Image Section */}
       <View style={styles.imageContainer}>
         <Image
           source={{ uri: item.image ?? item.imageUrl ?? '' }}
@@ -37,7 +35,6 @@ export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
           resizeMode="cover"
         />
 
-        {/* Distance badge */}
         {item.distance_km != null && (
           <View style={styles.distanceBadge}>
             <Ionicons name="location" size={12} color={COLORS.emergencyRed} />
@@ -45,7 +42,6 @@ export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
           </View>
         )}
 
-        {/* Emergency badge */}
         {item.urgency === 'red' && (
           <View style={styles.emergencyBadge}>
             <Ionicons name="alert-circle" size={12} color={COLORS.white} />
@@ -53,7 +49,6 @@ export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
           </View>
         )}
 
-        {/* 3-dot menu */}
         <TouchableOpacity
           style={styles.menuButton}
           onPress={() => setMenuVisible(true)}
@@ -67,14 +62,13 @@ export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
         {menuVisible && (
           <CardMenu
             onReserve={() => { handleReserve(); setMenuVisible(false); }}
-            onReport={() => setMenuVisible(false)}
-            onNotInterested={() => setMenuVisible(false)}
+            onReport={() => { onReport(String(item.id), item.title); setMenuVisible(false); }}
+            onNotInterested={() => { onNotInterested(String(item.id)); setMenuVisible(false); }}
             onClose={() => setMenuVisible(false)}
           />
         )}
       </View>
 
-      {/* Info Section */}
       <View style={styles.infoSection}>
         <View style={styles.titleRow}>
           <Text style={styles.title}>{item.title}</Text>
@@ -90,9 +84,7 @@ export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
         <View style={styles.metaRow}>
           {item.unit && (
             <View style={styles.metaTag}>
-              <Text style={styles.metaText}>
-                {item.available_quantity} {item.unit}
-              </Text>
+              <Text style={styles.metaText}>{item.available_quantity} {item.unit}</Text>
             </View>
           )}
           <View style={styles.metaTag}>
@@ -103,8 +95,8 @@ export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
         <View style={styles.divider} />
 
         <View style={styles.footer}>
-          <TouchableOpacity 
-            style={styles.userInfo} 
+          <TouchableOpacity
+            style={styles.userInfo}
             onPress={() => router.push({ pathname: "/(Screens)/UserProfile" as any, params: { id: item.donor } })}
           >
             <View style={styles.avatar}>
@@ -127,72 +119,29 @@ export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
 };
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: BORDER_RADIUS.lg,
-    marginHorizontal: SPACING.lg,
-    marginBottom: SPACING.lg,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
+  card: { backgroundColor: COLORS.cardBg, borderRadius: BORDER_RADIUS.lg, marginHorizontal: SPACING.lg, marginBottom: SPACING.lg, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   imageContainer: { position: 'relative', width: '100%', height: 220 },
   image: { width: '100%', height: '100%' },
-  distanceBadge: {
-    position: 'absolute', bottom: SPACING.sm, left: SPACING.sm,
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.sm, paddingVertical: 4, gap: 3,
-  },
+  distanceBadge: { position: 'absolute', bottom: SPACING.sm, left: SPACING.sm, flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.sm, paddingVertical: 4, gap: 3 },
   distanceText: { fontSize: 12, color: COLORS.textPrimary, fontWeight: '500' },
-  emergencyBadge: {
-    position: 'absolute', top: SPACING.sm, left: SPACING.sm,
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.emergencyRed, borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.sm, paddingVertical: 3, gap: 3,
-  },
+  emergencyBadge: { position: 'absolute', top: SPACING.sm, left: SPACING.sm, flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.emergencyRed, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.sm, paddingVertical: 3, gap: 3 },
   emergencyText: { fontSize: 11, color: COLORS.white, fontWeight: '700' },
   menuButton: { position: 'absolute', top: SPACING.sm, right: SPACING.sm, zIndex: 10 },
-  menuButtonInner: {
-    backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.sm,
-    width: 32, height: 32, alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
-  },
+  menuButtonInner: { backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.sm, width: 32, height: 32, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
   infoSection: { padding: SPACING.md },
-  titleRow: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: SPACING.xs,
-    flexWrap: 'wrap', gap: SPACING.xs,
-  },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.xs, flexWrap: 'wrap', gap: SPACING.xs },
   title: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, flex: 1 },
-  categoryTag: {
-    backgroundColor: COLORS.tagBg, borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.sm, paddingVertical: 3,
-  },
+  categoryTag: { backgroundColor: COLORS.tagBg, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.sm, paddingVertical: 3 },
   categoryTagText: { fontSize: 11, color: COLORS.primary, fontWeight: '500' },
   description: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19, marginBottom: SPACING.sm },
   metaRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.sm },
-  metaTag: {
-    backgroundColor: COLORS.tagBg, borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.sm, paddingVertical: 4,
-  },
+  metaTag: { backgroundColor: COLORS.tagBg, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.sm, paddingVertical: 4 },
   metaText: { fontSize: 12, color: COLORS.textSecondary },
   divider: { height: 1, backgroundColor: COLORS.border, marginBottom: SPACING.sm },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   userInfo: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  avatar: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center',
-  },
+  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' },
   username: { fontSize: 14, color: COLORS.textPrimary, fontWeight: '500' },
-  reserveButton: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.xl, paddingVertical: SPACING.sm,
-  },
+  reserveButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.full, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.sm },
   reserveButtonText: { color: COLORS.white, fontSize: 14, fontWeight: '600' },
 });

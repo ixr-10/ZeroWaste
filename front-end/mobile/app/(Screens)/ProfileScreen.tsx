@@ -322,7 +322,7 @@ export default function ProfileScreen() {
   const handleDeletePost = (id: number) => {
     showConfirm('Delete this donation? This cannot be undone.', async () => {
       try {
-        await api.delete(`/donations/${id}/`);
+        await api.delete(`donations/${id}/delete/`);
         loadData();
       } catch (err: any) {
         Alert.alert('Error', err.response?.data?.error || 'Failed to delete');
@@ -337,14 +337,22 @@ export default function ProfileScreen() {
     });
   };
 
-  const handleLogout = () => {
-    setMenuOpen(false);
-    showConfirm('Are you sure you want to logout?', async () => {
+ const handleLogout = () => {
+  setMenuOpen(false);
+  showConfirm(
+    'Are you sure you want to logout?',
+    async () => {
+      try {
+        const refresh = await AsyncStorage.getItem('refresh');
+        if (refresh) await api.post('users/logout/', { refresh });
+      } catch {}
       await AsyncStorage.multiRemove(['access', 'refresh', 'user']);
       router.replace('/auth/login');
-    }, 'Logout', COLORS.red);
-  };
-
+    },
+    'Logout',
+    COLORS.red
+  );
+};
   return (
     <SafeAreaView style={styles.safeArea}>
       <ConfirmModal
