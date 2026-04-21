@@ -31,11 +31,11 @@ function LoginPage({ onNavigateToReset }) {
       const data = await loginUser(username, password);
       const profile = await getProfile(data.access);
 
-      if (profile.role !== 'admin') {
-        setError('Access denied. This login is for admins only.');
-        setLoading(false);
-        return;
-      }
+      if (profile.role !== 'admin' && profile.role !== 'localauthority') {
+      setError('Access denied. Only admins or local authorities can log in.');
+      setLoading(false);
+      return;
+    }
 
       localStorage.setItem('access_token', data.access);
       localStorage.setItem('refresh_token', data.refresh);
