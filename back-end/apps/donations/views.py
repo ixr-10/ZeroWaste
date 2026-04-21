@@ -18,19 +18,34 @@ from django.utils.timezone import now
 # DONATIONS
 # ─────────────────────────────────────────────
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-
-
 class CreateDonationView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request):
-        return Response({'message': 'GET works'})
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        print("DEBUG: POST hit at CreateDonationView class")
-        return Response({'message': 'POST works'}, status=status.HTTP_201_CREATED)
+        today = now().date()
+        donations_today = Donation.objects.filter(
+            donor=request.user,
+            created_at__date=today
+        ).count()
+
+        if not request.user.is_verified:
+            if donations_today >= 1:
+                return Response(
+                    {'error': 'Unverified users can only make 1 donation per day. Get verified to unlock full access.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        else:
+            if donations_today >= 5:
+                return Response(
+                    {'error': 'You have reached the maximum of 5 donations for today.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        serializer = DonationSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save(donor=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class EditDonationView(APIView):
     permission_classes = [IsAuthenticated]
@@ -86,7 +101,6 @@ class DeleteDonationView(APIView):
                 {'error': 'Cannot delete donation with active reservations.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         donation.delete()
         return Response({'message': 'Donation deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
 
@@ -173,8 +187,7 @@ class AvailableDonationsView(APIView):
 
         # BUG FIX: exclude own donations
         donations = donations.exclude(donor=request.user)
-
-        # BUG FIX: exclude donations user already has an active reservation on
+# BUG FIX: exclude donations user already has an active reservation on
         reserved_ids = Reservation.objects.filter(
             beneficiary=request.user
         ).exclude(status__in=['cancelled', 'rejected']).values_list('donation_id', flat=True)
@@ -269,7 +282,6 @@ class ReserveDonationView(APIView):
                     {'error': 'Unverified users can only make 2 reservations. Get verified to unlock full access.'},
                     status=status.HTTP_403_FORBIDDEN
                 )
-
         try:
             with transaction.atomic():
                 donation = Donation.objects.select_for_update().get(id=donation_id, status='available')
@@ -367,7 +379,6 @@ class RejectReservationView(APIView):
             reservation = Reservation.objects.get(id=reservation_id, donation__donor=request.user)
         except Reservation.DoesNotExist:
             return Response({'error': 'Reservation not found.'}, status=status.HTTP_404_NOT_FOUND)
-
         if reservation.status != 'pending':
             return Response({'error': 'Reservation is not pending.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -418,25 +429,7 @@ class CancelReservationView(APIView):
         return Response({'message': 'Reservation cancelled successfully.'})
     
 
-class CreateDonationView(APIView):
-    permission_classes = [IsAuthenticated]
-    def post(self, request):
-        serializer = DonationSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            donation = serializer.save(donor=request.user)
-
-            # Notify nearby users and food savers
-            from apps.notifications.utils import (
-                notify_nearby_users_new_donation,
-                notify_nearby_food_savers,
-                notify_urgent_donation
-            )
-            notify_nearby_users_new_donation(donation)
-            notify_nearby_food_savers(donation)
-            notify_urgent_donation(donation)
-
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)    
+    
 
 class MyReservationsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -462,8 +455,6 @@ class MyReservationsView(APIView):
                 'rejected': ReservationSerializer(my_requests.filter(status__in=['rejected', 'cancelled']), many=True, context={'request': request}).data,
             }
         })
-
-
 class MyReceivedReservationsView(APIView):
     permission_classes = [IsAuthenticated]
 
