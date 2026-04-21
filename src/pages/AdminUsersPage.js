@@ -21,6 +21,7 @@ const AdminUsersPage = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const adminName = user.username || 'Admin';
   const [isLoading, setIsLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const handleLogout = async () => {
     await logoutUser();
@@ -88,10 +89,12 @@ const AdminUsersPage = () => {
   }
 };
 
-  const filteredUsers = users.filter(user =>
-    user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+ const filteredUsers = users.filter(user => {
+  const matchesSearch = user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase());
+  const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+  return matchesSearch && matchesStatus;
+});
 
   const totalUsersCount = users.length;
   const activeUsersCount = users.filter(user => user.status === 'Active').length;
@@ -165,43 +168,55 @@ const AdminUsersPage = () => {
       <main className="main-content">
 
         {/* STATS */}
-        <div className="stats-container">
-          <div className="stat-card">
-            <div className="stat-title">👥 Total Users</div>
-            <div className="stat-content">
-              <div className="stat-value">{isLoading ? "..." : totalUsersCount}</div>
-              <button 
-                className="stat-action-btn" 
-                onClick={() => navigate('/admin/users/create')} 
-              >
-                <FiPlus />
-              </button>
-            </div>
-          </div>
+       <div className="stats-container">
+  <div 
+    className={`stat-card ${statusFilter === 'all' ? 'stat-card-active' : ''}`}
+    onClick={() => setStatusFilter('all')}
+    style={{ cursor: 'pointer' }}
+  >
+    <div className="stat-title">👥 Total Users</div>
+    <div className="stat-content">
+      <div className="stat-value">{isLoading ? "..." : totalUsersCount}</div>
+      <button 
+        className="stat-action-btn" 
+        onClick={(e) => { e.stopPropagation(); navigate('/admin/users/create'); }} 
+      >
+        <FiPlus />
+      </button>
+    </div>
+  </div>
 
-          <div className="stat-card">
-            <div className="stat-title">👤 Active</div>
-            <div className="stat-value">{isLoading ? "..." : activeUsersCount}</div>
-          </div>
+  <div 
+    className={`stat-card ${statusFilter === 'Active' ? 'stat-card-active' : ''}`}
+    onClick={() => setStatusFilter('Active')}
+    style={{ cursor: 'pointer' }}
+  >
+    <div className="stat-title">👤 Active</div>
+    <div className="stat-value">{isLoading ? "..." : activeUsersCount}</div>
+  </div>
 
-          <div className="stat-card">
-            <div className="stat-title">⏸️ Inactive</div>
-            <div className="stat-value">{isLoading ? "..." : inactiveUsersCount}</div>
-          </div>
+  <div 
+    className={`stat-card ${statusFilter === 'Inactive' ? 'stat-card-active' : ''}`}
+    onClick={() => setStatusFilter('Inactive')}
+    style={{ cursor: 'pointer' }}
+  >
+    <div className="stat-title">⏸️ Inactive</div>
+    <div className="stat-value">{isLoading ? "..." : inactiveUsersCount}</div>
+  </div>
 
-          <div className="stat-card">
-            <div className="stat-title">👑 Food Savers</div>
-            <div className="stat-content">
-              <div className="stat-value">{isLoading ? "..." : foodSaversCount}</div>
-              <button 
-                className="stat-action-btn" 
-                onClick={() => navigate('/admin/promotion-criteria')}
-              >
-                <FiRefreshCw />
-              </button>
-            </div>
-          </div>
-        </div>
+  <div className="stat-card">
+    <div className="stat-title">👑 Food Savers</div>
+    <div className="stat-content">
+      <div className="stat-value">{isLoading ? "..." : foodSaversCount}</div>
+      <button 
+        className="stat-action-btn" 
+        onClick={() => navigate('/admin/promotion-criteria')}
+      >
+        <FiRefreshCw />
+      </button>
+    </div>
+  </div>
+</div>
 
         {/* TABLE SECTION */}
         <div className="table-section">
