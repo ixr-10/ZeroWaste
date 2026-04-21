@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  SafeAreaView,
+  
   View,
   Text,
   StyleSheet,
@@ -15,6 +15,7 @@ import {
   Pressable,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Location from 'expo-location';

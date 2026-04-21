@@ -457,7 +457,8 @@ class DeleteAccountView(APIView):
     def delete(self, request):
         user = request.user
         user.delete()
-        return Response({'message': 'Your account has been deleted.'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({'message': 'Your account has been deleted.'}, status=status.HTTP_200_OK)
+
 
 
 class ChangeEmailRequestView(APIView):
