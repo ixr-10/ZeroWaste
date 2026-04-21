@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import ReservationAcceptedModal from '../../components/ReservationAcceptedModal';
 import {
   View, FlatList, StyleSheet, StatusBar,
   Text, TouchableOpacity, ActivityIndicator,
@@ -9,9 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SearchBar } from '../../components/SearchBar';
 import { FilterButton } from '../../components/FilterButton';
 import { FoodCard } from '../../components/FoodCard';
-import api from '../../constants/axios';
+import axios from '../../constants/axios';
 import * as Location from 'expo-location';
-
 const COLORS = {
   primary: '#588157BF', secondary: '#588157',
   primaryLight: '#D1D8C4', background: '#F8F8F6',
@@ -41,7 +41,7 @@ export default function HomeScreen() {
             console.warn('Location unavailable, loading donations without distance.', locationError);
           }
         }
-        const res = await api.get('donations/available/', { params });
+        const res = await axios.get('/donations/available/', { params });
         setDonations(res.data);
       } catch (err) {
         console.log('Error fetching donations:', err);
@@ -67,22 +67,6 @@ export default function HomeScreen() {
     });
   }, [searchQuery, selectedCategory, selectedDistance, emergencyOnly, donations]);
 
-  const handleNotInterested = async (donationId: string) => {
-    try {
-      await api.post(`donations/available/${donationId}/not-interested/`);
-      setDonations(prev => prev.filter(d => String(d.id) !== donationId));
-    } catch (err: any) {
-      console.error('Not interested failed:', err.response?.data);
-    }
-  };
-
-  const handleReport = (donationId: string, donationTitle: string) => {
-    router.push({
-      pathname: '/(Screens)/ReportPost' as any,
-      params: { donationId, donationTitle },
-    });
-  };
-
   const handleReserve = (donationId: string) => {
     const item = donations.find((d) => String(d.id) === donationId);
     if (!item) return;
@@ -104,6 +88,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <ReservationAcceptedModal />
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
       <View style={styles.header}>
@@ -162,8 +147,6 @@ export default function HomeScreen() {
             <FoodCard
               item={item}
               onReserve={handleReserve}
-              onNotInterested={handleNotInterested}
-              onReport={handleReport}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -181,16 +164,16 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea:         { flex: 1, backgroundColor: COLORS.background },
-  centered:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header:           { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, zIndex: 100, gap: 8 },
-  mapBtn:           { width: 44, height: 44, borderRadius: 999, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  activeFilterRow:  { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
-  activeFilterTag:  { backgroundColor: '#C8D5C0', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  emergencyTag:     { backgroundColor: '#F5C6C6' },
-  activeFilterText: { fontSize: 12, color: COLORS.secondary, fontWeight: '600' },
-  listContent:      { paddingTop: 8, paddingBottom: 80 },
-  emptyState:       { alignItems: 'center', paddingTop: 80 },
-  emptyText:        { fontSize: 18, fontWeight: '600', color: COLORS.textSecondary, marginBottom: 8 },
-  emptySubText:     { fontSize: 14, color: COLORS.textMuted },
+  safeArea:        { flex: 1, backgroundColor: COLORS.background },
+  centered:        { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  header:          { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, zIndex: 100, gap: 8 },
+  mapBtn:          { width: 44, height: 44, borderRadius: 999, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  activeFilterRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
+  activeFilterTag: { backgroundColor: '#C8D5C0', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  emergencyTag:    { backgroundColor: '#F5C6C6' },
+  activeFilterText:{ fontSize: 12, color: COLORS.secondary, fontWeight: '600' },
+  listContent:     { paddingTop: 8, paddingBottom: 80 },
+  emptyState:      { alignItems: 'center', paddingTop: 80 },
+  emptyText:       { fontSize: 18, fontWeight: '600', color: COLORS.textSecondary, marginBottom: 8 },
+  emptySubText:    { fontSize: 14, color: COLORS.textMuted },
 });

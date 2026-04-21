@@ -1,36 +1,30 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import AppText from './AppText';
+import { Image, TouchableOpacity, View, StyleSheet } from "react-native";
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 interface HeaderProps {
-  onBack?: () => void;
+  showBack?: boolean;
 }
 
-export default function Header({ onBack }: HeaderProps) {
+export default function Header({ showBack = false }: HeaderProps) {
   return (
     <View style={styles.container}>
-      {/* Back Button */}
-      <TouchableOpacity 
-        style={styles.backBtn} 
-        onPress={onBack}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="arrow-back-outline" size={26} color="black" />
-      </TouchableOpacity>
-      
-      {/* Logo */}
-      <View style={styles.logoWrapper}>
-        <MaterialCommunityIcons 
-          name="cached" // This provides the circular arrows
-          size={42} 
-          color="black" 
-          style={styles.arrowsIcon}
-        />
-        <AppText weight="bold" style={styles.logoLetter}>
-          w
-        </AppText>
-      </View>
+      {showBack ? (
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back-outline" size={26} color="black" />
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.backBtn} />
+      )}
+
+      <Image
+        source={require('../assets/images/logo.png')}
+        style={styles.logo}
+      />
     </View>
   );
 }
@@ -40,8 +34,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
     paddingVertical: 10,
-    paddingHorizontal: 5,
+    marginBottom: 25,
     backgroundColor: 'transparent',
   },
   backBtn: {
@@ -53,21 +48,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoWrapper: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  arrowsIcon: {
-    position: 'absolute',
-    // Slight rotation to match the slant in your PNG
-    transform: [{ rotate: '15deg' }], 
-  },
-  logoLetter: {
-    fontSize: 18,
-    color: '#000',
-    // Adjusting position to center perfectly inside the arrows
-    marginTop: -2, 
+  logo: {
+    width: 36,
+    height: 29.03,
+    resizeMode: 'contain',
+    right: 20,
   },
 });
