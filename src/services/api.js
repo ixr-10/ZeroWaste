@@ -1,4 +1,4 @@
-const BASE_URL = 'http://192.168.43.100:8000/api';
+const BASE_URL = 'http://192.168.73.147:8000/api';
 
 // ── Token helpers ──
 export const saveTokens = (access, refresh) => {

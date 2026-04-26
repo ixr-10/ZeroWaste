@@ -1,5 +1,5 @@
 {
-<<<<<<< HEAD
+
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "types": ["expo/types/global"],
@@ -19,12 +19,4 @@
     "app/confirmation.jsx"
   ]
 }
-=======
-  "files": [],
-  "references": [
-    {
-      "path": "./mobile"
-    }
-  ]
-}
->>>>>>> origin/ibtihal-front
+

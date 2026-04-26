@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
+import api from '../../constants/axios';
 
 const COLORS = {
-  primary: '#4A6741',
+  primary: '#588157',
   primaryLight: '#C8D5C0',
   white: '#FFFFFF',
   textPrimary: '#1A1A1A',
@@ -23,118 +24,168 @@ const COLORS = {
   green: '#4A6741',
 };
 
-const MOCK_OFFSETS = [
-  { id: '1', title: 'Mixed Berries',    category: 'Fruit & Vegetables', status: 'active',    dlat:  0.002, dlng:  0.003 },
-  { id: '2', title: 'Homemade Bread',   category: 'Pastries',           status: 'expiring',  dlat: -0.001, dlng:  0.004 },
-  { id: '3', title: 'Organic Tomatoes', category: 'Fruit & Vegetables', status: 'active',    dlat:  0.004, dlng: -0.002 },
-  { id: '4', title: 'Lentil Soup',      category: 'Cooked Meals',       status: 'emergency', dlat: -0.003, dlng: -0.001 },
-  { id: '5', title: 'Whole Milk',       category: 'Milk Products',      status: 'emergency', dlat:  0.001, dlng: -0.004 },
-  { id: '6', title: 'Beef',             category: 'Meat & Fish',        status: 'expiring',  dlat: -0.004, dlng:  0.002 },
-  { id: '7', title: 'Chinese Food',     category: 'Cooked Meals',       status: 'active',    dlat:  0.003, dlng:  0.001 },
-];
+type ListingStatus = 'available' | 'reserved' | 'expired';
 
-type ListingStatus = 'active' | 'expiring' | 'emergency';
-
-interface Coords { latitude: number; longitude: number; }
-interface Listing {
-  id: string; title: string; category: string;
-  status: ListingStatus; latitude: number; longitude: number;
+interface Coords {
+  latitude: number;
+  longitude: number;
 }
 
-const markerColor = (s: ListingStatus) =>
-  s === 'emergency' ? COLORS.red : s === 'expiring' ? COLORS.orange : COLORS.green;
+interface Listing {
+  id: string | number;
+  title: string;
+  category: string;
+  status: ListingStatus;
+  urgency?: 'green' | 'orange' | 'red' | null;
+  latitude: number;
+  longitude: number;
+  donor_username: string;
+  donor: string | number;
+  image?: string;
+  available_quantity: number;
+  expiry_date: string;
+  distance_km?: number;
+}
 
-const statusLabel = (s: ListingStatus) =>
-  s === 'emergency' ? 'Emergency' : s === 'expiring' ? 'Expiring soon' : 'Available';
+const markerColor = (urgency?: string | null) => {
+  if (urgency === 'red') return COLORS.red;
+  if (urgency === 'orange') return COLORS.orange;
+  return COLORS.green;
+};
 
-// ─── Map content (only rendered after location is ready) ──────────────────────
-function MapContent({ coords }: { coords: Coords }) {
-  // Import maps here so it only loads on native
-  const MapView     = require('react-native-maps').default;
+const statusLabel = (urgency?: string | null) => {
+  if (urgency === 'red') return 'Critical';
+  if (urgency === 'orange') return 'High Priority';
+  return 'Urgent';
+};
+
+// ─── Emergency Color Buttons (icon only, no labels) ──────────────────────────
+const EmergencyColorButtons = ({
+  filter,
+  setFilter,
+}: {
+  filter: 'all' | 'urgent' | 'superUrgent' | 'superSuperUrgent';
+  setFilter: React.Dispatch<React.SetStateAction<'all' | 'urgent' | 'superUrgent' | 'superSuperUrgent'>>;
+}) => {
+  const options = [
+    { key: 'all', color: '#A8B5A0' as const },
+    { key: 'urgent', color: COLORS.green },
+    { key: 'superUrgent', color: COLORS.orange },
+    { key: 'superSuperUrgent', color: COLORS.red },
+  ] as const;
+
+  return (
+    <View style={emergency.container}>
+      {options.map((option) => {
+        const isActive = filter === option.key;
+        return (
+          <TouchableOpacity
+            key={option.key}
+            style={[
+              emergency.button,
+              isActive && { backgroundColor: option.color + '15', borderColor: option.color },
+            ]}
+            onPress={() => setFilter(option.key)}
+            activeOpacity={0.8}
+          >
+            {/* Pin icon only — no label text */}
+            <View style={[emergency.pinContainer, { backgroundColor: option.color }]}>
+              <View style={emergency.pinDot} />
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+};
+
+// ─── Map Content ──────────────────────────────────────────────────────────────
+function MapContent({ coords, listings }: { coords: Coords; listings: Listing[] }) {
+  const MapView = require('react-native-maps').default;
   const { Marker, Circle } = require('react-native-maps');
-
   const router = useRouter();
-  const [selected, setSelected]     = useState<Listing | null>(null);
-  const [filter, setFilter]         = useState<ListingStatus | 'all'>('all');
 
-  const listings: Listing[] = MOCK_OFFSETS.map((o) => ({
-    id: o.id, title: o.title, category: o.category,
-    status: o.status as ListingStatus,
-    latitude:  coords.latitude  + o.dlat,
-    longitude: coords.longitude + o.dlng,
-  }));
+  const [selected, setSelected] = useState<Listing | null>(null);
+  const [filter, setFilter] = useState<'all' | 'urgent' | 'superUrgent' | 'superSuperUrgent'>('all');
 
-  const visible = filter === 'all' ? listings : listings.filter((l) => l.status === filter);
+  const visible = useMemo(() => {
+    if (filter === 'all') return listings;
+    return listings.filter((l) => {
+      if (filter === 'superSuperUrgent') return l.urgency === 'red';
+      if (filter === 'superUrgent') return l.urgency === 'orange';
+      if (filter === 'urgent') return l.urgency === 'green' || !l.urgency;
+      return true;
+    });
+  }, [listings, filter]);
 
   const region = {
-    latitude:      coords.latitude,
-    longitude:     coords.longitude,
-    latitudeDelta:  0.018,
-    longitudeDelta: 0.018,
+    latitude: coords.latitude,
+    longitude: coords.longitude,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  };
+
+  const handleReserve = () => {
+    if (!selected) return;
+    router.push({
+      pathname: '/(Screens)/ReservationScreen' as any,
+      params: {
+        donationId: String(selected.id),
+        title: selected.title,
+        category: selected.category,
+        date: selected.expiry_date,
+        postedBy: selected.donor_username,
+        imageUrl: selected.image ?? '',
+        maxQuantity: String(selected.available_quantity),
+      },
+    });
   };
 
   return (
     <View style={{ flex: 1 }}>
       <MapView
-  style={StyleSheet.absoluteFillObject}
-  mapType="standard"          // uses Apple Maps on iOS
-  // on Android without API key it uses OpenStreetMap automatically
-  initialRegion={region}
-  showsUserLocation
->
+        style={StyleSheet.absoluteFillObject}
+        mapType="standard"
+        initialRegion={region}
+        showsUserLocation
+      >
         <Circle
           center={coords}
           radius={900}
-          strokeColor="rgba(74,103,65,0.35)"
-          fillColor="rgba(74,103,65,0.08)"
+          strokeColor="rgba(88,129,87,0.35)"
+          fillColor="rgba(88,129,87,0.08)"
           strokeWidth={1.5}
         />
+
         {visible.map((l) => (
           <Marker
-            key={l.id}
+            key={String(l.id)}
             coordinate={{ latitude: l.latitude, longitude: l.longitude }}
             onPress={() => setSelected(l)}
           >
-            <View style={[pin.wrap, { borderColor: markerColor(l.status) }]}>
-              <View style={[pin.dot, { backgroundColor: markerColor(l.status) }]} />
+            <View style={[pin.wrap, { borderColor: markerColor(l.urgency) }]}>
+              <View style={[pin.dot, { backgroundColor: markerColor(l.urgency) }]} />
             </View>
           </Marker>
         ))}
       </MapView>
 
-      {/* Back */}
+      {/* Back Button */}
       <View style={overlay.topRow}>
         <TouchableOpacity style={overlay.backBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
 
-      {/* Filter chips */}
-      <View style={overlay.chips}>
-        {([
-          { key: 'all',       label: 'All'        },
-          { key: 'active',    label: '🟢 Fresh'   },
-          { key: 'expiring',  label: '🟠 Expiring' },
-          { key: 'emergency', label: '🔴 Urgent'  },
-        ] as const).map((f) => (
-          <TouchableOpacity
-            key={f.key}
-            style={[overlay.chip, filter === f.key && overlay.chipActive]}
-            onPress={() => setFilter(f.key)}
-          >
-            <Text style={[overlay.chipTxt, filter === f.key && overlay.chipTxtActive]}>
-              {f.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* Emergency Filter Buttons — icon only */}
+      <EmergencyColorButtons filter={filter} setFilter={setFilter} />
 
-      {/* Legend */}
+      {/* Legend — proper emergency level names */}
       <View style={overlay.legend}>
         {[
-          { color: COLORS.green,  label: 'Available' },
-          { color: COLORS.orange, label: 'Expiring'  },
-          { color: COLORS.red,    label: 'Emergency' },
+          { color: COLORS.green, label: 'Urgent' },
+          { color: COLORS.orange, label: 'High Priority' },
+          { color: COLORS.red, label: 'Critical' },
         ].map((i) => (
           <View key={i.label} style={overlay.legendRow}>
             <View style={[overlay.legendDot, { backgroundColor: i.color }]} />
@@ -143,27 +194,33 @@ function MapContent({ coords }: { coords: Coords }) {
         ))}
       </View>
 
-      {/* Selected card */}
+      {/* Selected Card */}
       {selected && (
         <View style={overlay.card}>
           <TouchableOpacity style={overlay.cardClose} onPress={() => setSelected(null)}>
             <Ionicons name="close" size={16} color={COLORS.textMuted} />
           </TouchableOpacity>
+
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <View style={[overlay.statusDot, { backgroundColor: markerColor(selected.status) }]} />
-            <Text style={[overlay.statusTxt, { color: markerColor(selected.status) }]}>
-              {statusLabel(selected.status)}
+            <View style={[overlay.statusDot, { backgroundColor: markerColor(selected.urgency) }]} />
+            <Text style={[overlay.statusTxt, { color: markerColor(selected.urgency) }]}>
+              {statusLabel(selected.urgency)}
             </Text>
           </View>
+
           <Text style={overlay.cardTitle}>{selected.title}</Text>
           <Text style={overlay.cardCat}>{selected.category}</Text>
-          <TouchableOpacity style={overlay.reserveBtn} onPress={() => { setSelected(null); router.back(); }}>
+          {selected.distance_km && (
+            <Text style={overlay.cardDistance}>📍 {selected.distance_km} km away</Text>
+          )}
+
+          <TouchableOpacity style={overlay.reserveBtn} onPress={handleReserve}>
             <Text style={overlay.reserveTxt}>Reserve</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Listings count */}
+      {/* Count */}
       <View style={overlay.countBadge}>
         <Text style={overlay.countTxt}>{visible.length} listings near you</Text>
       </View>
@@ -171,47 +228,74 @@ function MapContent({ coords }: { coords: Coords }) {
   );
 }
 
-// ─── Main screen: wait for location, then show map ────────────────────────────
+// ─── Main MapScreen ───────────────────────────────────────────────────────────
 export default function MapScreen() {
   const router = useRouter();
   const [coords, setCoords] = useState<Coords | null>(null);
+  const [listings, setListings] = useState<Listing[]>([]);
   const [status, setStatus] = useState('Requesting location permission...');
-  const [error,  setError]  = useState(false);
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { init(); }, []);
+  useEffect(() => {
+    init();
+  }, []);
 
   const init = async () => {
     try {
       setError(false);
       setStatus('Requesting permission...');
+
       const { status: perm } = await Location.requestForegroundPermissionsAsync();
+      let userCoords: Coords;
 
       if (perm !== 'granted') {
-        setStatus('Permission denied — using default location (Sidi Bel Abbes)');
-        setCoords({ latitude: 35.1897, longitude: -0.6311 });
-        return;
+        setStatus('Permission denied — using default location');
+        userCoords = { latitude: 35.1897, longitude: -0.6311 };
+      } else {
+        setStatus('Getting your position...');
+        const last = await Location.getLastKnownPositionAsync({ maxAge: 300000 });
+        if (last) {
+          userCoords = { latitude: last.coords.latitude, longitude: last.coords.longitude };
+        } else {
+          setStatus('Acquiring GPS signal...');
+          const current = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          userCoords = { latitude: current.coords.latitude, longitude: current.coords.longitude };
+        }
       }
 
-      setStatus('Getting your position...');
-      // Try last known first (instant)
-      const last = await Location.getLastKnownPositionAsync({ maxAge: 300000 });
-      if (last) {
-        setStatus('Done ✓');
-        setCoords({ latitude: last.coords.latitude, longitude: last.coords.longitude });
-        return;
-      }
+      setCoords(userCoords);
+      setStatus('Loading donations...');
 
-      setStatus('Acquiring GPS signal...');
-      const current = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-        timeInterval: 10000,
-      });
-      setStatus('Done ✓');
-      setCoords({ latitude: current.coords.latitude, longitude: current.coords.longitude });
+      const params = { lat: userCoords.latitude, lng: userCoords.longitude };
+      const res = await api.get('donations/available/', { params });
 
+      const donations = Array.isArray(res.data) ? res.data : [];
+
+      const mapped: Listing[] = donations.map((d: any) => ({
+        id: d.id,
+        title: d.title,
+        category: d.category,
+        status: d.status || 'available',
+        urgency: d.urgency,
+        latitude: d.latitude,
+        longitude: d.longitude,
+        donor_username: d.donor_username,
+        donor: d.donor,
+        image: d.image,
+        available_quantity: d.available_quantity,
+        expiry_date: d.expiry_date,
+        distance_km: d.distance_km,
+      }));
+
+      setListings(mapped);
+      setLoading(false);
     } catch (e: any) {
       setError(true);
       setStatus(`Error: ${e?.message ?? 'Unknown error'}`);
+      setLoading(false);
     }
   };
 
@@ -224,8 +308,7 @@ export default function MapScreen() {
     );
   }
 
-  // Show loading until we have coords
-  if (!coords) {
+  if (!coords || loading) {
     return (
       <View style={styles.center}>
         <TouchableOpacity style={styles.backBtnLoading} onPress={() => router.back()}>
@@ -242,103 +325,185 @@ export default function MapScreen() {
     );
   }
 
-  return <MapContent coords={coords} />;
+  return <MapContent coords={coords} listings={listings} />;
 }
 
-// ─── Pin styles ───────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const pin = StyleSheet.create({
   wrap: {
-    width: 30, height: 30, borderRadius: 15,
-    borderWidth: 2.5, backgroundColor: COLORS.white,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25, shadowRadius: 3, elevation: 5,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 2.5,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 5,
   },
   dot: { width: 13, height: 13, borderRadius: 7 },
 });
 
-// ─── Overlay styles ───────────────────────────────────────────────────────────
+const emergency = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    top: Platform.OS === 'android' ? 100 : 115,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  button: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: 999,
+    // Reduced vertical padding since there's no label anymore
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  // Smaller pin icon (was 28×28)
+  pinContainer: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Smaller inner dot (was 10×10)
+  pinDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#fff',
+  },
+  label: {
+    fontSize: 11.5,
+    fontWeight: '500',
+    color: '#333',
+    textAlign: 'center',
+  },
+});
+
 const overlay = StyleSheet.create({
   topRow: {
-    position: 'absolute', top: Platform.OS === 'android' ? 40 : 54,
-    left: 16, right: 16,
+    position: 'absolute',
+    top: Platform.OS === 'android' ? 40 : 54,
+    left: 16,
+    right: 16,
   },
   backBtn: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: COLORS.white, alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15, shadowRadius: 4, elevation: 4,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  chips: {
-    position: 'absolute',
-    top: Platform.OS === 'android' ? 92 : 106,
-    left: 12, right: 12,
-    flexDirection: 'row', gap: 8, flexWrap: 'wrap',
-  },
-  chip: {
-    backgroundColor: COLORS.white, borderRadius: 999,
-    paddingHorizontal: 14, paddingVertical: 7,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1, shadowRadius: 3, elevation: 3,
-  },
-  chipActive: { backgroundColor: COLORS.primary },
-  chipTxt: { fontSize: 12, fontWeight: '600', color: COLORS.textPrimary },
-  chipTxtActive: { color: COLORS.white },
-
   legend: {
-    position: 'absolute', bottom: 130, left: 16,
-    backgroundColor: COLORS.white, borderRadius: 12,
-    padding: 10, gap: 6,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1, shadowRadius: 6, elevation: 4,
+    position: 'absolute',
+    bottom: 130,
+    left: 16,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 10,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
   },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendTxt: { fontSize: 12, color: COLORS.textPrimary, fontWeight: '500' },
 
   card: {
-    position: 'absolute', bottom: 70, left: 16, right: 16,
-    backgroundColor: COLORS.white, borderRadius: 18, padding: 16,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
+    position: 'absolute',
+    bottom: 70,
+    left: 16,
+    right: 16,
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
   cardClose: { position: 'absolute', top: 12, right: 12, padding: 4 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   statusTxt: { fontSize: 12, fontWeight: '600' },
   cardTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 2 },
-  cardCat: { fontSize: 13, color: COLORS.textMuted, marginBottom: 14 },
+  cardCat: { fontSize: 13, color: COLORS.textMuted, marginBottom: 8 },
+  cardDistance: { fontSize: 12, color: COLORS.textMuted, marginBottom: 12, fontWeight: '500' },
   reserveBtn: {
-    backgroundColor: COLORS.primary, borderRadius: 999,
-    paddingVertical: 10, alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: 999,
+    paddingVertical: 10,
+    alignItems: 'center',
   },
   reserveTxt: { color: COLORS.white, fontSize: 14, fontWeight: '700' },
-
   countBadge: {
-    position: 'absolute', bottom: 20, alignSelf: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 999,
-    paddingHorizontal: 14, paddingVertical: 6,
+    position: 'absolute',
+    bottom: 20,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
   },
   countTxt: { color: COLORS.white, fontSize: 12, fontWeight: '600' },
 });
 
-// ─── Loading screen styles ────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   center: {
-    flex: 1, backgroundColor: COLORS.background,
-    justifyContent: 'center', alignItems: 'center',
+    flex: 1,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 32,
   },
   backBtnLoading: {
-    position: 'absolute', top: Platform.OS === 'android' ? 40 : 54, left: 16,
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: COLORS.white, alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12, shadowRadius: 4, elevation: 3,
+    position: 'absolute',
+    top: Platform.OS === 'android' ? 40 : 54,
+    left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
   },
   msg: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', marginTop: 8 },
   retryBtn: {
-    marginTop: 20, backgroundColor: COLORS.primary,
-    paddingHorizontal: 28, paddingVertical: 12, borderRadius: 999,
+    marginTop: 20,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 999,
   },
   retryTxt: { color: COLORS.white, fontWeight: '700', fontSize: 14 },
 });

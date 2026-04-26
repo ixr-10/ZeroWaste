@@ -26,7 +26,11 @@ export default function ReportPost() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!selected) return;
+    if (!selected) {
+      Alert.alert('Error', 'Please select a reason before submitting.');
+      return;
+    }
+
     setLoading(true);
     try {
       await api.post('moderation/report/', {
@@ -34,12 +38,12 @@ export default function ReportPost() {
         reason: selected,
         description: details,
       });
-      Alert.alert('Report submitted', 'Thank you. Our team will review it.', [
+      Alert.alert('Report Submitted', 'Thank you for your feedback. Our team will review it.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (err: any) {
       console.log('Report error:', JSON.stringify(err.response?.data)); 
-      Alert.alert('Error', err.response?.data?.error || 'Failed to submit report.');
+      Alert.alert('Error', err.response?.data?.error || 'Failed to submit report. Please try again.');
     } finally {
       setLoading(false);
     }

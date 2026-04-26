@@ -18,11 +18,11 @@ const COLORS = {
 };
 
 const TABS = [
-  { label: 'Home',         icon: 'home',          route: '/(tabs)/HomeScreen' },
-  { label: 'Chat',         icon: 'chatbubble',    route: '/(tabs)/ChatList' },
+  { label: 'Home',         icon: 'home',          route: '/../(tabs)/HomeScreen' },
+  { label: 'Chat',         icon: 'chatbubble',    route: '/../(tabs)/ChatList' },
   { label: '',             icon: '',              route: '__add__' },
-  { label: 'Notification', icon: 'notifications', route: '/(tabs)/notifications' },
-  { label: 'Profile',      icon: 'person',        route: '/(tabs)/ProfileScreen' },
+  { label: 'Notification', icon: 'notifications', route: '/../(tabs)/Notifications' },
+  { label: 'Profile',      icon: 'person',        route: '/../(tabs)/ProfileScreen' },
 ];
 
 interface BottomNavBarProps {
