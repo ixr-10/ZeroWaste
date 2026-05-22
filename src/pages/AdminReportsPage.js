@@ -24,6 +24,57 @@ import {
 // 
 import { fetchAdminReports, processReportAction } from '../services/api';
 
+// ==========================================
+// 1. FAKE DATA (POUR TESTER L'INTERFACE)
+// ==========================================
+const fakeReportsData = [
+  {
+    id: 101,
+    type: 'post',
+    title: 'Don de 5kg de pommes de terre',
+    reason: 'Contenu frauduleux / Vente déguisée',
+    postDesc: 'L\'utilisateur demande de l\'argent en message privé en échange du don!',
+    author: 'Yacine_Dz',
+    date: 'Apr 21, 2026',
+    imgUrl: null, // Null pour afficher l'emoji par défaut
+    userImg: null,
+    imageEmoji: '📦',
+    status: 'Pending',
+    action: null,
+    actionDate: null
+  },
+  {
+    id: 102,
+    type: 'user',
+    title: 'Spammeur_123',
+    reason: 'Harcèlement ou propos haineux',
+    postDesc: null,
+    author: 'Amina_Oran',
+    date: 'Apr 20, 2026',
+    imgUrl: null,
+    userImg: null,
+    imageEmoji: '👤',
+    status: 'Pending',
+    action: null,
+    actionDate: null
+  },
+  {
+    id: 103,
+    type: 'post',
+    title: 'Don de viande (Périmée)',
+    reason: 'Danger pour la santé / Périmé',
+    postDesc: 'La date d\'expiration sur la photo est dépassée depuis 2 mois.',
+    author: 'Karim_W',
+    date: 'Apr 19, 2026',
+    imgUrl: null,
+    userImg: null,
+    imageEmoji: '📦',
+    status: 'Treated',
+    action: 'Post deleted',
+    actionDate: 'Apr 20, 2026'
+  }
+];
+
 const AdminReportsPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [statusTab, setStatusTab] = useState('Pending');
@@ -53,10 +104,14 @@ const AdminReportsPage = () => {
     const loadReports = async () => {
       setIsLoading(true);
       try {
-        // 2. to get the data from the dserver 
+        // ====================================================
+        // COMMENTÉ POUR UTILISER LA FAKE DATA TEMPORAIREMENT
+        // ====================================================
+        /*
+        // 2. to get the data from the server 
         const backendData = await fetchAdminReports(); 
         
-        // 3. tr
+        // 3. format data
         const formattedReports = backendData.map(r => {
           const isPost = r.reported_donation !== null;
           return {
@@ -75,11 +130,17 @@ const AdminReportsPage = () => {
             actionDate: r.treated_at ? new Date(r.treated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
           };
         });
-
         setReports(formattedReports);
+        */
+
+        // UTILISATION DE LA FAKE DATA AVEC UN PETIT DÉLAI POUR SIMULER LE CHARGEMENT
+        setTimeout(() => {
+          setReports(fakeReportsData);
+          setIsLoading(false);
+        }, 600); // 600ms loading time
+
       } catch (error) {
         console.error("Failed to load reports", error);
-      } finally {
         setIsLoading(false);
       }
     };
@@ -95,8 +156,11 @@ const AdminReportsPage = () => {
     if (!confirmAction) return;
 
     try {
+      // ====================================================
+      // COMMENTÉ POUR ÉVITER LES ERREURS API SANS BACKEND
+      // ====================================================
       // 4. send actions to the server 
-      await processReportAction(selectedReport.id, actionType);
+      // await processReportAction(selectedReport.id, actionType);
 
       const todayDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       
@@ -109,6 +173,7 @@ const AdminReportsPage = () => {
         default: formattedAction = actionType;
       }
 
+      // METTRE À JOUR LE STATE LOCALEMENT (POUR VOIR L'EFFET DANS L'UI)
       setReports((prevReports) => 
         prevReports.map((r) => 
           r.id === selectedReport.id ? { ...r, status: 'Treated', action: formattedAction, actionDate: todayDate } : r
