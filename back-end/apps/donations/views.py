@@ -83,6 +83,7 @@ class EditDonationView(APIView):
         ]
         data = {k: v for k, v in request.data.items() if k in allowed_fields}
 
+        # if quantity is increased, add the difference to available_quantity
         if 'quantity' in data:
             new_quantity = int(data['quantity'])
             if new_quantity < donation.quantity:
@@ -114,7 +115,6 @@ class DeleteDonationView(APIView):
                 {'error': 'Cannot delete donation with active reservations.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         donation.delete()
         return Response({'message': 'Donation deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
 
@@ -134,6 +134,7 @@ class CompleteDonationView(APIView):
         if donation.status == 'expired':
             return Response({'error': 'Cannot complete an expired donation.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # BUG FIX: guard — must have at least one confirmed reservation
         if not donation.reservations.filter(status='confirmed').exists():
             return Response(
                 {'error': 'Cannot complete a donation with no confirmed reservations.'},
@@ -152,6 +153,7 @@ class MyDonationsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        # BUG FIX: pure read — no DB writes here anymore
         donations = Donation.objects.filter(donor=request.user).order_by('-created_at')
         active  = donations.filter(status__in=['available', 'reserved'])
         expired = donations.filter(status='expired')
@@ -163,6 +165,7 @@ class MyDonationsView(APIView):
         })
 
     def post(self, request):
+        # Call POST /my-donations/ to trigger expiry + deadline sync
         donations = Donation.objects.filter(donor=request.user)
         for donation in donations:
             if donation.expiry_date and donation.is_expired():
@@ -193,14 +196,18 @@ class AvailableDonationsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        # Base: only available donations
         donations = Donation.objects.filter(status='available')
-        donations = donations.exclude(donor=request.user)
 
+        #  exclude own donations
+        donations = donations.exclude(donor=request.user)
+        #exclude donations user already has an active reservation on
         reserved_ids = Reservation.objects.filter(
             beneficiary=request.user
         ).exclude(status__in=['cancelled', 'rejected']).values_list('donation_id', flat=True)
         donations = donations.exclude(id__in=reserved_ids)
 
+        # NEW: exclude not-interested donations
         ignored_ids = NotInterested.objects.filter(
             user=request.user
         ).values_list('donation_id', flat=True)
@@ -209,22 +216,26 @@ class AvailableDonationsView(APIView):
         # ── Filter by donor ID (used by public profile screen) ────────────────
         donor_id = request.query_params.get('donor')
         if donor_id:
-            donations = Donation.objects.filter(donor_id=donor_id, status='available')
+            donations = donations.filter(donor_id=donor_id)
 
+        # Filter by category
         category = request.query_params.get('category')
         if category:
             donations = donations.filter(category=category)
 
+        # Filter by urgency
         urgency = request.query_params.get('urgency')
         if urgency:
             donations = donations.filter(urgency=urgency)
 
+        # Filter by expiry — "expiring_soon" = within 2 days
         expiring_soon = request.query_params.get('expiring_soon')
         if expiring_soon:
             from datetime import date
             soon = date.today() + timedelta(days=2)
             donations = donations.filter(expiry_date__lte=soon)
 
+        # BUG FIX: distance filter — use .values() to avoid loading full objects into memory
         lat = request.query_params.get('lat')
         lng = request.query_params.get('lng')
         max_km = request.query_params.get('max_km')
@@ -290,7 +301,6 @@ class ReserveDonationView(APIView):
                     {'error': 'Unverified users can only make 2 reservations. Get verified to unlock full access.'},
                     status=status.HTTP_403_FORBIDDEN
                 )
-
         try:
             with transaction.atomic():
                 donation = Donation.objects.select_for_update().get(id=donation_id, status='available')
@@ -369,6 +379,11 @@ class ConfirmReservationView(APIView):
         reservation.status = 'confirmed'
         reservation.save()
 
+        
+        donor = reservation.donation.donor
+        donor.reputation_score += 10
+        donor.save()
+
         create_notification(
             recipient=reservation.beneficiary,
             notification_type='reservation_confirmed',
@@ -378,8 +393,6 @@ class ConfirmReservationView(APIView):
         )
 
         return Response({'message': 'Reservation confirmed successfully.'})
-
-
 class RejectReservationView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -388,7 +401,6 @@ class RejectReservationView(APIView):
             reservation = Reservation.objects.get(id=reservation_id, donation__donor=request.user)
         except Reservation.DoesNotExist:
             return Response({'error': 'Reservation not found.'}, status=status.HTTP_404_NOT_FOUND)
-
         if reservation.status != 'pending':
             return Response({'error': 'Reservation is not pending.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -437,7 +449,9 @@ class CancelReservationView(APIView):
         reservation.save()
 
         return Response({'message': 'Reservation cancelled successfully.'})
+    
 
+    
 
 class MyReservationsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -463,8 +477,6 @@ class MyReservationsView(APIView):
                 'rejected':  ReservationSerializer(my_requests.filter(status__in=['rejected', 'cancelled']), many=True, context={'request': request}).data,
             }
         })
-
-
 class MyReceivedReservationsView(APIView):
     permission_classes = [IsAuthenticated]
 

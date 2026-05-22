@@ -52,7 +52,7 @@ export default function PersonalInfoScreen() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const { data } = await api.get('/profile/');
+        const { data } = await api.get('users/profile/');
         setUser(data);
       } catch (err: any) {
         setError('Failed to load profile. Please try again.');
@@ -89,8 +89,8 @@ export default function PersonalInfoScreen() {
             {/* Avatar */}
             <View style={styles.avatarCard}>
               <View style={styles.avatarCircle}>
-                {user?.profile_picture ? (
-                  <Image source={{ uri: user.profile_picture }} style={styles.avatarImage} />
+               {user?.avatar ? (
+                  <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
                 ) : (
                   <View style={[styles.avatarImage, styles.avatarPlaceholder]}>
                     <Ionicons name="person" size={40} color={COLORS.primary} />
@@ -114,7 +114,7 @@ export default function PersonalInfoScreen() {
               <InfoRow
                 icon="call-outline"
                 label="Phone number"
-                value={user?.phone_number}
+                value={user?.phone}
               />
               <InfoRow
                 icon="location-outline"

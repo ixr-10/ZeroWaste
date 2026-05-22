@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -26,10 +27,16 @@ const TAB_ITEMS = [
   { screen: '/(tabs)/ProfileScreen', icon: 'person', label: 'Profile' },
 ];
 
+=======
+import { Tabs } from 'expo-router';
+import 'react-native-reanimated';
+
+>>>>>>> beec5ca7ed89bb4867c32357f8bd65ac61158756
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
+<<<<<<< HEAD
 function CustomTabBar() {
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -171,3 +178,21 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
 });
+=======
+export default function TabLayout() {
+  return (
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: { display: 'none' }, 
+      }}
+    >
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="login" />
+      <Tabs.Screen name="Notifications" />
+      <Tabs.Screen name="Profile" />
+      <Tabs.Screen name="slides" />
+    </Tabs>
+  );
+}
+>>>>>>> beec5ca7ed89bb4867c32357f8bd65ac61158756

@@ -1,4 +1,4 @@
-const BASE_URL = 'http://10.89.206.228:8000/api';
+const BASE_URL = 'http://192.168.73.147:8000/api';
 
 // ── Token helpers ──
 export const saveTokens = (access, refresh) => {
@@ -105,15 +105,18 @@ export const promoteToFoodSaver = async (userId) => {
 export const adminCreateUser = async (userData) => {
   const completeUserData = {
     ...userData,
-    phone: "0555000000",      
-    address: "Not provided"   
+    phone: "0555000000",
+    address: "Not provided"
   };
 
   const res = await authFetch(`${BASE_URL}/users/admin/create-user/`, {
     method: 'POST',
     body: JSON.stringify(completeUserData),
   });
-  return res.json();
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(JSON.stringify(data)); 
+  return data;
 };
 
 export const adminDeleteUser = async (userId) => {
@@ -149,7 +152,7 @@ export const logoutUser = async () => {
 // ── Admin Reports (Moderation) ──
 
 export const fetchAdminReports = async () => {
-  const res = await authFetch(`${BASE_URL}/reports/`); 
+  const res = await authFetch(`${BASE_URL}/moderation/reports/`); 
   const data = await res.json();
   
   if (!res.ok) throw new Error(data.detail || 'Failed to fetch reports.');
@@ -162,12 +165,20 @@ export const processReportAction = async (reportId, actionType) => {
   if (actionType === 'delete_account') backendAction = 'deactivate_account';
   if (actionType === 'ignore_report') backendAction = 'ignore';
 
-  const res = await authFetch(`${BASE_URL}/reports/${reportId}/action/`, {
+  const res = await authFetch(`${BASE_URL}/moderation/reports/${reportId}/action/`, {
     method: 'POST',
     body: JSON.stringify({ action: backendAction }),
   });
   
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || data.error || 'Failed to process action.');
+  return data;
+};
+export const toggleUserActive = async (userId) => {
+  const res = await authFetch(`${BASE_URL}/moderation/users/${userId}/toggle-active/`, {
+    method: 'POST',
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(JSON.stringify(data));
   return data;
 };

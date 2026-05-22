@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  SafeAreaView,
+  
   View,
   Text,
   StyleSheet,
@@ -15,6 +15,7 @@ import {
   Pressable,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Location from 'expo-location';
@@ -42,14 +43,12 @@ const COLORS = {
 type EmergencyColor = 'green' | 'orange' | 'red';
 
 const CATEGORIES = [
-  'Fruit & Vegetables',
-  'Pastries',
-  'Milk Products',
-  'Meat & Fish',
-  'Preserved Food',
-  'Cooked Meals',
-  'Drinks',
-  'Other',
+  { label: 'Fruits & Veg',     value: 'fruits' },
+  { label: 'Bread',            value: 'pain' },
+  { label: 'Dairy',            value: 'produits_laitiers' },
+  { label: 'Preserved',        value: 'conserves' },
+  { label: 'Cooked Meals',     value: 'autre' },
+  { label: 'Other',            value: 'autre' },
 ];
 
 const UNITS = ['Kg', 'g', 'L', 'Pieces'];
@@ -67,7 +66,7 @@ const CategoryDropdown = ({
     <View style={{ zIndex: 100 }}>
       <TouchableOpacity style={styles.dropdownTrigger} onPress={() => setOpen(!open)} activeOpacity={0.8}>
         <Text style={value ? styles.dropdownValue : styles.dropdownPlaceholder}>
-          {value || 'The previous selected category'}
+          {CATEGORIES.find(c => c.value === value)?.label || 'Select category'}
         </Text>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={COLORS.primary} />
       </TouchableOpacity>
@@ -79,13 +78,13 @@ const CategoryDropdown = ({
               <View key={rowIdx} style={styles.dropdownRow}>
                 {CATEGORIES.slice(rowIdx * 2, rowIdx * 2 + 2).map((cat) => (
                   <TouchableOpacity
-                    key={cat}
-                    style={[styles.dropdownCell, value === cat && styles.dropdownCellActive]}
-                    onPress={() => { onChange(cat); setOpen(false); }}
+                    key={cat.value}
+                    style={[styles.dropdownCell, value === cat.value && styles.dropdownCellActive]}
+                    onPress={() => { onChange(cat.value); setOpen(false); }}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.dropdownCellText, value === cat && styles.dropdownCellTextActive]}>
-                      {cat}
+                    <Text style={[styles.dropdownCellText, value === cat.value && styles.dropdownCellTextActive]}>
+                      {cat.label}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -205,10 +204,10 @@ export default function EditPostScreen() {
       if (parsed.category)        setCategory(parsed.category);
       if (parsed.quantity)        setQuantity(String(parsed.quantity));
       if (parsed.unit)            setUnit(parsed.unit);
-      if (parsed.pickup_address)  setMeetingPoint(parsed.pickup_address); // ✅ correct field name
+      if (parsed.pickup_address)  setMeetingPoint(parsed.pickup_address);
       if (parsed.description)     setDescription(parsed.description);
-      if (parsed.urgency)         setEmergencyColor(parsed.urgency as EmergencyColor); // ✅ correct field name
-
+      if (parsed.urgency)         setEmergencyColor(parsed.urgency as EmergencyColor);
+      // expiry_date from backend: "YYYY-MM-DD" → display "DD/MM/YYYY"
       if (parsed.expiry_date) {
         const parts = String(parsed.expiry_date).split('-');
         if (parts.length === 3) {
@@ -311,14 +310,13 @@ export default function EditPostScreen() {
 
     setLoading(true);
     try {
-      // ✅ PATCH instead of PUT, correct backend field names
       await api.patch(`/donations/${post.id}/edit/`, {
         category,
         quantity:        parsedQty,
         unit,
-        expiry_date:     isoDate,
-        urgency:         emergencyColor,   // ✅ backend field name
-        pickup_address:  meetingPoint,     // ✅ backend field name
+        expiry_date:     isoDate,          // "YYYY-MM-DD"
+        urgency:         emergencyColor,
+        pickup_address:  meetingPoint,
         description,
       });
 

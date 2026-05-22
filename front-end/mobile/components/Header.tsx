@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 
 interface HeaderProps {
   showBack?: boolean;
+  onBack?: () => void;
 }
 
 export default function Header({ showBack = false }: HeaderProps) {

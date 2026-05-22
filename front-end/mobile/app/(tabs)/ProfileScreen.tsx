@@ -1,15 +1,27 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, Pressable, SafeAreaView, Modal, TextInput,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Pressable,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, router } from 'expo-router';
 import { BottomNavBar } from '../../components/ButtomNavBar';
 import api from '../../constants/axios';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const COLORS = {
   primary: '#4A6741', primaryMedium: '#7A9B71',
@@ -243,9 +255,11 @@ const rStyles = StyleSheet.create({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function ProfileScreen() {
   const router = useRouter();
+
   const [username, setUsername]                 = useState('');
+  const [role, setRole]                         = useState('');
   const [score, setScore]                       = useState<number | null>(null);
-  const [donationCount, setDonationCount]       = useState(0); // ← real completed donations count
+  const [donationCount, setDonationCount]       = useState(0);
   const [profileImage, setProfileImage]         = useState<string | null>(null);
   const [editModalVisible, setEditModal]         = useState(false);
   const [menuOpen, setMenuOpen]                 = useState(false);
@@ -257,6 +271,7 @@ export default function ProfileScreen() {
   const [donations, setDonations]               = useState<any[]>([]);
   const [reservations, setReservations]         = useState<any[]>([]);
   const [loading, setLoading]                   = useState(true);
+  const [refreshing, setRefreshing]             = useState(false);
   const [confirmVisible, setConfirmVisible]     = useState(false);
   const [confirmMsg, setConfirmMsg]             = useState('');
   const [confirmAct, setConfirmAct]             = useState<() => void>(() => {});
@@ -269,7 +284,6 @@ export default function ProfileScreen() {
   };
 
   // ── Recalculate donation count whenever donations list changes ──────────────
-  // Counts all donations the user has posted (any status)
   useEffect(() => {
     setDonationCount(donations.length);
   }, [donations]);
@@ -277,56 +291,57 @@ export default function ProfileScreen() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      // ── Load username + persisted profile image ──
-      const [userStr, savedImage] = await Promise.all([
-        AsyncStorage.getItem('user'),
-        AsyncStorage.getItem('profileImage'),
-      ]);
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        setUsername(user.username || 'Username');
-      }
+      // ── Load persisted profile image ──
+      const savedImage = await AsyncStorage.getItem('profileImage');
       if (savedImage) setProfileImage(savedImage);
 
-      // ── Fetch donations, reservations, profile (score) in parallel ──
+      // ── Fetch donations, reservations, profile in parallel ──
       const [donRes, resRes, profileRes] = await Promise.all([
         api.get('/donations/my-donations/'),
         api.get('/donations/reservations/received/'),
         api.get('/users/profile/'),
       ]);
 
-// API returns { active: [], donated: [], expired: [] }
-const donData = donRes.data;
-const allDonations = [
-  ...(donData?.active  || []),
-  ...(donData?.donated || []),
-  ...(donData?.expired || []),
-];
-setDonations(allDonations);
+      // API returns { active: [], donated: [], expired: [] }
+      const donData = donRes.data;
+      const allDonations = [
+        ...(donData?.active  || []),
+        ...(donData?.donated || []),
+        ...(donData?.expired || []),
+      ];
+      setDonations(allDonations);
 
-// API returns { incoming: {...}, my_requests: {...} }
-const resData = resRes.data;
-const allReservations = Array.isArray(resData)
-  ? resData
-  : [
-      ...(resData?.incoming?.pending   || []),
-      ...(resData?.incoming?.confirmed || []),
-      ...(resData?.incoming?.rejected  || []),
-    ];
-setReservations(allReservations);
-    
-      // Supports common backend field names for score
+      // API returns { incoming: {...}, my_requests: {...} }
+      const resData = resRes.data;
+      const allReservations = Array.isArray(resData)
+        ? resData
+        : [
+            ...(resData?.incoming?.pending   || []),
+            ...(resData?.incoming?.confirmed || []),
+            ...(resData?.incoming?.rejected  || []),
+          ];
+      setReservations(allReservations);
+
+      // Profile data
       const p = profileRes.data;
+      setUsername(p.username || 'Username');
+      setRole(p.role || '');
       setScore(p?.score ?? p?.rating ?? p?.average_rating ?? null);
 
     } catch (err) {
       console.log('Error loading profile data:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
-  // ── Reload every time screen comes into focus (catches new posts) ───────────
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadData();
+  }, [loadData]);
+
+  // ── Reload every time screen comes into focus ────────────────────────────────
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
   // ── Photo handlers ────────────────────────────────────────────────────────
@@ -343,7 +358,7 @@ setReservations(allReservations);
     if (!result.canceled && result.assets[0]) {
       const uri = result.assets[0].uri;
       setProfileImage(uri);
-      await AsyncStorage.setItem('profileImage', uri); // ← persisted across logout
+      await AsyncStorage.setItem('profileImage', uri);
     }
   };
 
@@ -351,7 +366,7 @@ setReservations(allReservations);
     setPhotoMenuOpen(false);
     showConfirm('Delete your profile photo?', async () => {
       setProfileImage(null);
-      await AsyncStorage.removeItem('profileImage'); // ← removed from storage too
+      await AsyncStorage.removeItem('profileImage');
     }, 'Delete', COLORS.red);
   };
 
@@ -392,7 +407,6 @@ setReservations(allReservations);
     showConfirm('Delete this donation? This cannot be undone.', async () => {
       try {
         await api.delete(`/donations/${id}/`);
-        // Remove from list → useEffect auto-updates donationCount
         setDonations((prev) => prev.filter((d) => d.id !== id));
       } catch (err: any) {
         Alert.alert('Error', err?.response?.data?.error || 'Failed to delete donation');
@@ -408,7 +422,6 @@ setReservations(allReservations);
     setMenuOpen(false);
     showConfirm('Are you sure you want to logout?', async () => {
       await AsyncStorage.multiRemove(['access', 'refresh', 'user']);
-      // Note: profileImage key is intentionally kept so it reloads on next login
       router.replace('/auth/login');
     }, 'Logout', COLORS.red);
   };
@@ -431,8 +444,14 @@ setReservations(allReservations);
       <EditUsernameModal visible={editModalVisible} currentUsername={username} onSave={setUsername} onClose={() => setEditModal(false)} />
       <ViewPhotoModal visible={viewPhotoVisible} imageUri={profileImage} onClose={() => setViewPhotoVisible(false)} />
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+        }
+      >
         {/* ── Profile Card ── */}
         <View style={styles.profileCard}>
 
@@ -458,7 +477,10 @@ setReservations(allReservations);
 
           {/* ── Avatar ── */}
           <TouchableOpacity onPress={() => setPhotoMenuOpen(!photoMenuOpen)} style={styles.avatarWrapper} activeOpacity={0.85}>
-            <View style={styles.avatarCircle}>
+            <View style={[
+              styles.avatarCircle,
+              role === 'food_saver' && { borderColor: '#E09F3E', borderWidth: 3 },
+            ]}>
               {profileImage
                 ? <Image source={{ uri: profileImage }} style={styles.avatarImage} />
                 : <Image source={require('../../assets/images/me.png')} style={styles.avatarImage} />
@@ -491,13 +513,19 @@ setReservations(allReservations);
 
           <View style={styles.nameRow}>
             <Text style={styles.username}>{username}</Text>
+            {role === 'food_saver' && (
+              <Ionicons name="trophy" size={20} color="orange" style={{ marginLeft: 6 }} />
+            )}
             <TouchableOpacity style={{ marginLeft: 6 }} onPress={() => setEditModal(true)}>
               <Ionicons name="pencil" size={16} color={COLORS.textMuted} />
             </TouchableOpacity>
           </View>
 
-          {/* ── Stats: live donation count + dynamic score ── */}
-          <View style={styles.statsRow}>
+          {/* ── Stats ── */}
+          <View style={[
+            styles.statsRow,
+            role === 'food_saver' && { borderColor: '#E09F3E' },
+          ]}>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{donationCount}</Text>
               <Text style={styles.statLabel}>Donations</Text>
@@ -586,18 +614,20 @@ const styles = StyleSheet.create({
   dropdownDivider: { height: 1, backgroundColor: COLORS.border },
   dropdownText:    { fontSize: 15, color: COLORS.textPrimary, fontWeight: '500' },
 
-  avatarWrapper:   { marginTop: 8, marginBottom: 12, position: 'relative' },
-  avatarCircle:    { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: COLORS.primary, overflow: 'hidden', backgroundColor: '#B8D4E8' },
-  avatarImage:     { width: '100%', height: '100%' },
-  editPhotoBadge:  { position: 'absolute', bottom: 4, right: 4, backgroundColor: COLORS.primary, borderRadius: 12, padding: 4 },
+  avatarWrapper:    { marginTop: 8, marginBottom: 12, position: 'relative' },
+  avatarCircle:     { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: COLORS.primary, overflow: 'hidden', backgroundColor: '#B8D4E8' },
+  avatarImage:      { width: '100%', height: '100%' },
+  editPhotoBadge:   { position: 'absolute', bottom: 4, right: 4, backgroundColor: COLORS.primary, borderRadius: 12, padding: 4 },
 
   photoMenu:        { position: 'absolute', top: 145, right: 30, backgroundColor: COLORS.white, borderRadius: 12, borderWidth: 1.5, borderColor: COLORS.border, minWidth: 160, zIndex: 30, elevation: 10, overflow: 'hidden' },
   photoMenuItem:    { paddingVertical: 13, paddingHorizontal: 18, alignItems: 'center' },
   photoMenuDivider: { height: 1, backgroundColor: COLORS.border },
   photoMenuText:    { fontSize: 15, color: COLORS.textPrimary, fontWeight: '500' },
 
-  nameRow:  { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  nameRow:  { flexDirection: 'row', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', justifyContent: 'center' },
   username: { fontSize: 20, fontWeight: '700', color: COLORS.textPrimary },
+  foodSaverBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, marginLeft: 8 },
+  foodSaverText:  { color: '#fff', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
 
   statsRow:    { flexDirection: 'row', borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: 12, overflow: 'hidden', width: '80%' },
   statBox:     { flex: 1, alignItems: 'center', paddingVertical: 10 },
@@ -618,4 +648,29 @@ const styles = StyleSheet.create({
   filterChipTextActive: { color: COLORS.white, fontWeight: '700' },
 
   emptyText: { textAlign: 'center', color: COLORS.textMuted, marginTop: 24, fontSize: 14 },
+
+  postCard:          { flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: 12, padding: 8, marginBottom: 8, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
+  postImage:         { width: 55, height: 55, borderRadius: 8, backgroundColor: '#f0f4ef' },
+  postImageFallback: { alignItems: 'center', justifyContent: 'center' },
+  postInfo:          { flex: 1, marginLeft: 12, justifyContent: 'center' },
+  postTitle:         { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
+  postDetails:       { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  postExpiry:        { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
+  postActions:       { flexDirection: 'row', gap: 12, marginTop: 4 },
+  postActionBtn:     { padding: 2 },
+
+  resItemWrapper:     { marginBottom: 10, position: 'relative', zIndex: 10 },
+  resItemCard:        { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FDFCF0', borderRadius: 25, paddingVertical: 10, paddingHorizontal: 15, borderWidth: 1, borderColor: '#F1F1E6', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
+  resAvatar:          { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F7D774', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  resContent:         { flex: 1 },
+  resText:            { fontSize: 13, color: COLORS.textPrimary, lineHeight: 18 },
+  resUser:            { fontWeight: '700' },
+  resProduct:         { color: COLORS.primary, fontWeight: '600' },
+  resTime:            { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
+  resMenuBtn:         { padding: 5 },
+  resDropdown:        { position: 'absolute', right: 10, top: 45, backgroundColor: COLORS.white, borderRadius: 8, elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, zIndex: 100, borderWidth: 1, borderColor: COLORS.border, minWidth: 100 },
+  resDropdownItem:    { paddingVertical: 10, paddingHorizontal: 15 },
+  resDropdownDivider: { height: 1, backgroundColor: COLORS.border },
+  resConfirmText:     { fontSize: 13, fontWeight: '600', color: COLORS.primary, textAlign: 'center' },
+  resRejectText:      { fontSize: 13, fontWeight: '600', color: COLORS.red, textAlign: 'center' },
 });

@@ -19,7 +19,38 @@ class Conversation(models.Model):
 
     def get_room_name(self):
         return f"conversation_{self.id}"
+class DirectConversation(models.Model):
+    
+    food_saver = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='direct_conversations_as_fs'
+    )
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='direct_conversations_as_user'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        unique_together = ('food_saver', 'user')
+
+    def __str__(self):
+        return f"Direct: {self.food_saver.username} ↔ {self.user.username}"
+
+
+class DirectMessage(models.Model):
+    conversation = models.ForeignKey(
+        DirectConversation, on_delete=models.CASCADE,
+        related_name='messages'
+    )
+    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
 
 class Message(models.Model):
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
@@ -30,6 +61,7 @@ class Message(models.Model):
 
     class Meta:
         ordering = ['created_at']
+        
 
     def __str__(self):
         return f"{self.sender.username}: {self.content[:50]}"

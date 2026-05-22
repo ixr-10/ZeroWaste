@@ -14,6 +14,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(
         choices=[
             ('donateur', 'Donateur'),
+            ('admin', 'Administrateur'),
             ('beneficiaire', 'Bénéficiaire'),
             ('localauthority', 'Local authority'),
             ('food_saver', 'Food Saver'),
@@ -88,6 +89,8 @@ class AdminCreateUserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User(**validated_data)
         user.set_unusable_password()
+        user.is_active = False         
+        user.is_email_confirmed = False  
         user.save()
         return user
 
@@ -113,3 +116,6 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = SystemSettings
         fields = ['food_saver_score_threshold']
+
+
+    

@@ -42,17 +42,19 @@ export default function DeleteAccountScreen() {
     setLoading(true);
     try {
       // ✅ Call backend to permanently delete account
-      await api.delete('/delete-account/');
+      await api.delete('users/delete-account/');
 
       // ✅ Wipe all local storage and go to login
       await AsyncStorage.clear();
       router.replace('/auth/login');
     } catch (err: any) {
-      const msg = err.response?.data?.error || 'Failed to delete account. Please try again.';
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
+  if (err.response) {
+    const msg = err.response.data?.error || 'Failed to delete account.';
+    setError(msg);
+  } else {
+    setError('Network error. Please try again.');
+  }
+}
   };
 
   return (
