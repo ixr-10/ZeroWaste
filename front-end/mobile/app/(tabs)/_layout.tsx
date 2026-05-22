@@ -1,15 +1,14 @@
-<<<<<<< HEAD
-import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Tabs, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  TouchableOpacity,
+  Platform,
   StyleSheet,
   Text,
-  Platform,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import 'react-native-reanimated';
 
 const COLORS = {
   primary: '#4A6741',
@@ -20,12 +19,16 @@ const COLORS = {
 };
 
 const TAB_ITEMS = [
-  { screen: '/(tabs)/HomeScreen',   icon: 'home',          label: 'Home' },
-  { screen: '/(tabs)/ChatList',     icon: 'chatbubble',    label: 'Chat' },
-  { screen: '/(tabs)/Picture',      icon: 'add',           label: '' },
+  { screen: '/(tabs)/HomeScreen', icon: 'home', label: 'Home' },
+  { screen: '/(tabs)/ChatList', icon: 'chatbubble', label: 'Chat' },
+  { screen: '/(tabs)/Picture', icon: 'add', label: '' },
   { screen: '/(tabs)/notifications', icon: 'notifications', label: 'Notification' },
-  { screen: '/(tabs)/ProfileScreen', icon: 'person',        label: 'Profile' },
+  { screen: '/(tabs)/ProfileScreen', icon: 'person', label: 'Profile' },
 ];
+
+export const unstable_settings = {
+  anchor: '(tabs)',
+};
 
 function CustomTabBar() {
   const router = useRouter();
@@ -33,15 +36,14 @@ function CustomTabBar() {
 
   const handlePress = (index: number, screen: string) => {
     setActiveIndex(index);
-    router.push(screen as any);   
+    router.push(screen as any);
   };
 
   return (
     <View style={styles.container}>
-      {/* Home + Chat */}
       {TAB_ITEMS.slice(0, 2).map((tab, i) => (
         <TouchableOpacity
-          key={i}
+          key={tab.screen}
           style={styles.tabItem}
           onPress={() => handlePress(i, tab.screen)}
           activeOpacity={0.7}
@@ -57,7 +59,6 @@ function CustomTabBar() {
         </TouchableOpacity>
       ))}
 
-      {/* Center + Button */}
       <TouchableOpacity
         style={styles.addWrapper}
         onPress={() => router.push('/(tabs)/Picture' as any)}
@@ -68,12 +69,11 @@ function CustomTabBar() {
         </View>
       </TouchableOpacity>
 
-      {/* Notification + Profile */}
       {TAB_ITEMS.slice(3).map((tab, i) => {
         const index = i + 3;
         return (
           <TouchableOpacity
-            key={index}
+            key={tab.screen}
             style={styles.tabItem}
             onPress={() => handlePress(index, tab.screen)}
             activeOpacity={0.7}
@@ -112,6 +112,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="Quantity" />
       <Tabs.Screen name="Localization" />
       <Tabs.Screen name="Details" />
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="chat" />
     </Tabs>
   );
 }
@@ -169,54 +171,3 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
 });
-=======
-import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
-import 'react-native-reanimated';
-
-
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
-
-export default function TabLayout() {
-  
-
-  return (
-      <Tabs screenOptions={{
-        tabBarStyle:{backgroundColor : "#A4B18A80" ,  } ,
-        }}>
-        <Tabs.Screen name="index" options={{  title:"Home" ,
-         headerShown: false ,  
-          tabBarIcon: ({ color, size }) => (<Ionicons name="home-outline" color={"black"} size={20} />) ,
-          tabBarActiveTintColor : "black",
-         }} 
-          />
-
-        <Tabs.Screen name="login" options={{ tabBarIcon : ({color , size}) => (<Ionicons name="chatbox-outline" color={"black"} size={20}/>) ,
-          tabBarActiveTintColor : "black" ,       
-          headerShown: false }} />
-
-        <Tabs.Screen name="Notifications" options={{ tabBarIcon : ({color , size}) => (<Ionicons name="notifications-outline" color={"black"} size={20}/>) ,
-          tabBarActiveTintColor : "black" ,       
-          headerShown: false 
-        }} />
-
-        <Tabs.Screen name="Profile" options={{ tabBarIcon : ({color , size}) => (<Ionicons name="person-outline" color={"black"} size={20}/>) ,
-          tabBarActiveTintColor : "black" , 
-          headerShown: false 
-        }} />
-
-        <Tabs.Screen name="slides" options={{ tabBarIcon : ({color , size}) => (<Ionicons name="camera-outline" color={"black"} size={20}/>) ,
-          tabBarActiveTintColor : "black" , 
-          headerShown: false ,
-        }} />
-    
-      </Tabs>
-
-      
-      
-    );
-}
->>>>>>> origin/ibtihal-front

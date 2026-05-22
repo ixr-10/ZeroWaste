@@ -43,7 +43,20 @@ class CreateDonationView(APIView):
 
         serializer = DonationSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(donor=request.user)
+            donation = serializer.save(donor=request.user)
+
+            try:
+                from apps.notifications.utils import (
+                    notify_nearby_users_new_donation,
+                    notify_nearby_food_savers,
+                    notify_urgent_donation,
+                )
+                notify_nearby_users_new_donation(donation)
+                notify_nearby_food_savers(donation)
+                notify_urgent_donation(donation)
+            except Exception:
+                pass  # don't block donation creation if notifications fail
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -140,11 +153,11 @@ class MyDonationsView(APIView):
 
     def get(self, request):
         donations = Donation.objects.filter(donor=request.user).order_by('-created_at')
-        active = donations.filter(status__in=['available', 'reserved'])
+        active  = donations.filter(status__in=['available', 'reserved'])
         expired = donations.filter(status='expired')
         donated = donations.filter(status='completed')
         return Response({
-            'active': DonationSerializer(active, many=True, context={'request': request}).data,
+            'active':  DonationSerializer(active,  many=True, context={'request': request}).data,
             'expired': DonationSerializer(expired, many=True, context={'request': request}).data,
             'donated': DonationSerializer(donated, many=True, context={'request': request}).data,
         })
@@ -193,6 +206,11 @@ class AvailableDonationsView(APIView):
         ).values_list('donation_id', flat=True)
         donations = donations.exclude(id__in=ignored_ids)
 
+        # ── Filter by donor ID (used by public profile screen) ────────────────
+        donor_id = request.query_params.get('donor')
+        if donor_id:
+            donations = Donation.objects.filter(donor_id=donor_id, status='available')
+
         category = request.query_params.get('category')
         if category:
             donations = donations.filter(category=category)
@@ -203,7 +221,7 @@ class AvailableDonationsView(APIView):
 
         expiring_soon = request.query_params.get('expiring_soon')
         if expiring_soon:
-            from datetime import date, timedelta
+            from datetime import date
             soon = date.today() + timedelta(days=2)
             donations = donations.filter(expiry_date__lte=soon)
 
@@ -435,14 +453,14 @@ class MyReservationsView(APIView):
 
         return Response({
             'incoming': {
-                'pending': ReservationSerializer(incoming.filter(status='pending'), many=True, context={'request': request}).data,
-                'confirmed': ReservationSerializer(incoming.filter(status='confirmed'), many=True, context={'request': request}).data,
-                'rejected': ReservationSerializer(incoming.filter(status__in=['rejected', 'cancelled']), many=True, context={'request': request}).data,
+                'pending':   ReservationSerializer(incoming.filter(status='pending'),                       many=True, context={'request': request}).data,
+                'confirmed': ReservationSerializer(incoming.filter(status='confirmed'),                     many=True, context={'request': request}).data,
+                'rejected':  ReservationSerializer(incoming.filter(status__in=['rejected', 'cancelled']),   many=True, context={'request': request}).data,
             },
             'my_requests': {
-                'pending': ReservationSerializer(my_requests.filter(status='pending'), many=True, context={'request': request}).data,
-                'confirmed': ReservationSerializer(my_requests.filter(status='confirmed'), many=True, context={'request': request}).data,
-                'rejected': ReservationSerializer(my_requests.filter(status__in=['rejected', 'cancelled']), many=True, context={'request': request}).data,
+                'pending':   ReservationSerializer(my_requests.filter(status='pending'),                    many=True, context={'request': request}).data,
+                'confirmed': ReservationSerializer(my_requests.filter(status='confirmed'),                  many=True, context={'request': request}).data,
+                'rejected':  ReservationSerializer(my_requests.filter(status__in=['rejected', 'cancelled']), many=True, context={'request': request}).data,
             }
         })
 

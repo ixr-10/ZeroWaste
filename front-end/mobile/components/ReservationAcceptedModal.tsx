@@ -46,26 +46,27 @@ export default function ReservationAcceptedModal() {
   const [visible, setVisible]         = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
 
-  // ── useFocusEffect: re-checks every time any screen gets focus ──────────────
-  // This means it works both on app start AND when returning from another screen
   useFocusEffect(
     useCallback(() => {
       const check = async () => {
         try {
-          const token = await AsyncStorage.getItem('access');
+          const token = await AsyncStorage.getItem('access_token'); // ✅ fixed key
+          console.log('[Modal] token:', token ? 'EXISTS' : 'NULL');
           if (!token) {
             console.log('[Modal] No token — skipping');
             return;
           }
 
           const res = await api.get('/donations/reservations/my-reservations/');
+          console.log('[Modal] API response:', JSON.stringify(res.data, null, 2));
 
-          // API returns { incoming: { confirmed: [] }, my_requests: { confirmed: [] } }
-          // We want my_requests.confirmed — reservations I made that were confirmed by donor
           const all: AcceptedReservation[] = res.data?.my_requests?.confirmed || [];
-          console.log('[Modal] Total reservations:', all.length);
+          console.log('[Modal] Confirmed reservations count:', all.length);
 
-          if (all.length === 0) return;
+          if (all.length === 0) {
+            console.log('[Modal] No confirmed reservations');
+            return;
+          }
 
           const shownIds = await getShownIds();
           console.log('[Modal] Already shown IDs:', shownIds);
@@ -78,14 +79,14 @@ export default function ReservationAcceptedModal() {
           }
 
           const unseen = all.find((r) => !cleanedShown.includes(r.id));
-          console.log('[Modal] Unseen confirmed:', unseen ? unseen.id : 'none');
+          console.log('[Modal] Unseen confirmed:', unseen ? JSON.stringify(unseen) : 'none');
 
           if (unseen) {
             setReservation(unseen);
             setVisible(true);
           }
         } catch (err: any) {
-          console.log('[Modal] check failed:', err?.response?.status, err?.message);
+          console.log('[Modal] check failed:', err?.response?.status, err?.message, JSON.stringify(err?.response?.data));
         }
       };
 

@@ -13,7 +13,7 @@ const api = axios.create({
 // Auto attach token
 api.interceptors.request.use(
   async (config) => {
-    const access = await AsyncStorage.getItem('access');
+    const access = await AsyncStorage.getItem('access_token'); // ✅ fixed key
     if (access) {
       config.headers.Authorization = `Bearer ${access}`;
     }

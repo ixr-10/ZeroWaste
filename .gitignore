@@ -228,3 +228,5 @@ __marimo__/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+front-end/mobile/constants/config.ts
+front-end/mobile/constants/api.js

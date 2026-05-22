@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import ReservationAcceptedModal from '../../components/ReservationAcceptedModal';
 import {
   View, FlatList, StyleSheet, StatusBar,
   Text, TouchableOpacity, ActivityIndicator,
@@ -10,8 +9,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SearchBar } from '../../components/SearchBar';
 import { FilterButton } from '../../components/FilterButton';
 import { FoodCard } from '../../components/FoodCard';
+import ReservationAcceptedModal from '../../components/ReservationAcceptedModal'; // ✅ added
 import axios from '../../constants/axios';
 import * as Location from 'expo-location';
+
 const COLORS = {
   primary: '#588157BF', secondary: '#588157',
   primaryLight: '#D1D8C4', background: '#F8F8F6',
@@ -88,8 +89,10 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ReservationAcceptedModal />
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+
+      {/* ✅ Modal renders on top of everything */}
+      <ReservationAcceptedModal />
 
       <View style={styles.header}>
         <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="" />
@@ -147,6 +150,12 @@ export default function HomeScreen() {
             <FoodCard
               item={item}
               onReserve={handleReserve}
+              onPressAvatar={(donorId) =>
+                router.push({
+                  pathname: '/(Screens)/UserProfile' as any,
+                  params: { userId: donorId },
+                })
+              }
             />
           )}
           contentContainerStyle={styles.listContent}
