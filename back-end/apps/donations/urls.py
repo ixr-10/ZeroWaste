@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     CreateDonationView,
     EditDonationView,
+    DeleteDonationView,
     MyDonationsView,
     ReserveDonationView,
     ConfirmReservationView,
@@ -13,14 +14,13 @@ from .views import (
     DonationReservationsView,
     CancelReservationView,
     MyReservationsView,
-    DeleteDonationView,
     NotInterestedView,
 )
 
 urlpatterns = [
     # ── Donations ──────────────────────────────────────
     path('create_donation/', CreateDonationView.as_view(), name='create_donation'),
-    path('my-donations/', MyDonationsView.as_view(), name='my_donations'),          # GET=read, POST=sync
+    path('my-donations/', MyDonationsView.as_view(), name='my_donations'),
     path('<int:donation_id>/edit/', EditDonationView.as_view(), name='edit_donation'),
     path('<int:donation_id>/delete/', DeleteDonationView.as_view(), name='delete_donation'),
     path('<int:donation_id>/complete/', CompleteDonationView.as_view(), name='complete_donation'),

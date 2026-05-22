@@ -4,7 +4,7 @@ import {
   ScrollView, Image, StatusBar, ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, Stack } from "expo-router";
+import { useRouter, Stack, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SPACING, BORDER_RADIUS } from "../../constants/theme";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -15,22 +15,40 @@ export default function UserProfile() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<"donations" | "reservations">("donations");
   const [donations, setDonations] = useState<any[]>([]);
-  const [reservations, setReservations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  const { id } = useLocalSearchParams<{ id: string }>();
 
   useEffect(() => {
+    console.log("UserProfile opened with id:", id);
     const loadData = async () => {
+      setLoading(true);
+      setUser(null);
       try {
-        const userStr = await AsyncStorage.getItem("user");
-        if (userStr) setUser(JSON.parse(userStr));
+        const meStr = await AsyncStorage.getItem("user");
+        if (meStr) setCurrentUser(JSON.parse(meStr));
 
-        const [donRes, resRes] = await Promise.all([
-          axios.get("/donations/my-donations/"),
-          axios.get("/donations/reservations/my-reservations/"),
-        ]);
-        setDonations(donRes.data);
-        setReservations(resRes.data);
+        if (id) {
+          // Viewing someone else
+          const [userRes, donRes] = await Promise.all([
+            axios.get(`/users/users/${id}/`),
+            axios.get(`/donations/available/`), 
+          ]);
+          setUser(userRes.data);
+          // Safety check for map
+          const allDonations = Array.isArray(donRes.data) ? donRes.data : (donRes.data?.active || []);
+          setDonations(allDonations.filter((d: any) => String(d.donor_id) === String(id)));
+        } else {
+          // Viewing self
+          const userStr = await AsyncStorage.getItem("user");
+          if (userStr) setUser(JSON.parse(userStr));
+          const donRes = await axios.get("/donations/my-donations/");
+          
+          const donData = donRes.data || {};
+          setDonations(Array.isArray(donData.active) ? donData.active : []);
+        }
       } catch (err) {
         console.log("Error loading profile data:", err);
       } finally {
@@ -38,7 +56,31 @@ export default function UserProfile() {
       }
     };
     loadData();
-  }, []);
+  }, [id]);
+
+  const handlePromote = async () => {
+    if (!id) return;
+    try {
+      await axios.post(`/users/promote/${id}/`);
+      alert(`Success! ${user?.username} is now a Food Saver.`);
+      // Refresh to show gold badge
+      const res = await axios.get(`/users/users/${id}/`);
+      setUser(res.data);
+    } catch (err) {
+      alert("Failed to promote user.");
+    }
+  };
+
+  const handleMessage = async () => {
+    // Navigate to chat
+    router.push({
+      pathname: "/(Screens)/ChatConversation" as any,
+      params: { 
+        otherUsername: user?.username,
+        otherUserId: id?.toString()
+      }
+    });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -85,44 +127,78 @@ export default function UserProfile() {
               </TouchableOpacity>
               {menuVisible && (
                 <View style={styles.menu}>
-                  {["Block", "Report"].map((option, index) => (
-                    <TouchableOpacity
-                      key={option}
-                      style={[styles.menuItem, index === 0 && styles.menuItemBorder]}
-                      onPress={() => {
-                        setMenuVisible(false);
-                        if (option === "Report") router.push("/ReportProfile" as any);
-                      }}
-                    >
-                      <Text style={[styles.menuText, option === "Report" && { color: COLORS.emergencyRed }]}>
-                        {option}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                  {(() => {
+                    const opts = ["Block", "Report"];
+                    if (currentUser?.role === 'food_saver') {
+                      opts.unshift("Send Message");
+                      if (user?.role !== 'food_saver') {
+                        opts.unshift("Promote to Food Saver");
+                      }
+                    }
+                    return opts.map((option, index) => (
+                      <TouchableOpacity
+                        key={option}
+                        style={[styles.menuItem, index < opts.length - 1 && styles.menuItemBorder]}
+                        onPress={() => {
+                          setMenuVisible(false);
+                          if (option === "Promote to Food Saver") handlePromote();
+                          if (option === "Send Message") handleMessage();
+                        }}
+                      >
+                        <Text style={[
+                          styles.menuText, 
+                          option === "Report" && { color: COLORS.emergencyRed },
+                          (option === "Promote to Food Saver" || option === "Send Message") && { color: COLORS.primary, fontWeight: '700' }
+                        ]}>
+                          {option}
+                        </Text>
+                      </TouchableOpacity>
+                    ));
+                  })()}
                 </View>
               )}
             </View>
           </View>
 
           <View style={styles.avatarWrapper}>
-            <Image style={styles.avatar} source={require("../../assets/images/avatar.png")} />
+            <View style={[
+              styles.avatarContainer,
+              user?.role === 'food_saver' && { borderColor: '#E09F3E', borderWidth: 3 }
+            ]}>
+              <Image style={styles.avatar} source={require("../../assets/images/avatar.png")} />
+            </View>
           </View>
 
           <View style={styles.nameRow}>
-            <Text style={styles.name}>{user?.username ?? "Username"}</Text>
-            <Ionicons name="checkmark-circle" size={17} color="black" />
+            {loading ? (
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            ) : (
+              <>
+                <Text style={styles.name}>{user?.username || "..."}</Text>
+                {user?.role === 'food_saver' ? (
+                  
+                    <Ionicons name="trophy" size={20} color="orange" />
+                  
+                  
+                ) : (
+                  <Ionicons name="checkmark-circle" size={17} color="black" />
+                )}
+              </>
+            )}
           </View>
 
           <View style={styles.statsRow}>
-            <View style={styles.statCard}>
+            <View style={[
+              styles.statCard,
+              user?.role === 'food_saver' && styles.statCardGold
+            ]}>
               <Text style={styles.statValue}>{donations.length}</Text>
               <Text style={styles.statLabel}>Donations</Text>
             </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{reservations.length}</Text>
-              <Text style={styles.statLabel}>Reservations</Text>
-            </View>
-            <View style={styles.statCard}>
+            <View style={[
+              styles.statCard,
+              user?.role === 'food_saver' && styles.statCardGold
+            ]}>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <Text style={styles.statValue}>{user?.reputation_score ?? 0} </Text>
                 <Ionicons name="star" size={13} color="orange" />
@@ -132,93 +208,38 @@ export default function UserProfile() {
           </View>
         </View>
 
-        {/* ── Tabs ── */}
-        <View style={styles.tabRow}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === "donations" && styles.tabActive]}
-            onPress={() => setActiveTab("donations")}
-          >
-            <Text style={[styles.tabText, activeTab === "donations" && styles.tabTextActive]}>
-              My Donations
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === "reservations" && styles.tabActive]}
-            onPress={() => setActiveTab("reservations")}
-          >
-            <Text style={[styles.tabText, activeTab === "reservations" && styles.tabTextActive]}>
-              My Reservations
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* ── Content ── */}
+        {/* ── Posts ── */}
         <View style={styles.postsCard}>
+          <Text style={styles.postsTitle}>Posts</Text>
           {loading ? (
             <ActivityIndicator size="large" color={COLORS.primary} style={{ paddingVertical: 30 }} />
-          ) : activeTab === "donations" ? (
-            donations.length === 0 ? (
-              <Text style={styles.emptyText}>No donations yet</Text>
-            ) : (
-              donations.map((item) => (
-                <View key={item.id} style={styles.postItem}>
-                  {item.image ? (
-                    <Image source={{ uri: item.image }} style={styles.postImage} />
-                  ) : (
-                    <View style={[styles.postImage, styles.imageFallback]}>
-                      <Ionicons name="fast-food-outline" size={22} color={COLORS.primary} />
-                    </View>
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.postTitle}>{item.title}</Text>
-                    <Text style={styles.postDetails}>
-                      {item.available_quantity} / {item.quantity} {item.unit} • {item.category}
-                    </Text>
-                    <Text style={styles.postExpiry}>Expires: {item.expiry_date}</Text>
-                  </View>
-                  {/* Status badge */}
-                  <View style={[styles.statusBadge, { borderColor: getStatusColor(item.status) }]}>
-                    <Ionicons name={getStatusIcon(item.status) as any} size={10} color={getStatusColor(item.status)} />
-                    <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                      {item.status}
-                    </Text>
-                  </View>
-                </View>
-              ))
-            )
+          ) : donations.length === 0 ? (
+            <Text style={styles.emptyText}>No posts yet</Text>
           ) : (
-            reservations.length === 0 ? (
-              <Text style={styles.emptyText}>No reservations yet</Text>
-            ) : (
-              reservations.map((item) => (
-                <View key={item.id} style={styles.postItem}>
+            donations.map((item) => (
+              <View key={item.id} style={styles.postItem}>
+                {item.image ? (
+                  <Image source={{ uri: item.image }} style={styles.postImage} />
+                ) : (
                   <View style={[styles.postImage, styles.imageFallback]}>
-                    <Ionicons name="bag-handle-outline" size={22} color={COLORS.primary} />
+                    <Ionicons name="fast-food-outline" size={22} color={COLORS.primary} />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.postTitle}>{item.donation_title}</Text>
-                    <Text style={styles.postDetails}>
-                      Qty: {item.quantity_requested} • from {item.donation_title}
-                    </Text>
-                    <Text style={styles.postExpiry}>
-                      Reserved on: {new Date(item.created_at).toLocaleDateString()}
-                    </Text>
-                    {item.confirmation_deadline && item.status === "pending" && (
-                      <Text style={[styles.postExpiry, { color: "#E09F3E" }]}>
-                        Confirm by: {new Date(item.confirmation_deadline).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </Text>
-                    )}
-                  </View>
-                  {/* Status badge */}
-                  <View style={[styles.statusBadge, { borderColor: getStatusColor(item.status) }]}>
-                    <Ionicons name={getStatusIcon(item.status) as any} size={10} color={getStatusColor(item.status)} />
-                    <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                      {item.status}
-                    </Text>
-                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.postTitle}>{item.title}</Text>
+                  <Text style={styles.postDetails}>
+                    {item.available_quantity} / {item.quantity} {item.unit} • {item.category}
+                  </Text>
+                  <Text style={styles.postExpiry}>Expires: {item.expiry_date}</Text>
                 </View>
-              ))
-            )
+                <View style={[styles.statusBadge, { borderColor: getStatusColor(item.status) }]}>
+                  <Ionicons name={getStatusIcon(item.status) as any} size={10} color={getStatusColor(item.status)} />
+                  <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+                    {item.status}
+                  </Text>
+                </View>
+              </View>
+            ))
           )}
         </View>
       </ScrollView>
@@ -238,24 +259,24 @@ const styles = StyleSheet.create({
   menuItemBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
   menuText:       { fontSize: 14, color: COLORS.textPrimary, textAlign: "center" },
   avatarWrapper:  { alignItems: "center", marginBottom: SPACING.md },
-  avatar:         { width: 100, height: 100, borderRadius: BORDER_RADIUS.full },
+  avatarContainer: { width: 100, height: 100, borderRadius: 50, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: '#B8D4E8' },
+  avatar:         { width: '100%', height: '100%' },
   nameRow:        { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 6, marginBottom: SPACING.lg },
-  name:           { fontSize: 16, fontWeight: "700", color: COLORS.textPrimary },
-  statsRow:       { flexDirection: "row", gap: 6 },
-  statCard:       { flex: 1, backgroundColor: "#D9E0C9", padding: SPACING.md, alignItems: "center", borderWidth: 1, borderColor: "#588157", borderRadius: 10 },
-  statValue:      { fontSize: 12, fontWeight: "700", color: COLORS.textPrimary },
-  statLabel:      { fontSize: 12, fontWeight: "700", color: "black", marginTop: 2 },
+  name:           { fontSize: 18, fontWeight: "700", color: COLORS.textPrimary },
+  
+  foodSaverBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E09F3E', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
+  foodSaverText: { color: '#fff', fontSize: 11, fontWeight: '700', marginLeft: 4 },
 
-  // Tabs
-  tabRow:         { flexDirection: "row", backgroundColor: "#E8EBE1", borderRadius: 12, padding: 4 },
-  tab:            { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 10 },
-  tabActive:      { backgroundColor: "#588157" },
-  tabText:        { fontSize: 13, fontWeight: "600", color: COLORS.textMuted },
-  tabTextActive:  { color: COLORS.white },
+  statsRow:       { flexDirection: "row", gap: 12, justifyContent: 'center' },
+  statCard:       { flex: 1, maxWidth: 120, backgroundColor: "#D9E0C9", padding: SPACING.md, alignItems: "center", borderWidth: 1.5, borderColor: "#588157", borderRadius: 15 },
+  statCardGold:   { backgroundColor: 'rgba(253, 230, 138, 0.2)', borderColor: '#E09F3E' },
+  statValue:      { fontSize: 16, fontWeight: "700", color: COLORS.textPrimary },
+  statLabel:      { fontSize: 12, fontWeight: "600", color: COLORS.textSecondary, marginTop: 2 },
 
   // Posts
-  postsCard:      { backgroundColor: "#E8EBE1", borderRadius: BORDER_RADIUS.xl, padding: SPACING.lg, gap: SPACING.md },
-  postItem:       { flexDirection: "row", alignItems: "center", gap: SPACING.md, backgroundColor: "#F5F5F5", borderRadius: 15, padding: SPACING.sm },
+  postsCard:      { backgroundColor: "#E8EBE1", borderRadius: BORDER_RADIUS.xl, padding: SPACING.lg, gap: SPACING.md, marginBottom: 20 },
+  postsTitle:     { fontSize: 15, fontWeight: "700", color: COLORS.textPrimary, marginBottom: 5 },
+  postItem:       { flexDirection: "row", alignItems: "center", gap: SPACING.md, backgroundColor: COLORS.white, borderRadius: 15, padding: SPACING.sm, elevation: 1 },
   postImage:      { width: 50, height: 50, borderRadius: 10 },
   imageFallback:  { backgroundColor: "#D9E0C9", alignItems: "center", justifyContent: "center" },
   postTitle:      { fontSize: 14, fontWeight: "600", color: COLORS.textPrimary },

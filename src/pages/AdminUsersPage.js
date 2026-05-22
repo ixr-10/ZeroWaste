@@ -12,8 +12,7 @@ import {
 
 import { FaStar, FaRegStar, FaUserCheck, FaPauseCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { logoutUser, adminListUsers, promoteToFoodSaver, demoteFromFoodSaver } from '../services/api';
-
+import { logoutUser, adminListUsers, promoteToFoodSaver, demoteFromFoodSaver, toggleUserActive } from '../services/api';
 const AdminUsersPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,6 +21,7 @@ const AdminUsersPage = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const adminName = user.username || 'Admin';
   const [isLoading, setIsLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const handleLogout = async () => {
     await logoutUser();
@@ -41,9 +41,9 @@ const AdminUsersPage = () => {
           rank: index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`,
           username: user.username,
           email: user.email,
-          donations: ((user.reputation_score ?? 0) / 10).toFixed(1),
-          score: user.reputation_score ?? 0,
-          status: user.is_verified ? 'Active' : 'Inactive',
+          donations: user.donations_count ?? 0, 
+          score: ((user.reputation_score ?? 0?? 0) / 10).toFixed(1),
+          status: user.is_active ? 'Active' : 'Inactive',
           isFoodSaver: user.role === 'food_saver',
         }));
         setUsers(mapped);
@@ -75,23 +75,26 @@ const AdminUsersPage = () => {
     }
   };
 
-  const toggleUserStatus = async (userId, currentStatus) => {
-    try {
-     
-      setUsers(prev => prev.map(user =>
-        user.id === userId 
-          ? { ...user, status: currentStatus === 'Active' ? 'Inactive' : 'Active' } 
-          : user
-      ));
-    } catch (err) {
-      console.error('Failed to update user status:', err);
-    }
-  };
+ const toggleUserStatus = async (userId, currentStatus) => {
+  try {
+    await toggleUserActive(userId);
+    setUsers(prev => prev.map(u =>
+      u.id === userId
+        ? { ...u, status: currentStatus === 'Active' ? 'Inactive' : 'Active' }
+        : u
+    ));
+  } catch (err) {
+    console.error('Failed to toggle user status:', err);
+    alert(' Failed to update user status.');
+  }
+};
 
-  const filteredUsers = users.filter(user =>
-    user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+ const filteredUsers = users.filter(user => {
+  const matchesSearch = user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase());
+  const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+  return matchesSearch && matchesStatus;
+});
 
   const totalUsersCount = users.length;
   const activeUsersCount = users.filter(user => user.status === 'Active').length;
@@ -165,43 +168,55 @@ const AdminUsersPage = () => {
       <main className="main-content">
 
         {/* STATS */}
-        <div className="stats-container">
-          <div className="stat-card">
-            <div className="stat-title">👥 Total Users</div>
-            <div className="stat-content">
-              <div className="stat-value">{isLoading ? "..." : totalUsersCount}</div>
-              <button 
-                className="stat-action-btn" 
-                onClick={() => navigate('/admin/users/create')} 
-              >
-                <FiPlus />
-              </button>
-            </div>
-          </div>
+       <div className="stats-container">
+  <div 
+    className={`stat-card ${statusFilter === 'all' ? 'stat-card-active' : ''}`}
+    onClick={() => setStatusFilter('all')}
+    style={{ cursor: 'pointer' }}
+  >
+    <div className="stat-title">👥 Total Users</div>
+    <div className="stat-content">
+      <div className="stat-value">{isLoading ? "..." : totalUsersCount}</div>
+      <button 
+        className="stat-action-btn" 
+        onClick={(e) => { e.stopPropagation(); navigate('/admin/users/create'); }} 
+      >
+        <FiPlus />
+      </button>
+    </div>
+  </div>
 
-          <div className="stat-card">
-            <div className="stat-title">👤 Active</div>
-            <div className="stat-value">{isLoading ? "..." : activeUsersCount}</div>
-          </div>
+  <div 
+    className={`stat-card ${statusFilter === 'Active' ? 'stat-card-active' : ''}`}
+    onClick={() => setStatusFilter('Active')}
+    style={{ cursor: 'pointer' }}
+  >
+    <div className="stat-title">👤 Active</div>
+    <div className="stat-value">{isLoading ? "..." : activeUsersCount}</div>
+  </div>
 
-          <div className="stat-card">
-            <div className="stat-title">⏸️ Inactive</div>
-            <div className="stat-value">{isLoading ? "..." : inactiveUsersCount}</div>
-          </div>
+  <div 
+    className={`stat-card ${statusFilter === 'Inactive' ? 'stat-card-active' : ''}`}
+    onClick={() => setStatusFilter('Inactive')}
+    style={{ cursor: 'pointer' }}
+  >
+    <div className="stat-title">⏸️ Inactive</div>
+    <div className="stat-value">{isLoading ? "..." : inactiveUsersCount}</div>
+  </div>
 
-          <div className="stat-card">
-            <div className="stat-title">👑 Food Savers</div>
-            <div className="stat-content">
-              <div className="stat-value">{isLoading ? "..." : foodSaversCount}</div>
-              <button 
-                className="stat-action-btn" 
-                onClick={() => navigate('/admin/promotion-criteria')}
-              >
-                <FiRefreshCw />
-              </button>
-            </div>
-          </div>
-        </div>
+  <div className="stat-card">
+    <div className="stat-title">👑 Food Savers</div>
+    <div className="stat-content">
+      <div className="stat-value">{isLoading ? "..." : foodSaversCount}</div>
+      <button 
+        className="stat-action-btn" 
+        onClick={() => navigate('/admin/promotion-criteria')}
+      >
+        <FiRefreshCw />
+      </button>
+    </div>
+  </div>
+</div>
 
         {/* TABLE SECTION */}
         <div className="table-section">

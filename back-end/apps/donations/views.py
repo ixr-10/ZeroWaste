@@ -43,10 +43,20 @@ class CreateDonationView(APIView):
 
         serializer = DonationSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(donor=request.user)
+            donation = serializer.save(donor=request.user)
+
+            # ✅ Notify nearby users and food savers
+            from apps.notifications.utils import (
+                notify_nearby_users_new_donation,
+                notify_nearby_food_savers,
+                notify_urgent_donation
+            )
+            notify_nearby_users_new_donation(donation)
+            notify_nearby_food_savers(donation)
+            notify_urgent_donation(donation)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 class EditDonationView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -101,7 +111,6 @@ class DeleteDonationView(APIView):
                 {'error': 'Cannot delete donation with active reservations.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         donation.delete()
         return Response({'message': 'Donation deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
 
@@ -186,10 +195,9 @@ class AvailableDonationsView(APIView):
         # Base: only available donations
         donations = Donation.objects.filter(status='available')
 
-        # BUG FIX: exclude own donations
+        #  exclude own donations
         donations = donations.exclude(donor=request.user)
-
-        # BUG FIX: exclude donations user already has an active reservation on
+        #exclude donations user already has an active reservation on
         reserved_ids = Reservation.objects.filter(
             beneficiary=request.user
         ).exclude(status__in=['cancelled', 'rejected']).values_list('donation_id', flat=True)
@@ -284,7 +292,6 @@ class ReserveDonationView(APIView):
                     {'error': 'Unverified users can only make 2 reservations. Get verified to unlock full access.'},
                     status=status.HTTP_403_FORBIDDEN
                 )
-
         try:
             with transaction.atomic():
                 donation = Donation.objects.select_for_update().get(id=donation_id, status='available')
@@ -363,6 +370,11 @@ class ConfirmReservationView(APIView):
         reservation.status = 'confirmed'
         reservation.save()
 
+        
+        donor = reservation.donation.donor
+        donor.reputation_score += 10
+        donor.save()
+
         create_notification(
             recipient=reservation.beneficiary,
             notification_type='reservation_confirmed',
@@ -372,8 +384,6 @@ class ConfirmReservationView(APIView):
         )
 
         return Response({'message': 'Reservation confirmed successfully.'})
-
-
 class RejectReservationView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -382,7 +392,6 @@ class RejectReservationView(APIView):
             reservation = Reservation.objects.get(id=reservation_id, donation__donor=request.user)
         except Reservation.DoesNotExist:
             return Response({'error': 'Reservation not found.'}, status=status.HTTP_404_NOT_FOUND)
-
         if reservation.status != 'pending':
             return Response({'error': 'Reservation is not pending.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -431,7 +440,9 @@ class CancelReservationView(APIView):
         reservation.save()
 
         return Response({'message': 'Reservation cancelled successfully.'})
+    
 
+    
 
 class MyReservationsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -457,8 +468,6 @@ class MyReservationsView(APIView):
                 'rejected': ReservationSerializer(my_requests.filter(status__in=['rejected', 'cancelled']), many=True, context={'request': request}).data,
             }
         })
-
-
 class MyReceivedReservationsView(APIView):
     permission_classes = [IsAuthenticated]
 

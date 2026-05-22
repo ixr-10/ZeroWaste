@@ -7,21 +7,21 @@ import {
   TouchableOpacity,
   Image,
   Pressable,
-  SafeAreaView,
   Modal,
   TextInput,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect,router } from 'expo-router';
 import { BottomNavBar } from '../../components/ButtomNavBar';
 import api from '../../constants/axios';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const COLORS = {
   primary: '#4A6741',
   primaryMedium: '#7A9B71',
@@ -119,65 +119,111 @@ const eStyles = StyleSheet.create({
 
 // ── PostItem ──
 const PostItem = ({ item, onDelete, onEdit }: any) => (
-  <View style={{ backgroundColor: COLORS.white, borderRadius: 14, padding: 16, marginBottom: 12 }}>
-    <Text style={{ fontWeight: '700', fontSize: 16 }}>{item.title}</Text>
-    <Text style={{ color: COLORS.textMuted, marginTop: 4 }}>{item.category} • {item.quantity} {item.unit}</Text>
-    <Text style={{ color: COLORS.textMuted, fontSize: 12, marginTop: 2 }}>Expires: {item.expiry_date}</Text>
-    <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
-      <TouchableOpacity onPress={onEdit}>
-        <Ionicons name="create-outline" size={24} color={COLORS.primary} />
-      </TouchableOpacity>
-      <TouchableOpacity onPress={onDelete}>
-        <Ionicons name="trash-outline" size={24} color={COLORS.red} />
-      </TouchableOpacity>
+  <View style={styles.postCard}>
+    {item.image ? (
+      <Image source={{ uri: item.image }} style={styles.postImage} />
+    ) : (
+      <View style={[styles.postImage, styles.postImageFallback]}>
+        <Ionicons name="fast-food-outline" size={24} color={COLORS.primary} />
+      </View>
+    )}
+    <View style={styles.postInfo}>
+      <Text style={styles.postTitle}>{item.title}</Text>
+      <Text style={styles.postDetails}>{item.category} • {item.quantity} {item.unit}</Text>
+      <Text style={styles.postExpiry}>Expires: {item.expiry_date}</Text>
+      <View style={styles.postActions}>
+        <TouchableOpacity onPress={onEdit} style={styles.postActionBtn}>
+          <Ionicons name="create-outline" size={20} color={COLORS.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onDelete} style={styles.postActionBtn}>
+          <Ionicons name="trash-outline" size={20} color={COLORS.red} />
+        </TouchableOpacity>
+      </View>
     </View>
   </View>
 );
 
 // ── ReservationItem ──
-const ReservationItem = ({ item, isIncoming, onAction }: any) => (
-  <View style={{ backgroundColor: COLORS.white, borderRadius: 14, padding: 16, marginBottom: 12 }}>
-    <Text style={{ fontWeight: '700' }}>{item.donation_title || 'Reservation'}</Text>
-    <Text style={{ color: COLORS.textMuted, fontSize: 12, marginTop: 4 }}>
-      Qty: {item.quantity_requested} • {isIncoming ? `By: ${item.beneficiary_username || 'User'}` : `Donor: ${item.donation?.title || ''}`}
-    </Text>
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 8 }}>
-      <View style={{
-        paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999,
-        backgroundColor: item.status === 'confirmed' ? '#e8f5e9' : item.status === 'rejected' ? '#fce4e4' : '#fff9e6'
-      }}>
-        <Text style={{
-          fontSize: 12, fontWeight: '600',
-          color: item.status === 'confirmed' ? COLORS.primary : item.status === 'rejected' ? COLORS.red : COLORS.orange
-        }}>
-          {item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Unknown'}
-        </Text>
+const ReservationItem = ({ item, isIncoming, onAction }: any) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const getTimeAgo = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  };
+
+  return (
+    <View style={styles.resItemWrapper}>
+      <View style={styles.resItemCard}>
+        {/* Avatar */}
+        <View style={styles.resAvatar}>
+          <Ionicons name="person" size={16} color={COLORS.primary} />
+        </View>
+
+        {/* Content */}
+        <View style={styles.resContent}>
+          <Text style={styles.resText}>
+            <Text 
+              style={styles.resUser} 
+              onPress={() => router.push({ 
+                pathname: "/(Screens)/UserProfile" as any, 
+                params: { id: isIncoming ? item.beneficiary : item.donor } 
+              })}
+            >
+              {isIncoming ? item.beneficiary_username : (item.donor_username || 'Donor')}
+            </Text>
+            {isIncoming ? ' wants to reserve ' : ' reserved '}
+            <Text style={styles.resProduct}>‘{item.donation_title}’</Text>
+          </Text>
+          <Text style={styles.resTime}>{getTimeAgo(item.created_at)}</Text>
+        </View>
+
+        {/* Action Button */}
+        {isIncoming && item.status === 'pending' && (
+          <TouchableOpacity onPress={() => setMenuOpen(!menuOpen)} style={styles.resMenuBtn}>
+            <Ionicons name="ellipsis-vertical" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* Action Dropdown */}
+      {menuOpen && (
+        <View style={styles.resDropdown}>
+          <TouchableOpacity 
+            style={styles.resDropdownItem} 
+            onPress={() => { onAction(item.id, 'confirm'); setMenuOpen(false); }}
+          >
+            <Text style={styles.resConfirmText}>Confirm</Text>
+          </TouchableOpacity>
+          <View style={styles.resDropdownDivider} />
+          <TouchableOpacity 
+            style={styles.resDropdownItem} 
+            onPress={() => { onAction(item.id, 'reject'); setMenuOpen(false); }}
+          >
+            <Text style={styles.resRejectText}>Reject</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
-    {isIncoming && item.status === 'pending' && (
-      <View style={{ flexDirection: 'row', gap: 16, marginTop: 12 }}>
-        <TouchableOpacity
-          style={{ backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999 }}
-          onPress={() => onAction(item.id, 'confirm')}
-        >
-          <Text style={{ color: COLORS.white, fontWeight: '600', fontSize: 13 }}>Confirm</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={{ borderWidth: 1.5, borderColor: COLORS.red, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999 }}
-          onPress={() => onAction(item.id, 'reject')}
-        >
-          <Text style={{ color: COLORS.red, fontWeight: '600', fontSize: 13 }}>Reject</Text>
-        </TouchableOpacity>
-      </View>
-    )}
-  </View>
-);
+  );
+};
 
 // ── Main Profile Screen ──
 export default function ProfileScreen() {
   const router = useRouter();
 
   const [username, setUsername] = useState('');
+  const [role, setRole] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
   const [reputationScore, setReputationScore] = useState(0);
   const [editModalVisible, setEditModal] = useState(false);
@@ -187,6 +233,7 @@ export default function ProfileScreen() {
   const [resTab, setResTab] = useState<ResTab>('incoming');
   const [resFilter, setResFilter] = useState<ResFilter>('pending');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [activeDonations, setActiveDonations] = useState<any[]>([]);
   const [expiredDonations, setExpiredDonations] = useState<any[]>([]);
@@ -224,6 +271,7 @@ export default function ProfileScreen() {
 
       const user = profileRes.data;
       setUsername(user.username || 'Username');
+      setRole(user.role || '');
       setAvatar(user.avatar || null);
       setReputationScore(user.reputation_score || 0);
 
@@ -242,13 +290,16 @@ export default function ProfileScreen() {
 
     } catch (err: any) {
       console.error('Profile load error:', err);
-      setActiveDonations([]); setExpiredDonations([]); setDonatedDonations([]);
-      setIncomingPending([]); setIncomingConfirmed([]); setIncomingRejected([]);
-      setMyPending([]); setMyConfirmed([]); setMyRejected([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadData();
+  }, [loadData]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
@@ -326,15 +377,18 @@ export default function ProfileScreen() {
   };
 
   const handleDeletePost = (id: number) => {
-    showConfirm('Delete this donation? This cannot be undone.', async () => {
-      try {
-        await api.delete(`/donations/${id}/`);
-        loadData();
-      } catch (err: any) {
-        Alert.alert('Error', err.response?.data?.error || 'Failed to delete');
-      }
-    });
-  };
+  showConfirm('Delete this donation? This cannot be undone.', async () => {
+    try {
+      await api.delete(`/donations/${id}/delete/`);
+      // ✅ Remove from local state immediately without waiting for reload
+      setActiveDonations(prev => prev.filter(d => d.id !== id));
+      setExpiredDonations(prev => prev.filter(d => d.id !== id));
+      setDonatedDonations(prev => prev.filter(d => d.id !== id));
+    } catch (err: any) {
+      Alert.alert('Error', err.response?.data?.error || 'Failed to delete');
+    }
+  });
+};
 
   const handleEditPost = (item: any) => {
     router.push({ pathname: '/(Screens)/EditPostScreen' as any, params: { post: JSON.stringify(item) } });
@@ -370,6 +424,9 @@ export default function ProfileScreen() {
         style={styles.scroll} 
         contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+        }
       >
         {/* Dropdown Menu */}
         {menuOpen && (
@@ -395,7 +452,10 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity onPress={pickAndUploadAvatar} style={styles.avatarWrapper}>
-            <View style={styles.avatarCircle}>
+            <View style={[
+              styles.avatarCircle,
+              role === 'food_saver' && { borderColor: '#E09F3E', borderWidth: 3 }
+            ]}>
               {avatar ? (
                 <Image source={{ uri: avatar }} style={styles.avatarImage} />
               ) : (
@@ -409,22 +469,37 @@ export default function ProfileScreen() {
 
           <View style={styles.nameRow}>
             <Text style={styles.username}>{username}</Text>
+            {role === 'food_saver' && (
+            
+                <Ionicons name="trophy" size={20} color="orange" style={{ marginRight: 4 }} />
+                
+            
+            )}
             <TouchableOpacity style={{ marginLeft: 6 }} onPress={() => setEditModal(true)}>
               <Ionicons name="pencil" size={16} color={COLORS.textMuted} />
             </TouchableOpacity>
           </View>
 
-          <View style={{ backgroundColor: '#e8f3e8', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4, marginBottom: 12 }}>
-            <Text style={{ color: COLORS.primary, fontWeight: '600', fontSize: 13 }}>⭐ {reputationScore} pts</Text>
-          </View>
 
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
+          <View style={[
+            styles.statsRow,
+            role === 'food_saver' && { borderColor: '#E09F3E' }
+          ]}>
+            <View style={[
+              styles.statBox,
+              role === 'food_saver' && { backgroundColor: 'rgba(253, 230, 138, 0.2)' }
+            ]}>
               <Text style={styles.statValue}>{totalDonations}</Text>
               <Text style={styles.statLabel}>Donations</Text>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
+            <View style={[
+              styles.statDivider,
+              role === 'food_saver' && { backgroundColor: '#E09F3E' }
+            ]} />
+            <View style={[
+              styles.statBox,
+              role === 'food_saver' && { backgroundColor: 'rgba(253, 230, 138, 0.2)' }
+            ]}>
               <Text style={styles.statValue}>{totalReservations}</Text>
               <Text style={styles.statLabel}>Reservations</Text>
             </View>
@@ -555,12 +630,26 @@ const styles = StyleSheet.create({
   dropdownText: { fontSize: 15, color: COLORS.textPrimary, fontWeight: '500' },
 
   avatarWrapper: { marginTop: 8, marginBottom: 12, position: 'relative' },
-  avatarCircle: { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: COLORS.primary, overflow: 'hidden', backgroundColor: '#B8D4E8' },
+  avatarCircle: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: COLORS.primary, overflow: 'hidden', backgroundColor: '#B8D4E8' },
   avatarImage: { width: '100%', height: '100%' },
   editPhotoBadge: { position: 'absolute', bottom: 4, right: 4, backgroundColor: COLORS.primary, borderRadius: 12, padding: 4 },
 
-  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', justifyContent: 'center' },
   username: { fontSize: 20, fontWeight: '700', color: COLORS.textPrimary },
+  foodSaverBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  foodSaverText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
 
   statsRow: { flexDirection: 'row', borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: 12, overflow: 'hidden', width: '80%' },
   statBox: { flex: 1, alignItems: 'center', paddingVertical: 10 },
@@ -601,4 +690,69 @@ const styles = StyleSheet.create({
   filterChipTextActive: { color: COLORS.white, fontWeight: '700' },
 
   emptyText: { textAlign: 'center', color: COLORS.textMuted, marginTop: 24, fontSize: 14 },
+
+  // Post Item Styles (Smaller & More Compact)
+  postCard: { flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: 12, padding: 8, marginBottom: 8, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
+  postImage: { width: 55, height: 55, borderRadius: 8, backgroundColor: '#f0f4ef' },
+  postImageFallback: { alignItems: 'center', justifyContent: 'center' },
+  postInfo: { flex: 1, marginLeft: 12, justifyContent: 'center' },
+  postTitle: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
+  postDetails: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  postExpiry: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
+  postActions: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  postActionBtn: { padding: 2 },
+
+  // Reservation Styles (Mockup Style)
+  resItemWrapper: { marginBottom: 10, position: 'relative', zIndex: 10 },
+  resItemCard: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#FDFCF0', 
+    borderRadius: 25, 
+    paddingVertical: 10, 
+    paddingHorizontal: 15, 
+    borderWidth: 1, 
+    borderColor: '#F1F1E6',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  resAvatar: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
+    backgroundColor: '#F7D774', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    marginRight: 12
+  },
+  resContent: { flex: 1 },
+  resText: { fontSize: 13, color: COLORS.textPrimary, lineHeight: 18 },
+  resUser: { fontWeight: '700' },
+  resProduct: { color: COLORS.primary, fontWeight: '600' },
+  resTime: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
+  resMenuBtn: { padding: 5 },
+
+  resDropdown: { 
+    position: 'absolute', 
+    right: 10, 
+    top: 45, 
+    backgroundColor: COLORS.white, 
+    borderRadius: 8, 
+    elevation: 5, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.2, 
+    shadowRadius: 4, 
+    zIndex: 100,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    minWidth: 100
+  },
+  resDropdownItem: { paddingVertical: 10, paddingHorizontal: 15 },
+  resDropdownDivider: { height: 1, backgroundColor: COLORS.border },
+  resConfirmText: { fontSize: 13, fontWeight: '600', color: COLORS.primary, textAlign: 'center' },
+  resRejectText: { fontSize: 13, fontWeight: '600', color: COLORS.red, textAlign: 'center' },
 });

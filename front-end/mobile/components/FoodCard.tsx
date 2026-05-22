@@ -1,118 +1,198 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  View, Text, Image, StyleSheet, TouchableOpacity,
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  UIManager,
+  findNodeHandle,
+  ActionSheetIOS,
+  Platform,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
-import { CardMenu } from './CardMenu';
+import { useRouter } from 'expo-router';
+
+const COLORS = {
+  primary: '#588157BF',
+  secondary: '#588157',
+  primaryLight: '#D1D8C4',
+  background: '#F8F8F6',
+  white: '#FFFFFF',
+  textSecondary: '#555555',
+  textMuted: '#888888',
+  border: '#D5DED0',
+  tagBg: '#E8EEE5',
+  pinGreen: '#4A6741',
+  pinOrange: '#E07B39',
+  pinRed: '#D94F4F',
+  pinGray: '#B0B8A8',
+};
+
+const screenWidth = Dimensions.get('window').width;
 
 interface FoodCardProps {
-  item: any;
-  onReserve: (id: string) => void;
+  item: {
+    id: string | number;
+    title: string;
+    description: string;
+    category: string;
+    image?: string;
+    available_quantity: number;
+    unit?: string;
+    expiry_date: string;
+    donor_username: string;
+    donor: string | number;
+    urgency?: string;
+    distance_km?: number;
+  };
+  onReserve: (donationId: string) => void;
+  onReport: (donationId: string, title: string) => void;
+  onNotInterested: (donationId: string) => void;
 }
 
-export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
-  const [menuVisible, setMenuVisible] = useState(false);
+// ─── Urgency pin — matches the map screen style ───────────────────────────────
+const urgencyPinColor = (urgency?: string | null): string => {
+  if (urgency === 'red')    return COLORS.pinRed;
+  if (urgency === 'orange') return COLORS.pinOrange;
+  if (urgency === 'green')  return COLORS.pinGreen;
+  return COLORS.pinGray;
+};
 
-  const formatDistance = (km: number) => {
-    if (!km) return '';
-    if (km < 1) return `${Math.round(km * 1000)} m`;
-    return `${km.toFixed(1)} km`;
+const UrgencyPin = ({ urgency }: { urgency?: string | null }) => {
+  const color = urgencyPinColor(urgency);
+  return (
+    <View style={[pin.outer, { borderColor: color }]}>
+      <View style={[pin.inner, { backgroundColor: color }]} />
+    </View>
+  );
+};
+
+export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve, onReport, onNotInterested }) => {
+  const router = useRouter();
+  const [menuVisible, setMenuVisible] = useState(false);
+  const menuRef = useRef(null);
+
+  const formatQuantity = (qty: number, unit?: string) => {
+    const u = (unit ?? 'g').trim();
+    return `${qty} ${u}`;
   };
 
-  const handleReserve = () => {
-    // ✅ Just call the prop — HomeScreen handles navigation
-    onReserve(String(item.id));
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const handleProfilePress = () => {
+    router.push({
+      pathname: '/(Screens)/UserProfile' as any,
+      params: { id: String(item.donor) },
+    });
+  };
+
+  const handleMenuPress = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Reserve', 'Report', 'Not Interested'],
+          cancelButtonIndex: 0,
+          destructiveButtonIndex: 3,
+          userInterfaceStyle: 'light',
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) onReserve(String(item.id));
+          else if (buttonIndex === 2) onReport(String(item.id), item.title);
+          else if (buttonIndex === 3) onNotInterested(String(item.id));
+        }
+      );
+    } else {
+      setMenuVisible(!menuVisible);
+    }
+  };
+
+  const getUrgencyColor = () => {
+    if (item.urgency === 'red')    return '#FFB3B3';
+    if (item.urgency === 'orange') return '#FFEBCC';
+    return COLORS.tagBg;
   };
 
   return (
-    <View style={styles.card}>
-      {/* Image Section */}
+    <View style={styles.cardContainer}>
+      {/* Image Container */}
       <View style={styles.imageContainer}>
         <Image
-          source={{ uri: item.image ?? item.imageUrl ?? '' }}
+          source={{ uri: item.image || 'https://via.placeholder.com/350x200?text=No+Image' }}
           style={styles.image}
-          resizeMode="cover"
         />
+        <View style={styles.sizeBadge}>
+          <Text style={styles.sizeBadgeText}>{formatQuantity(item.available_quantity, item.unit)}</Text>
+        </View>
 
-        {/* Distance badge */}
-        {item.distance_km != null && (
-          <View style={styles.distanceBadge}>
-            <Ionicons name="location" size={12} color={COLORS.emergencyRed} />
-            <Text style={styles.distanceText}>{formatDistance(item.distance_km)}</Text>
-          </View>
-        )}
-
-        {/* Emergency badge */}
-        {item.urgency === 'red' && (
-          <View style={styles.emergencyBadge}>
-            <Ionicons name="alert-circle" size={12} color={COLORS.white} />
-            <Text style={styles.emergencyText}>Emergency</Text>
-          </View>
-        )}
-
-        {/* 3-dot menu */}
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => setMenuVisible(true)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <View style={styles.menuButtonInner}>
-            <Ionicons name="ellipsis-vertical" size={18} color={COLORS.black} />
-          </View>
+        <TouchableOpacity ref={menuRef} style={styles.menuButton} onPress={handleMenuPress}>
+          <Ionicons name="ellipsis-vertical" size={20} color={COLORS.secondary} />
         </TouchableOpacity>
 
-        {menuVisible && (
-          <CardMenu
-            onReserve={() => { handleReserve(); setMenuVisible(false); }}
-            onReport={() => setMenuVisible(false)}
-            onNotInterested={() => setMenuVisible(false)}
-            onClose={() => setMenuVisible(false)}
-          />
+        {Platform.OS === 'android' && menuVisible && (
+          <View style={styles.contextMenu}>
+            <TouchableOpacity style={styles.menuItem} onPress={() => { onReserve(String(item.id)); setMenuVisible(false); }}>
+              <Text style={styles.menuItemText}>Reserve</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={() => { onReport(String(item.id), item.title); setMenuVisible(false); }}>
+              <Text style={styles.menuItemText}>Report</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={() => { onNotInterested(String(item.id)); setMenuVisible(false); }}>
+              <Text style={styles.menuItemText}>Not Interested</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
-      {/* Info Section */}
-      <View style={styles.infoSection}>
+      {/* Content Container */}
+      <View style={styles.contentContainer}>
+
+        {/* Title row: title text + urgency pin after it */}
         <View style={styles.titleRow}>
-          <Text style={styles.title}>{item.title}</Text>
-          <View style={styles.categoryTag}>
-            <Text style={styles.categoryTagText}>{item.category}</Text>
+          <View style={styles.titleWithPin}>
+            <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
+            {/* ✅ Pin icon always shown; color reflects urgency level */}
+            <UrgencyPin urgency={item.urgency} />
           </View>
+          <Text style={styles.category}>{item.category}</Text>
         </View>
 
+        {/* Description */}
         <Text style={styles.description} numberOfLines={2}>
           {item.description}
         </Text>
 
-        <View style={styles.metaRow}>
-          {item.unit && (
-            <View style={styles.metaTag}>
-              <Text style={styles.metaText}>
-                {item.available_quantity} {item.unit}
-              </Text>
-            </View>
-          )}
-          <View style={styles.metaTag}>
-            <Text style={styles.metaText}>{item.expiry_date}</Text>
+        {/* Quantity and Date Row */}
+        <View style={styles.infoRow}>
+          <View style={[styles.infoBadge, { backgroundColor: getUrgencyColor() }]}>
+            <Text style={styles.infoBadgeText}>{formatQuantity(item.available_quantity, item.unit)}</Text>
           </View>
+          <Text style={styles.date}>{formatDate(item.expiry_date)}</Text>
         </View>
 
-        <View style={styles.divider} />
-
-        <View style={styles.footer}>
-          <View style={styles.userInfo}>
+        {/* User and Reserve Row */}
+        <View style={styles.bottomRow}>
+          <TouchableOpacity style={styles.userContainer} onPress={handleProfilePress} activeOpacity={0.7}>
             <View style={styles.avatar}>
-              <Ionicons name="person" size={18} color={COLORS.primaryMedium} />
+              <Text style={styles.avatarText}>{item.donor_username.charAt(0).toUpperCase()}</Text>
             </View>
             <Text style={styles.username}>{item.donor_username}</Text>
-          </View>
+          </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.reserveButton}
-            onPress={handleReserve}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={styles.reserveButton} onPress={() => onReserve(String(item.id))} activeOpacity={0.8}>
             <Text style={styles.reserveButtonText}>Reserve</Text>
           </TouchableOpacity>
         </View>
@@ -121,73 +201,196 @@ export const FoodCard: React.FC<FoodCardProps> = ({ item, onReserve }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: BORDER_RADIUS.lg,
-    marginHorizontal: SPACING.lg,
-    marginBottom: SPACING.lg,
-    overflow: 'hidden',
+// ─── Pin styles ───────────────────────────────────────────────────────────────
+const pin = StyleSheet.create({
+  outer: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
+    // subtle shadow like the map pins
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
     elevation: 2,
   },
-  imageContainer: { position: 'relative', width: '100%', height: 220 },
-  image: { width: '100%', height: '100%' },
-  distanceBadge: {
-    position: 'absolute', bottom: SPACING.sm, left: SPACING.sm,
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.sm, paddingVertical: 4, gap: 3,
+  inner: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
   },
-  distanceText: { fontSize: 12, color: COLORS.textPrimary, fontWeight: '500' },
-  emergencyBadge: {
-    position: 'absolute', top: SPACING.sm, left: SPACING.sm,
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.emergencyRed, borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.sm, paddingVertical: 3, gap: 3,
+});
+
+// ─── Card styles ──────────────────────────────────────────────────────────────
+const styles = StyleSheet.create({
+  cardContainer: {
+    backgroundColor: COLORS.white,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  emergencyText: { fontSize: 11, color: COLORS.white, fontWeight: '700' },
-  menuButton: { position: 'absolute', top: SPACING.sm, right: SPACING.sm, zIndex: 10 },
-  menuButtonInner: {
-    backgroundColor: COLORS.white, borderRadius: BORDER_RADIUS.sm,
-    width: 32, height: 32, alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
+  imageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 200,
+    backgroundColor: '#E0E0E0',
   },
-  infoSection: { padding: SPACING.md },
+  image: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  sizeBadge: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  sizeBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.secondary,
+  },
+  menuButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contextMenu: {
+    position: 'absolute',
+    top: 50,
+    right: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 1000,
+  },
+  menuItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  menuItemText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  contentContainer: {
+    padding: 12,
+    gap: 8,
+  },
   titleRow: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: SPACING.xs,
-    flexWrap: 'wrap', gap: SPACING.xs,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  title: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, flex: 1 },
-  categoryTag: {
-    backgroundColor: COLORS.tagBg, borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.sm, paddingVertical: 3,
+  // ✅ Title + pin sit together in a row
+  titleWithPin: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
-  categoryTagText: { fontSize: 11, color: COLORS.primary, fontWeight: '500' },
-  description: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19, marginBottom: SPACING.sm },
-  metaRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.sm },
-  metaTag: {
-    backgroundColor: COLORS.tagBg, borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.sm, paddingVertical: 4,
+  title: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    flexShrink: 1,
   },
-  metaText: { fontSize: 12, color: COLORS.textSecondary },
-  divider: { height: 1, backgroundColor: COLORS.border, marginBottom: SPACING.sm },
-  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  userInfo: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  category: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  description: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    lineHeight: 18,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  infoBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  infoBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.secondary,
+  },
+  date: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  userContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   avatar: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  username: { fontSize: 14, color: COLORS.textPrimary, fontWeight: '500' },
+  avatarText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.secondary,
+  },
+  username: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
   reserveButton: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.xl, paddingVertical: SPACING.sm,
+    backgroundColor: COLORS.secondary,
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
   },
-  reserveButtonText: { color: COLORS.white, fontSize: 14, fontWeight: '600' },
+  reserveButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
 });

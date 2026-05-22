@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FONTS } from "../../constants/fonts";
-import Header2 from '../../components/Header2';
+import Header from '../../components/Header';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../constants/axios';
 
@@ -48,7 +48,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', marginTop: 0 }}>
-      <Header2 showBack={false} />
+      <Header showBack={false} />
       <ScrollView contentContainerStyle={styles.container}>
         <Image source={require('../../assets/images/login1.png')} style={styles.image} />
         <Text style={styles.title}>LOGIN</Text>
