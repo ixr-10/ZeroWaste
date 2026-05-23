@@ -10,12 +10,12 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import SetPasswordPage from './pages/SetPasswordPage'; 
 import AdminExportPage from './pages/AdminExportPage'; 
 import AdminReportsPage from './pages/AdminReportsPage'; 
+import AdminDonationsPage from './pages/AdminDonationsPage'; // 1. زدنا الاستيراد ديال صفحة التبرعات هنا
 
 import PromotionCriteria from './pages/PromotionCriteria'; 
 import CreateAccountPage from './pages/CreateAccountPage'; 
 
 import ProtectedRoute from './components/ProtectedRoute';
-
 
 import AuthorityStatistics from './pages/AuthorityStatistics';
 import AuthorityExport from './pages/AuthorityExport';
@@ -35,13 +35,15 @@ function AppRoutes() {
       <Route path="/admin/statistics" element={<ProtectedRoute><AdminStatisticsPage /></ProtectedRoute>} />
       <Route path="/admin/export" element={<ProtectedRoute><AdminExportPage /></ProtectedRoute>} />
       <Route path="/admin/reports" element={<ProtectedRoute><AdminReportsPage /></ProtectedRoute>} />
+      
+      {/* 2. زدنا هاد السطر هنا باش الصفحة تكون محمية بحال خوتها وتخدم بالرابط /admin/donations */}
+      <Route path="/admin/donations" element={<ProtectedRoute><AdminDonationsPage /></ProtectedRoute>} />
+      
       <Route path="/admin/promotion-criteria" element={<ProtectedRoute><PromotionCriteria /></ProtectedRoute>} />
       <Route path="/admin/users/create" element={<ProtectedRoute><CreateAccountPage /></ProtectedRoute>} />
       
-     
       <Route path="/authority/statistics" element={<AuthorityStatistics />} />
       <Route path="/authority/export" element={<AuthorityExport />} />
-      
     </Routes>
   );
 }

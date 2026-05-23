@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-
 import '../styles/AdminExportPage.css'; 
-
-
 
 import {
   FiPieChart,
@@ -16,6 +13,7 @@ import {
   FiChevronRight,
   FiLayers
 } from 'react-icons/fi';
+import { FaHandHoldingHeart } from 'react-icons/fa';
 
 const AdminExportPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -52,6 +50,10 @@ const AdminExportPage = () => {
           <div className="menu-item" onClick={() => navigate('/admin/users')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FiUsers /></span>
             {isSidebarOpen && <span className="menu-text">Users</span>}
+          </div>
+          <div className="menu-item" onClick={() => navigate('/admin/donations')} style={{ cursor: 'pointer' }}>
+            <span className="admin-icon"><FaHandHoldingHeart /></span>
+            {isSidebarOpen && <span className="menu-text">Donations</span>}
           </div>
           <div className="menu-item active">
             <span className="admin-icon"><FiDownload /></span>

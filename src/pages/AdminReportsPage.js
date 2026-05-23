@@ -7,10 +7,6 @@ import '../styles/AdminReportsPage.css';
 import SimpleBar from 'simplebar-react';
 import 'simplebar-react/dist/simplebar.min.css';
 
-import berriesImg from '../assets/berries.jpg';
-import adminIcon from '../assets/admin.png';
-import user2Img from '../assets/user2.png';
-
 import {
   FiPieChart,
   FiFileText,
@@ -20,60 +16,10 @@ import {
   FiChevronLeft,
   FiChevronRight
 } from 'react-icons/fi';
+import { FaHandHoldingHeart } from 'react-icons/fa';
 
-// 
+// API  calling
 import { fetchAdminReports, processReportAction } from '../services/api';
-
-// ==========================================
-// 1. FAKE DATA (POUR TESTER L'INTERFACE)
-// ==========================================
-const fakeReportsData = [
-  {
-    id: 101,
-    type: 'post',
-    title: 'Don de 5kg de pommes de terre',
-    reason: 'Contenu frauduleux / Vente déguisée',
-    postDesc: 'L\'utilisateur demande de l\'argent en message privé en échange du don!',
-    author: 'Yacine_Dz',
-    date: 'Apr 21, 2026',
-    imgUrl: null, // Null pour afficher l'emoji par défaut
-    userImg: null,
-    imageEmoji: '📦',
-    status: 'Pending',
-    action: null,
-    actionDate: null
-  },
-  {
-    id: 102,
-    type: 'user',
-    title: 'Spammeur_123',
-    reason: 'Harcèlement ou propos haineux',
-    postDesc: null,
-    author: 'Amina_Oran',
-    date: 'Apr 20, 2026',
-    imgUrl: null,
-    userImg: null,
-    imageEmoji: '👤',
-    status: 'Pending',
-    action: null,
-    actionDate: null
-  },
-  {
-    id: 103,
-    type: 'post',
-    title: 'Don de viande (Périmée)',
-    reason: 'Danger pour la santé / Périmé',
-    postDesc: 'La date d\'expiration sur la photo est dépassée depuis 2 mois.',
-    author: 'Karim_W',
-    date: 'Apr 19, 2026',
-    imgUrl: null,
-    userImg: null,
-    imageEmoji: '📦',
-    status: 'Treated',
-    action: 'Post deleted',
-    actionDate: 'Apr 20, 2026'
-  }
-];
 
 const AdminReportsPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -81,7 +27,6 @@ const AdminReportsPage = () => {
   const [categoryTab, setCategoryTab] = useState('All');
   
   const [selectedReport, setSelectedReport] = useState(null);
-  
   const [reports, setReports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
@@ -100,26 +45,30 @@ const AdminReportsPage = () => {
     return { backgroundColor: '#f2f4f4', color: '#bdc3c7' };
   };
 
+  // ====================================================
+  // BACKEND (FETCH DATA)
+  // ====================================================
   useEffect(() => {
     const loadReports = async () => {
       setIsLoading(true);
       try {
-        // ====================================================
-        // COMMENTÉ POUR UTILISER LA FAKE DATA TEMPORAIREMENT
-        // ====================================================
-        /*
-        // 2. to get the data from the server 
         const backendData = await fetchAdminReports(); 
         
-        // 3. format data
         const formattedReports = backendData.map(r => {
           const isPost = r.reported_donation !== null;
           return {
             id: r.id,
             type: isPost ? 'post' : 'user',
             title: isPost ? r.donation_title : r.reported_username,
+            email: !isPost ? r.reported_email : null,
+            donationsCount: !isPost ? r.reported_donations_count : 0,
+            userScore: !isPost ? r.reported_user_score : '0.0',
             reason: r.reason,
             postDesc: r.description,
+            
+            
+            additionalDetails: r.additional_details || r.details, 
+            screenshotFile: r.screenshot_file || r.screenshot, // link te3 screenshot
             author: r.reporter_username,
             date: new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
             imgUrl: isPost ? r.donation_image : null,
@@ -130,17 +79,11 @@ const AdminReportsPage = () => {
             actionDate: r.treated_at ? new Date(r.treated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
           };
         });
+
         setReports(formattedReports);
-        */
-
-        // UTILISATION DE LA FAKE DATA AVEC UN PETIT DÉLAI POUR SIMULER LE CHARGEMENT
-        setTimeout(() => {
-          setReports(fakeReportsData);
-          setIsLoading(false);
-        }, 600); // 600ms loading time
-
+        setIsLoading(false);
       } catch (error) {
-        console.error("Failed to load reports", error);
+        console.error("Failed to load reports from backend", error);
         setIsLoading(false);
       }
     };
@@ -148,22 +91,15 @@ const AdminReportsPage = () => {
     loadReports();
   }, []);
 
-  
   const handleAction = async (actionType) => {
     if (!selectedReport) return;
-
     const confirmAction = window.confirm(`Are you sure you want to ${actionType.replace('_', ' ')}?`);
     if (!confirmAction) return;
 
     try {
-      // ====================================================
-      // COMMENTÉ POUR ÉVITER LES ERREURS API SANS BACKEND
-      // ====================================================
-      // 4. send actions to the server 
-      // await processReportAction(selectedReport.id, actionType);
+      await processReportAction(selectedReport.id, actionType);
 
       const todayDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      
       let formattedAction = '';
       switch(actionType) {
         case 'delete_post': formattedAction = 'Post deleted'; break;
@@ -173,18 +109,14 @@ const AdminReportsPage = () => {
         default: formattedAction = actionType;
       }
 
-      // METTRE À JOUR LE STATE LOCALEMENT (POUR VOIR L'EFFET DANS L'UI)
       setReports((prevReports) => 
         prevReports.map((r) => 
           r.id === selectedReport.id ? { ...r, status: 'Treated', action: formattedAction, actionDate: todayDate } : r
         )
       );
-
       setSelectedReport(null);
-      
     } catch (error) {
       console.error(`Error performing action ${actionType}`, error);
-      alert("Something went wrong with the backend. Make sure you are an Admin.");
     }
   };
 
@@ -220,6 +152,10 @@ const AdminReportsPage = () => {
             <span className="admin-icon"><FiUsers /></span>
             {isSidebarOpen && <span className="menu-text">Users</span>}
           </div>
+          <div className="menu-item" onClick={() => navigate('/admin/donations')} style={{ cursor: 'pointer' }}>
+            <span className="admin-icon"><FaHandHoldingHeart /></span>
+            {isSidebarOpen && <span className="menu-text">Donations</span>}
+          </div>
           <div className="menu-item" onClick={() => navigate('/admin/export')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FiDownload /></span>
             {isSidebarOpen && <span className="menu-text">Export data</span>}
@@ -241,16 +177,9 @@ const AdminReportsPage = () => {
           
           {/* ===== 1. REPORTS LIST ===== */}
           <div className={`reports-left-column ${!selectedReport ? 'full-width' : ''}`}>
-            
             <div className="status-tabs">
-              <button 
-                className={`pill-btn status-btn ${statusTab === 'Pending' ? 'active-sage' : ''}`} 
-                onClick={() => { setStatusTab('Pending'); setSelectedReport(null); }}
-              >Pending</button>
-              <button 
-                className={`pill-btn status-btn ${statusTab === 'Treated' ? 'active-sage' : ''}`} 
-                onClick={() => { setStatusTab('Treated'); setSelectedReport(null); }}
-              >Treated</button>
+              <button className={`pill-btn status-btn ${statusTab === 'Pending' ? 'active-sage' : ''}`} onClick={() => { setStatusTab('Pending'); setSelectedReport(null); }}>Pending</button>
+              <button className={`pill-btn status-btn ${statusTab === 'Treated' ? 'active-sage' : ''}`} onClick={() => { setStatusTab('Treated'); setSelectedReport(null); }}>Treated</button>
             </div>
 
             <div className="filter-tabs">
@@ -291,18 +220,8 @@ const AdminReportsPage = () => {
 
                     {report.status === 'Treated' && report.action && (
                       <div className="report-action-badge" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px', paddingRight: '15px' }}>
-                        <span style={{
-                          ...getBadgeStyle(report.action),
-                          padding: '5px 15px',
-                          borderRadius: '20px',
-                          fontSize: '12px',
-                          fontWeight: 'bold'
-                        }}>
-                          {report.action}
-                        </span>
-                        <span style={{ fontSize: '10px', color: '#999' }}>
-                          on {report.actionDate}
-                        </span>
+                        <span style={{ ...getBadgeStyle(report.action), padding: '5px 15px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>{report.action}</span>
+                        <span style={{ fontSize: '10px', color: '#999' }}>on {report.actionDate}</span>
                       </div>
                     )}
                   </div>
@@ -325,17 +244,29 @@ const AdminReportsPage = () => {
                 </div>
 
                 <div className="details-section">
-                  <h4 className="section-title">Reported {selectedReport.type === 'user' ? 'account' : 'post'}</h4>
+                  <h4 className="section-title">{selectedReport.type === 'user' ? 'Reported account' : 'Reported post'}</h4>
+                  
                   {selectedReport.type === 'user' ? (
-                    <div className="reported-user-card">
-                      <div className="user-avatar-large">
-                        {selectedReport.userImg ? (
-                          <img src={`http://192.168.1.34:8000${selectedReport.userImg}`} alt="avatar" style={{width: '100%', height: '100%', borderRadius: '10px', objectFit: 'cover'}} />
-                        ) : selectedReport.imageEmoji}
-                      </div>
-                      <div className="user-info">
+                    <div className="reported-user-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div className="user-avatar-large">
+                          {selectedReport.userImg ? (
+                            <img src={`http://192.168.1.34:8000${selectedReport.userImg}`} alt="avatar" style={{width: '100%', height: '100%', borderRadius: '10px', objectFit: 'cover'}} />
+                          ) : selectedReport.imageEmoji}
+                        </div>
                         <div className="user-header">
-                          <p className="user-name">{selectedReport.title}</p>
+                          <p className="user-name" style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600' }}>{selectedReport.title}</p>
+                          <p className="user-email" style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#666' }}>{selectedReport.email || 'no-email@waste.com'}</p>
+                        </div>
+                      </div>
+                      <div className="user-stats" style={{ display: 'flex', gap: '40px', marginTop: '4px' }}>
+                        <div className="stat-item" style={{ textAlign: 'center' }}>
+                          <strong style={{ display: 'block', fontSize: '1.2rem', color: '#111' }}>{selectedReport.donationsCount}</strong>
+                          <span style={{ fontSize: '0.75rem', color: '#888' }}>Donations</span>
+                        </div>
+                        <div className="stat-item" style={{ textAlign: 'center' }}>
+                          <strong style={{ display: 'block', fontSize: '1.2rem', color: '#111' }}>{selectedReport.userScore}</strong>
+                          <span style={{ fontSize: '0.75rem', color: '#888' }}>Score</span>
                         </div>
                       </div>
                     </div>
@@ -345,10 +276,8 @@ const AdminReportsPage = () => {
                         <img src={`http://192.168.1.34:8000${selectedReport.imgUrl}`} alt="post" className="post-cover-image" />
                       ) : <div className="post-cover-placeholder">{selectedReport.imageEmoji}</div>}
                       <div className="post-card-body">
-                        <div className="post-card-header">
-                          <h5>{selectedReport.title}</h5>
-                        </div>
-                        <p className="post-desc">{selectedReport.postDesc}</p>
+                        <div className="post-card-header"><h5 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600' }}>{selectedReport.title}</h5></div>
+                        <p className="post-desc" style={{ marginTop: '8px', fontSize: '0.9rem', color: '#444' }}>{selectedReport.postDesc}</p>
                       </div>
                     </div>
                   )}
@@ -359,11 +288,38 @@ const AdminReportsPage = () => {
                   <div className="readonly-box">{selectedReport.reason}</div>
                 </div>
 
+                {/* additional detials*/}
+                <div className="details-section">
+                  <h4 className="section-title">Additional Details</h4>
+                  <div className="readonly-box large-box">
+                    {selectedReport.additionalDetails || 'No additional details provided.'}
+                  </div>
+                </div>
+
+                {/* 2. screenshot*/}
+                <div className="details-section">
+                  <h4 className="section-title">Attached screenshot</h4>
+                  {selectedReport.screenshotFile ? (
+                    <div className="screenshot-container" style={{ marginTop: '10px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e0e0e0', maxWidth: '100%' }}>
+                      <img 
+                        src={`http://192.168.1.34:8000${selectedReport.screenshotFile}`} 
+                        alt="Evidence screenshot" 
+                        style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '350px', objectFit: 'contain', backgroundColor: '#f9f9f9' }} 
+                      />
+                    </div>
+                  ) : (
+                    <div className="readonly-box screenshot-box" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>🖼️</span> 
+                      <span style={{ color: '#888' }}>No screenshot attached</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* ===== ADMIN ACTIONS ===== */}
                 {selectedReport.status === 'Pending' && (
                   <div className="details-section actions-section">
                     <h4 className="section-title">Admin actions</h4>
                     <div className="admin-actions-list">
-                      
                       {selectedReport.type === 'post' && (
                         <button className="action-btn delete-btn" onClick={() => handleAction('delete_post')}>
                           <div className="action-btn-icon">🗑️</div>
@@ -373,7 +329,6 @@ const AdminReportsPage = () => {
                           </div>
                         </button>
                       )}
-
                       <button className="action-btn delete-acc-btn" onClick={() => handleAction('delete_account')}>
                         <div className="action-btn-icon">👤</div>
                         <div className="action-btn-text">
@@ -381,7 +336,6 @@ const AdminReportsPage = () => {
                           <span className="action-btn-desc">deactivate the poster's account</span>
                         </div>
                       </button>
-
                       <button className="action-btn warning-btn" onClick={() => handleAction('send_warning')}>
                         <div className="action-btn-icon">⚠️</div>
                         <div className="action-btn-text">
@@ -389,7 +343,6 @@ const AdminReportsPage = () => {
                           <span className="action-btn-desc">notify the user about the violation</span>
                         </div>
                       </button>
-
                       <button className="action-btn ignore-btn" onClick={() => handleAction('ignore_report')}>
                         <div className="action-btn-icon">🚫</div>
                         <div className="action-btn-text">
@@ -397,10 +350,10 @@ const AdminReportsPage = () => {
                           <span className="action-btn-desc">dismiss - no action needed</span>
                         </div>
                       </button>
-
                     </div>
                   </div>
                 )}
+
               </div>
             </div>
           )}
