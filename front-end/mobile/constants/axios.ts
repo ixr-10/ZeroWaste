@@ -1,9 +1,9 @@
 import axios, { AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BASE_URL } from './config';
+import { appendIsInitial } from 'expo-router/build/fork/getStateFromPath-forks';
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: 'http://192.168.1.40:8000/api/',
   timeout: 15000,
   headers: {
     'Accept': 'application/json',
@@ -22,44 +22,8 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ Auto-refresh token on 401
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const refresh = await AsyncStorage.getItem('refresh');
-        if (!refresh) throw new Error('No refresh token');
-
-        const { data } = await axios.post(
-          `${BASE_URL}users/token/refresh/`,
-          { refresh }
-        );
-
-        // Save new access token
-        await AsyncStorage.setItem('access', data.access);
-
-        // Retry original request with new token
-        originalRequest.headers.Authorization = `Bearer ${data.access}`;
-        return api(originalRequest);
-
-      } catch (refreshError) {
-        // Refresh failed — clear storage and redirect to login
-        await AsyncStorage.multiRemove(['access', 'refresh', 'access_token', 'refresh_token', 'isLoggedIn', 'user']);
-        // You can add navigation to login here if needed
-        return Promise.reject(refreshError);
-      }
-    }
-
-    return Promise.reject(error);
-  }
-);
-
-export const fetchMyConversations = (): Promise<AxiosResponse> =>
+// ==================== EXISTING FUNCTIONS ====================
+export const fetchMyConversations = (): Promise<AxiosResponse> => 
   api.get('/chat/my-conversations/');
 
 export const startConversation = (donationId: number): Promise<AxiosResponse> =>
@@ -67,5 +31,23 @@ export const startConversation = (donationId: number): Promise<AxiosResponse> =>
 
 export const markMessagesRead = (conversationId: number): Promise<AxiosResponse> =>
   api.post(`/chat/${conversationId}/read/`);
+
+// ==================== NEW FUNCTIONS FOR NOTIFICATIONS ====================
+
+export const fetchNotifications = (): Promise<AxiosResponse> =>
+  api.get('/notifications/');
+
+export const confirmReservation = (reservationId: number): Promise<AxiosResponse> =>
+  api.post(`/reservations/${reservationId}/confirm/`);
+
+export const rejectReservation = (reservationId: number): Promise<AxiosResponse> =>
+  api.post(`/reservations/${reservationId}/reject/`);
+
+// Optional: Mark notification as read
+export const markNotificationRead = (notificationId: string | number): Promise<AxiosResponse> =>
+  api.post(`/notifications/${notificationId}/read/`);
+
+export const savePushToken = (token: string) =>
+  api.post("/api/notifications/save-push-token/", { push_token: token });
 
 export default api;
