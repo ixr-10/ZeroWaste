@@ -42,7 +42,7 @@ class StartConversationView(APIView):
         serializer = ConversationSerializer(conversation, context={'request': request})
         return Response({
             'conversation': serializer.data,
-            'websocket_url': f'ws://192.168.73.147:8000/ws/chat/{conversation.id}/',
+            'websocket_url': f'ws://192.168.1.36:8000/ws/chat/{conversation.id}/',
             'created': created
         }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 

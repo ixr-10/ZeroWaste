@@ -15,6 +15,7 @@ class User(AbstractUser):
         ('food_saver', 'Food Saver'),
         ('user', 'Utilisateur Standard'),
     ]
+    email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='user')
     phone = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
