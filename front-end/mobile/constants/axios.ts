@@ -1,8 +1,9 @@
 import axios, { AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from './config';
 
 const api = axios.create({
-  baseURL: 'http://192.168.1.33:8000/api/',
+  baseURL: BASE_URL,
   timeout: 15000,
   headers: {
     'Accept': 'application/json',
@@ -35,7 +36,7 @@ api.interceptors.response.use(
         if (!refresh) throw new Error('No refresh token');
 
         const { data } = await axios.post(
-          'http://192.168.1.33:8000/api/users/token/refresh/',
+          `${BASE_URL}users/token/refresh/`,
           { refresh }
         );
 

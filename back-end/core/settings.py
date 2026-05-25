@@ -11,13 +11,9 @@ import ssl
 import certifi
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
-
-EMAIL_HOST_USER = os.getenv('EMAIL_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD')
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_PORT = 465
+EMAIL_USE_SSL = True
+EMAIL_USE_TLS = False
 
 EMAIL_HOST_USER = os.getenv('EMAIL_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD')
@@ -121,7 +117,7 @@ CORS_ALLOWED_ORIGINS = [
      "http://192.168.43.100:3000",
     "http://192.168.1.34:8081",
     "http://10.0.2.2:8081",
-    "http://192.168.73.147:8081",
+    "http://192.168.1.40:8081",
     
 ]
 CSRF_TRUSTED_ORIGINS = [

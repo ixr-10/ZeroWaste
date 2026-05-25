@@ -1,8 +1,7 @@
 .sidebar-container {
   width: 260px;
   height: 100vh;
-  background-color: #C8D5B9; /* L'vert ta3 Figma */
-  display: flex;
+  background-color: #C8D5B9; 
   flex-direction: column;
   padding: 30px 20px;
   box-sizing: border-box;

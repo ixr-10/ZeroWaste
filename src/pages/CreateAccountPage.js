@@ -11,9 +11,9 @@ import {
   FiUsers,
   FiDownload
 } from 'react-icons/fi';
+import { FaHandHoldingHeart } from 'react-icons/fa';
 import '../styles/AdminUsersPage.css'; 
 import '../styles/CreateAccountPage.css';
-
 
 import { adminCreateUser } from '../services/api'; 
 
@@ -35,13 +35,11 @@ const CreateAccountPage = () => {
     navigate('/login');
   };
 
-  
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true); // 
+    setIsLoading(true); 
 
     try {
-      
       const newUserData = { 
         role: role, 
         email: email, 
@@ -50,12 +48,10 @@ const CreateAccountPage = () => {
       
       await adminCreateUser(newUserData);
       
-      // إذا جاز كلش نورمال، نخرجو ميساج و نرجعو لباجة المستخدمين
       alert('✅ Account created successfully!');
       navigate('/admin/users');
 
     } catch (err) {
-      
       console.error("Error creating account:", err);
       alert('❌ Failed to create account: ' + err.message);
     } finally {
@@ -91,6 +87,13 @@ const CreateAccountPage = () => {
             <FiUsers className="admin-icon" />
             {isSidebarOpen && <span className="menu-text">Users</span>}
           </div>
+          
+          
+          <div className="menu-item" onClick={() => navigate('/admin/donations')} style={{ cursor: 'pointer' }}>
+            <FaHandHoldingHeart className="admin-icon" />
+            {isSidebarOpen && <span className="menu-text">Donations</span>}
+          </div>
+
           <div className="menu-item" onClick={() => navigate('/admin/export')} style={{ cursor: 'pointer' }}>
             <FiDownload className="admin-icon" />
             {isSidebarOpen && <span className="menu-text">Export data</span>}
@@ -176,7 +179,6 @@ const CreateAccountPage = () => {
             </div>
 
             <div className="action-buttons-stacked">
-             
               <button type="submit" className="btn-create-full" disabled={isLoading}>
                 {isLoading ? 'Creating...' : 'Create'}
               </button>

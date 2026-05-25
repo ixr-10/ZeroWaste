@@ -357,4 +357,14 @@
 .simplebar-content-wrapper {
   scrollbar-width: none; 
   -ms-overflow-style: none; 
+}.readonly-box.large-box {
+  min-height: 60px;
+  height: auto;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+.screenshot-box {
+  font-weight: 500;
+  background-color: #F3F4ED;
 }

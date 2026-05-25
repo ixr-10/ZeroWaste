@@ -9,8 +9,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SPACING, BORDER_RADIUS } from "../../constants/theme";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import api from "../../constants/axios";
-import { markMessagesRead } from "../../constants/axios";
+import api, { markMessagesRead } from "../../constants/axios";
+import { WS_URL } from "../../constants/config";
 
 type Message = {
   id: string;
@@ -87,7 +87,7 @@ export default function ChatConversation() {
       if (conversationId) await markMessagesRead(Number(conversationId));
 
       const ws = new WebSocket(
-        `ws://192.168.1.33:8000/ws/chat/${conversationId}/?token=${token}`
+        `${WS_URL}/ws/chat/${conversationId}/?token=${token}`
       );
       wsRef.current = ws;
 

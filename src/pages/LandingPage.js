@@ -1,8 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import '../styles/LandingPage.css'; 
 import logo from '../assets/Logo.png'; 
 
+
 function LandingPage({ onNavigate }) {
+   useEffect(() => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+  }, []);
   return (
     
     <div className="landing-page" onClick={onNavigate} style={{ cursor: 'pointer' }}>

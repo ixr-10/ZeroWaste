@@ -1,0 +1,539 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  background-color: #ffffff;
+}
+
+.admin-layout-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: #ffffff;
+}
+
+/* ========================================================== */
+/* 1. Sidebar                                */
+/* ========================================================== */
+.custom-sidebar {
+  background-color: #C1D1C1;
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 30px 20px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.custom-sidebar.closed {
+  width: 80px;
+  align-items: center;
+}
+
+.sidebar-top {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo-title {
+  font-size: 1.5rem;
+  color: #fff;
+  font-weight: 700;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.collapse-btn {
+  background: #E5EDE5;
+  border: 1px solid #AABFAA;
+  border-radius: 5px 0 0 5px;
+  width: 25px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: absolute;
+  right: 0;
+  top: 35px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 1rem;
+  color: #333;
+  padding: 12px 15px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.active-nav {
+  background-color: #AABFAA;
+  color: #111;
+}
+
+.sidebar-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #AABFAA;
+  padding-top: 20px;
+}
+
+.profile-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #588157;
+}
+
+.admin-name-text {
+  font-weight: 600;
+  color: #333;
+}
+
+.logout-icon {
+  color: #E07A5F;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+/* ========================================================== */
+/* 2. Main Content Area   */
+/* ========================================================== */
+.main-content-area {
+  flex: 1;
+  padding: 30px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+/* ========================================================== */
+/* ✨ ANIMATED STATUS TABS (Pills)                            */
+/* ========================================================== */
+.status-tabs {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.status-pill {
+  padding: 10px 26px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #6c757d; 
+  background-color: #ffffff;
+  border: 1px solid #dcdcdc;
+  border-radius: 50px; 
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  
+  /* The secret to the smooth animation  */
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+/* Hover State (Ki tfawat la souris 3lihom) */
+.status-pill:hover {
+  transform: translateY(-3px); /* Lifts up slightly */
+  color: #588157; /* Text turns green */
+  border-color: #b0c4b1;
+  box-shadow: 0 6px 12px rgba(88, 129, 87, 0.15); /* Soft green shadow */
+}
+
+/* Active State (Ki tcliqui w tkon hiya li mselectionya) */
+.status-pill.active {
+  background-color: #DEE8DE; /* Matches your Figma theme */
+  color: #243f24; 
+  border-color: #8BA88B; /* Matches your Figma theme */
+  transform: scale(1.05); /* Zooms in slightly */
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+/* Active Hover (Prevents it from jumping too much if you hover while active) */
+.status-pill.active:hover {
+  transform: scale(1.05) translateY(-1px);
+}
+
+/* ========================================================== */
+/* 3. Filter           */
+/* ========================================================== */
+.filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  gap: 20px;
+}
+
+.search-input-box {
+  display: flex;
+  align-items: center;
+  background-color: #E1EAE1; 
+  padding: 12px 20px;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 540px;
+  border: none;
+}
+
+.search-icon {
+  color: #444444;
+  margin-right: 12px;
+  font-size: 1.2rem;
+}
+
+.search-input-box input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  color: #444444;
+}
+
+.search-input-box input::placeholder {
+  color: #888888;
+}
+
+
+.filter-wrapper-exact {
+  position: relative;
+  display: inline-block;
+}
+/**/
+.btn-filter-exact {
+  background-color: #8BA88B; 
+  color: #1A1A1A; 
+  border: none;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+
+.btn-filter-exact:hover {
+  background-color: #7A977A;
+}
+
+/* */
+.dropdown-panel-exact {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background-color: #F4F7F4;
+  border: 1px solid #7A977A; 
+  border-radius: 8px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.panel-main {
+  min-width: 140px;
+}
+
+.main-menu-row {
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  color: #2E3E2E;
+  cursor: pointer;
+  text-align: center;
+  background-color: #F4F7F4;
+  transition: background-color 0.2s;
+}
+
+.main-menu-row:first-child {
+  border-bottom: 1px solid #7A977A; 
+}
+
+.main-menu-row:hover {
+  background-color: #DEE8DE;
+}
+
+.panel-category {
+  width: max-content;
+}
+
+.cat-grid-exact {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  background-color: #7A977A; 
+  gap: 1px; 
+}
+
+.cat-cell-exact {
+  background-color: #F4F7F4; 
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  text-align: center;
+  cursor: pointer;
+  color: #2E3E2E;
+  transition: background-color 0.2s;
+}
+
+.cat-cell-exact:hover {
+  background-color: #DEE8DE;
+}
+
+.panel-emergency {
+  min-width: 60px;
+}
+
+.emergency-row-exact {
+  padding: 8px 0;
+  text-align: center;
+  border-bottom: 1px solid #7A977A;
+  background-color: #F4F7F4;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.emergency-row-exact:last-child {
+  border-bottom: none; 
+}
+
+.emergency-row-exact:hover {
+  background-color: #DEE8DE;
+}
+
+.exact-pin-icon {
+  font-size: 1.1rem;
+}
+
+/* ========================================================== */
+/* ========================================================== */
+.table-outer-box {
+  background-color: #F4F7F4; 
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid #D5E2D5;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #C1D1C1; 
+  border-radius: 20px;
+  background-color: transparent;
+}
+
+.custom-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 10px; 
+  background-color: transparent;
+  padding: 0 12px; 
+}
+
+.custom-table th {
+  background-color: #DEE8DE !important;
+  color: #000000;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 16px 18px;
+  text-align: left;
+}
+
+.custom-table th:first-child { border-top-left-radius: 16px; border-bottom-left-radius: 16px; }
+.custom-table th:last-child { border-top-right-radius: 16px; border-bottom-right-radius: 16px; }
+
+.custom-table tbody tr {
+  background-color: #FFFFFF; 
+}
+
+.custom-table td {
+  padding: 14px 18px;
+  color: #222222;
+  font-size: 0.95rem;
+  vertical-align: middle;
+  border-top: 1px solid #D5E2D5;
+  border-bottom: 1px solid #D5E2D5;
+}
+
+.custom-table td:first-child { 
+  border-left: 1px solid #D5E2D5; 
+  border-top-left-radius: 16px; 
+  border-bottom-left-radius: 16px; 
+}
+.custom-table td:last-child { 
+  border-right: 1px solid #D5E2D5; 
+  border-top-right-radius: 16px; 
+  border-bottom-right-radius: 16px; 
+}
+
+.table-prod-img {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+
+.status-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 20px; 
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  min-width: 80px; 
+}
+
+.status-badge.active {
+  background-color: #E8F5E9; 
+  color: #2E7D32; 
+}
+
+.status-badge.expired {
+  background-color: #FFF3E0; 
+  color: #EF6C00; 
+}
+
+.status-badge.donated {
+  background-color: #E3F2FD; 
+  color: #1565C0; 
+}
+
+
+.action-icons-wrapper {
+  display: flex;
+  gap: 10px; 
+  justify-content: center;
+  align-items: center;
+}
+
+.action-btn-item {
+  position: relative; 
+  width: 34px;
+  height: 34px;
+  border-radius: 6px; 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  font-size: 1.15rem;
+  transition: all 0.2s ease;
+}
+
+.target-location-btn {
+  background-color: #F4F7F4; 
+  color: #1A1A1A; 
+  border: 1px solid #7A977A; 
+}
+
+.target-location-btn:hover {
+  background-color: #DEE8DE;
+}
+
+.delete-item-btn {
+  background-color: #FFF2F0; 
+  color: #E07A5F; 
+  border: 1px solid #F3C3B6; 
+}
+
+.delete-item-btn:hover {
+  background-color: #FCE1DC;
+}
+
+.action-btn-item::after {
+  content: attr(data-tooltip); 
+  position: absolute;
+  top: 100%; 
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 8px; 
+  background-color: #F4F7F4; 
+  color: #2E3E2E; 
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 4px 8px;
+  border: 1px solid #7A977A; 
+  border-radius: 4px;
+  white-space: nowrap; 
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease;
+  z-index: 100;
+}
+
+.action-btn-item:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ========================================================== */
+/* 5. Map Control Box                                         */
+/* ========================================================== */
+.map-wrapper {
+  border: 2px solid #8BA88B;
+  border-radius: 15px;
+  position: relative;
+  overflow: hidden; 
+  width: 100%;
+  height: 320px; 
+  flex-shrink: 0;
+}
+
+.map-badge-input {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background-color: #DEE8DE !important; 
+  color: #444444 !important;
+  padding: 8px 16px !important;
+  border-radius: 20px !important; 
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid #8BA88B !important;
+  outline: none !important;
+  width: 240px !important; 
+  z-index: 99999 !important; 
+}
+
+.map-wrapper iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  z-index: 1; 
+}
