@@ -28,8 +28,6 @@ export default function ChatList() {
     const loadConversations = async () => {
       try {
         const userStr = await AsyncStorage.getItem("user");
-        
-        // ✅ Use a local variable, not state
         let userId: number | null = null;
         if (userStr) {
           const user = JSON.parse(userStr);
@@ -40,27 +38,16 @@ export default function ChatList() {
         const res = await fetchMyConversations();
 
         const uniqueConversations = Object.values(
-  res.data.reduce((acc: Record<string, any>, conv: any) => {
-    const otherUserId =
-      conv.donor === userId ? conv.beneficiary : conv.donor;
-
-    // ✅ Key by user only, not donation+user
-    const key = `${otherUserId}`;
-
-    const lastMsgTime = new Date(
-      conv.last_message?.created_at || 0
-    ).getTime();
-
-    if (
-      !acc[key] ||
-      lastMsgTime >
-        new Date(acc[key].last_message?.created_at || 0).getTime()
-    ) {
-      acc[key] = conv;
-    }
-    return acc;
-  }, {})
-);
+          res.data.reduce((acc: Record<string, any>, conv: any) => {
+            const otherUserId = conv.donor === userId ? conv.beneficiary : conv.donor;
+            const key = `${otherUserId}`;
+            const lastMsgTime = new Date(conv.last_message?.created_at || 0).getTime();
+            if (!acc[key] || lastMsgTime > new Date(acc[key].last_message?.created_at || 0).getTime()) {
+              acc[key] = conv;
+            }
+            return acc;
+          }, {})
+        );
 
         uniqueConversations.sort((a: any, b: any) => {
           const timeA = new Date(a.last_message?.created_at || 0).getTime();
@@ -77,20 +64,48 @@ export default function ChatList() {
     };
 
     loadConversations();
-  }, []); // ✅ Run only once on mount, no need for currentUserId dependency
+  }, []);
 
   const getOtherUser = (conv: any) => {
     if (!currentUserId) return { id: "", username: "User" };
     const myId = String(currentUserId);
     const donorId = String(conv.donor);
     const beneficiaryId = String(conv.beneficiary);
-
     if (donorId === myId) {
       return { id: beneficiaryId, username: conv.beneficiary_username || "User" };
     }
     return { id: donorId, username: conv.donor_username || "User" };
   };
 
+  // ✅ Fetch the reservation linked to this conversation
+ const getReservationInfo = async (conv: any) => {
+  try {
+    const donationId = conv.donation;
+    if (!donationId) return null;
+
+    const res = await axios.get(`/donations/${donationId}/reservations/`);
+    
+    // ✅ Fix: response is { reservations: [...] } not an array directly
+    const reservations = res.data.reservations;
+
+    if (!reservations || reservations.length === 0) return null;
+
+    const myId = String(currentUserId);
+    const myReservation = reservations.find(
+      (r: any) => String(r.beneficiary) === myId || String(r.donor) === myId
+    );
+
+    if (!myReservation) return null;
+
+    return {
+      reservationId: String(myReservation.id),
+      reservationStatus: myReservation.status,
+    };
+  } catch (e: any) {
+    console.log('getReservationInfo error:', e.response?.status, e.message);
+    return null;
+  }
+};
   const filteredConversations = conversations.filter((c) => {
     const other = getOtherUser(c);
     return other.username.toLowerCase().includes(search.toLowerCase());
@@ -122,9 +137,7 @@ export default function ChatList() {
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             ListEmptyComponent={
               <View style={{ alignItems: "center", paddingTop: 40 }}>
-                <Text style={{ color: COLORS.textMuted }}>
-                  No conversations yet
-                </Text>
+                <Text style={{ color: COLORS.textMuted }}>No conversations yet</Text>
               </View>
             }
             renderItem={({ item }) => {
@@ -135,26 +148,32 @@ export default function ChatList() {
                 <TouchableOpacity
                   style={styles.chatCard}
                   onPress={async () => {
+                    console.log('=== CONV TAPPED ===');
+  console.log('conv:', JSON.stringify(item));
                     // Optimistically clear unread count
                     setConversations((prev) =>
-                      prev.map((c) =>
-                        c.id === item.id ? { ...c, unread_count: 0 } : c
-                      )
+                      prev.map((c) => c.id === item.id ? { ...c, unread_count: 0 } : c)
                     );
 
-                    // Notify backend that messages are read
+                    // Mark as read
                     try {
                       await markConversationAsRead(item.id);
                     } catch (err) {
                       console.log("Failed to mark as read:", err);
                     }
 
+                    // ✅ Fetch reservation info before navigating
+                    const reservationInfo = await getReservationInfo(item);
+
                     router.push({
-                      pathname: "/../(Screens)/ChatConversation" as any,
+                      pathname: "/(Screens)/ChatConversation",
                       params: {
                         conversationId: item.id.toString(),
                         otherUsername: otherUser.username,
                         otherUserId: otherUser.id.toString(),
+                        // ✅ Pass reservation info — banner shows if status is 'completed'
+                        reservationId: reservationInfo?.reservationId ?? '',
+                        reservationStatus: reservationInfo?.reservationStatus ?? '',
                       },
                     });
                   }}
@@ -165,7 +184,11 @@ export default function ChatList() {
                       style={{ width: 46, height: 46 }}
                       source={require("../../assets/images/avatar.png")}
                     />
-                    <View style={styles.onlineDot} />
+                    {/* ✅ Show green dot only if reservation is completed (ready to rate) */}
+                    <View style={[
+                      styles.onlineDot,
+                      item.reservation_status === 'completed' && { backgroundColor: '#E8B84B' }
+                    ]} />
                   </View>
 
                   <View style={styles.chatContent}>
@@ -173,27 +196,19 @@ export default function ChatList() {
                       <Text style={styles.chatName}>{otherUser.username}</Text>
                       <Text style={styles.chatTime}>
                         {lastMsg
-                          ? new Date(lastMsg.created_at).toLocaleTimeString(
-                              [],
-                              { hour: "2-digit", minute: "2-digit" }
-                            )
+                          ? new Date(lastMsg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                           : ""}
                       </Text>
                     </View>
                     <View style={styles.chatBottom}>
-                      <Text
-                        style={styles.chatLastMessage}
-                        numberOfLines={1}
-                      >
+                      <Text style={styles.chatLastMessage} numberOfLines={1}>
                         {lastMsg
                           ? lastMsg.content
                           : item.donation_title || "New conversation"}
                       </Text>
                       {item.unread_count > 0 && (
                         <View style={styles.unreadBadge}>
-                          <Text style={styles.unreadText}>
-                            {item.unread_count}
-                          </Text>
+                          <Text style={styles.unreadText}>{item.unread_count}</Text>
                         </View>
                       )}
                     </View>

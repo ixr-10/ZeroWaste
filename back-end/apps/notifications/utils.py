@@ -51,7 +51,7 @@ def create_notification(recipient, notification_type, title, message, related_ob
 
 
 def notify_nearby_food_savers(donation):
-    """Notify Food Savers within 500m when a new donation is published"""
+   
     from geopy.distance import geodesic
     food_savers = User.objects.filter(
         role='food_saver',
@@ -66,11 +66,11 @@ def notify_nearby_food_savers(donation):
                 (donation.latitude, donation.longitude),
                 (fs.latitude, fs.longitude)
             ).km
-            if distance <= 0.5:  # 500m
+            if distance <= 0.5:  
                 create_notification(
                     recipient=fs,
                     notification_type='nearby_donation',
-                    title='📍 New donation near you!',
+                    title=' New donation near you!',
                     message=f'{donation.donor.username} just posted "{donation.title}" {round(distance * 1000)}m away.',
                     related_object_id=donation.id
                 )
@@ -79,7 +79,7 @@ def notify_nearby_food_savers(donation):
 
 
 def notify_nearby_users_new_donation(donation):
-    """Notify all users within 500m when a new donation is published"""
+   
     from geopy.distance import geodesic
     users = User.objects.filter(
         latitude__isnull=False,
@@ -96,7 +96,7 @@ def notify_nearby_users_new_donation(donation):
                 create_notification(
                     recipient=user,
                     notification_type='nearby_donation',
-                    title=f'📍 {round(distance * 1000)}m away!',
+                    title=f' {round(distance * 1000)}m away!',
                     message=f'"{donation.title}" is available near you. Pick it up fast!',
                     related_object_id=donation.id
                 )
@@ -105,7 +105,7 @@ def notify_nearby_users_new_donation(donation):
 
 
 def notify_urgent_donation(donation):
-    """Notify users who previously reserved same category — urgency alert"""
+    
     from apps.donations.models import Reservation
     from django.utils import timezone
     from datetime import timedelta
@@ -123,7 +123,29 @@ def notify_urgent_donation(donation):
         create_notification(
             recipient=user,
             notification_type='urgent_donation',
-            title=f'🚨 URGENT — {donation.category}',
+            title=f' URGENT — {donation.category}',
             message=f'Pick up fast: "{donation.title}" expires very soon!',
             related_object_id=donation.id
         )
+def notify_warning_received(user, reason):
+    """Called when admin sends a warning to a user"""
+    create_notification(
+        recipient=user,
+        notification_type='warning_received',
+        title=' Warning from ZeroWaste Admin',
+        message=f'You have received a warning. Reason: {reason}. Please review our community guidelines.',
+        related_object_id=None
+    )
+
+
+def notify_promoted_to_food_saver(user, promoted_by):
+    """Called when admin or food saver promotes a user"""
+    create_notification(
+        recipient=user,
+        notification_type='promoted_food_saver',
+        title=' You are now a Food Saver!',
+        message=f'Congratulations! {promoted_by.username} has promoted you to Food Saver. You can now verify new members!',
+        related_object_id=None
+    )
+
+     

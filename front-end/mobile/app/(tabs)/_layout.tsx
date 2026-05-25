@@ -1,14 +1,14 @@
-import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Tabs, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  TouchableOpacity,
+  Platform,
   StyleSheet,
   Text,
-  Platform,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import 'react-native-reanimated';
 
 const COLORS = {
   primary: '#4A6741',
@@ -19,12 +19,16 @@ const COLORS = {
 };
 
 const TAB_ITEMS = [
-  { screen: '/(tabs)/HomeScreen',   icon: 'home',          label: 'Home' },
-  { screen: '/(tabs)/ChatList',     icon: 'chatbubble',    label: 'Chat' },
-  { screen: '/(tabs)/Picture',      icon: 'add',           label: '' },
-  { screen: '/(tabs)/notifications', icon: 'notifications', label: 'Notification' },
-  { screen: '/(tabs)/ProfileScreen', icon: 'person',        label: 'Profile' },
+  { screen: '/(tabs)/HomeScreen', icon: 'home', label: 'Home' },
+  { screen: '/(tabs)/ChatList', icon: 'chatbubble', label: 'Chat' },
+  { screen: '/(tabs)/Picture', icon: 'add', label: '' },
+  { screen: '/(tabs)/Notifications', icon: 'notifications', label: 'Notification' },
+  { screen: '/(tabs)/ProfileScreen', icon: 'person', label: 'Profile' },
 ];
+
+export const unstable_settings = {
+  anchor: '(tabs)',
+};
 
 function CustomTabBar() {
   const router = useRouter();
@@ -32,15 +36,14 @@ function CustomTabBar() {
 
   const handlePress = (index: number, screen: string) => {
     setActiveIndex(index);
-    router.push(screen as any);   
+    router.push(screen as never);
   };
 
   return (
     <View style={styles.container}>
-      {/* Home + Chat */}
       {TAB_ITEMS.slice(0, 2).map((tab, i) => (
         <TouchableOpacity
-          key={i}
+          key={tab.screen}
           style={styles.tabItem}
           onPress={() => handlePress(i, tab.screen)}
           activeOpacity={0.7}
@@ -56,10 +59,9 @@ function CustomTabBar() {
         </TouchableOpacity>
       ))}
 
-      {/* Center + Button */}
       <TouchableOpacity
         style={styles.addWrapper}
-        onPress={() => router.push('/(tabs)/Picture' as any)}
+        onPress={() => router.push('/(tabs)/Picture' as never)}
         activeOpacity={0.85}
       >
         <View style={styles.addCircle}>
@@ -67,12 +69,11 @@ function CustomTabBar() {
         </View>
       </TouchableOpacity>
 
-      {/* Notification + Profile */}
       {TAB_ITEMS.slice(3).map((tab, i) => {
         const index = i + 3;
         return (
           <TouchableOpacity
-            key={index}
+            key={tab.screen}
             style={styles.tabItem}
             onPress={() => handlePress(index, tab.screen)}
             activeOpacity={0.7}
@@ -103,7 +104,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="HomeScreen" />
       <Tabs.Screen name="ChatList" />
       <Tabs.Screen name="Picture" />
-      <Tabs.Screen name="notifications" />
+      <Tabs.Screen name="Notifications" />
       <Tabs.Screen name="Notificationss" />
       <Tabs.Screen name="ProfileScreen" />
       <Tabs.Screen name="slides" />
@@ -111,6 +112,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="Quantity" />
       <Tabs.Screen name="Localization" />
       <Tabs.Screen name="Details" />
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="chat" />
     </Tabs>
   );
 }

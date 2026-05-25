@@ -9,17 +9,14 @@ export default function SplashScreen() {
   useEffect(() => {
     const init = async () => {
       const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
-      const accessToken = await AsyncStorage.getItem('access'); // ✅ matches what login.tsx saves
+      const accessToken = await AsyncStorage.getItem('access_token');
 
       setTimeout(() => {
         if (!hasSeenOnboarding) {
-          // First ever launch → Onboarding
           router.replace('/(Screens)/OnboardingScreen');
         } else if (!accessToken) {
-          // Seen onboarding but not logged in → Login
           router.replace('/auth/login');
         } else {
-          // Fully authenticated → Main app (Home tab)
           router.replace('/(tabs)/HomeScreen');
         }
       }, 500);
@@ -27,7 +24,6 @@ export default function SplashScreen() {
     init();
   }, [router]);
 
-  // Green splash background while checking
   return (
     <View style={{ flex: 1, backgroundColor: '#588157', justifyContent: 'center', alignItems: 'center' }}>
       <ActivityIndicator color="#fff" size="large" />

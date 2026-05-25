@@ -8,11 +8,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.notifications.utils import create_notification
-from .models import Donation, Reservation, NotInterested
+from .models import Donation, Reservation, NotInterested , Rating
 from .serializers import DonationSerializer, ReservationSerializer
 
 from django.utils.timezone import now
-
+from .models import Rating
 
 # ─────────────────────────────────────────────
 # DONATIONS
@@ -43,10 +43,24 @@ class CreateDonationView(APIView):
 
         serializer = DonationSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(donor=request.user)
+            donation = serializer.save(donor=request.user)
+
+            try:
+                from apps.notifications.utils import (
+                    notify_nearby_users_new_donation,
+                    notify_nearby_food_savers,
+                    notify_urgent_donation,
+                )
+                notify_nearby_users_new_donation(donation)
+                notify_nearby_food_savers(donation)
+                notify_urgent_donation(donation)
+            except Exception:
+                pass  # don't block donation creation if notifications fail
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
 class EditDonationView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -101,7 +115,6 @@ class DeleteDonationView(APIView):
                 {'error': 'Cannot delete donation with active reservations.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         donation.delete()
         return Response({'message': 'Donation deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
 
@@ -142,11 +155,11 @@ class MyDonationsView(APIView):
     def get(self, request):
         # BUG FIX: pure read — no DB writes here anymore
         donations = Donation.objects.filter(donor=request.user).order_by('-created_at')
-        active = donations.filter(status__in=['available', 'reserved'])
+        active  = donations.filter(status__in=['available', 'reserved'])
         expired = donations.filter(status='expired')
         donated = donations.filter(status='completed')
         return Response({
-            'active': DonationSerializer(active, many=True, context={'request': request}).data,
+            'active':  DonationSerializer(active,  many=True, context={'request': request}).data,
             'expired': DonationSerializer(expired, many=True, context={'request': request}).data,
             'donated': DonationSerializer(donated, many=True, context={'request': request}).data,
         })
@@ -186,10 +199,9 @@ class AvailableDonationsView(APIView):
         # Base: only available donations
         donations = Donation.objects.filter(status='available')
 
-        # BUG FIX: exclude own donations
+        #  exclude own donations
         donations = donations.exclude(donor=request.user)
-
-        # BUG FIX: exclude donations user already has an active reservation on
+        #exclude donations user already has an active reservation on
         reserved_ids = Reservation.objects.filter(
             beneficiary=request.user
         ).exclude(status__in=['cancelled', 'rejected']).values_list('donation_id', flat=True)
@@ -200,6 +212,11 @@ class AvailableDonationsView(APIView):
             user=request.user
         ).values_list('donation_id', flat=True)
         donations = donations.exclude(id__in=ignored_ids)
+
+        # ── Filter by donor ID (used by public profile screen) ────────────────
+        donor_id = request.query_params.get('donor')
+        if donor_id:
+            donations = donations.filter(donor_id=donor_id)
 
         # Filter by category
         category = request.query_params.get('category')
@@ -214,7 +231,7 @@ class AvailableDonationsView(APIView):
         # Filter by expiry — "expiring_soon" = within 2 days
         expiring_soon = request.query_params.get('expiring_soon')
         if expiring_soon:
-            from datetime import date, timedelta
+            from datetime import date
             soon = date.today() + timedelta(days=2)
             donations = donations.filter(expiry_date__lte=soon)
 
@@ -253,11 +270,30 @@ class DonationReservationsView(APIView):
 
     def get(self, request, donation_id):
         try:
-            donation = Donation.objects.get(id=donation_id, donor=request.user)
+            donation = Donation.objects.get(id=donation_id)
         except Donation.DoesNotExist:
-            return Response({'error': 'Donation not found or not yours.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Donation not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        reservations = Reservation.objects.filter(donation=donation).order_by('-created_at')
+        # ✅ Allow both donor AND beneficiary to see reservations
+        user = request.user
+        is_donor = donation.donor == user
+        is_beneficiary = Reservation.objects.filter(
+            donation=donation, beneficiary=user
+        ).exists()
+
+        if not is_donor and not is_beneficiary:
+            return Response({'error': 'Not authorized.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # ✅ If beneficiary — only return their own reservation
+        if is_beneficiary and not is_donor:
+            reservations = Reservation.objects.filter(
+                donation=donation, beneficiary=user
+            ).order_by('-created_at')
+        else:
+            reservations = Reservation.objects.filter(
+                donation=donation
+            ).order_by('-created_at')
+
         serializer = ReservationSerializer(reservations, many=True, context={'request': request})
         return Response({
             'donation': donation.title,
@@ -265,7 +301,6 @@ class DonationReservationsView(APIView):
             'available_quantity': donation.available_quantity,
             'reservations': serializer.data,
         })
-
 
 # ─────────────────────────────────────────────
 # RESERVATIONS
@@ -284,7 +319,6 @@ class ReserveDonationView(APIView):
                     {'error': 'Unverified users can only make 2 reservations. Get verified to unlock full access.'},
                     status=status.HTTP_403_FORBIDDEN
                 )
-
         try:
             with transaction.atomic():
                 donation = Donation.objects.select_for_update().get(id=donation_id, status='available')
@@ -363,6 +397,11 @@ class ConfirmReservationView(APIView):
         reservation.status = 'confirmed'
         reservation.save()
 
+        
+        donor = reservation.donation.donor
+        donor.reputation_score += 10
+        donor.save()
+
         create_notification(
             recipient=reservation.beneficiary,
             notification_type='reservation_confirmed',
@@ -372,8 +411,6 @@ class ConfirmReservationView(APIView):
         )
 
         return Response({'message': 'Reservation confirmed successfully.'})
-
-
 class RejectReservationView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -382,7 +419,6 @@ class RejectReservationView(APIView):
             reservation = Reservation.objects.get(id=reservation_id, donation__donor=request.user)
         except Reservation.DoesNotExist:
             return Response({'error': 'Reservation not found.'}, status=status.HTTP_404_NOT_FOUND)
-
         if reservation.status != 'pending':
             return Response({'error': 'Reservation is not pending.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -433,25 +469,7 @@ class CancelReservationView(APIView):
         return Response({'message': 'Reservation cancelled successfully.'})
     
 
-class CreateDonationView(APIView):
-    permission_classes = [IsAuthenticated]
-def post(self, request):
-        serializer = DonationSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            donation = serializer.save(donor=request.user)
-
-            # Notify nearby users and food savers
-            from apps.notifications.utils import (
-                notify_nearby_users_new_donation,
-                notify_nearby_food_savers,
-                notify_urgent_donation
-            )
-            notify_nearby_users_new_donation(donation)
-            notify_nearby_food_savers(donation)
-            notify_urgent_donation(donation)
-
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)    
+    
 
 class MyReservationsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -467,18 +485,16 @@ class MyReservationsView(APIView):
 
         return Response({
             'incoming': {
-                'pending': ReservationSerializer(incoming.filter(status='pending'), many=True, context={'request': request}).data,
-                'confirmed': ReservationSerializer(incoming.filter(status='confirmed'), many=True, context={'request': request}).data,
-                'rejected': ReservationSerializer(incoming.filter(status__in=['rejected', 'cancelled']), many=True, context={'request': request}).data,
+                'pending':   ReservationSerializer(incoming.filter(status='pending'),                       many=True, context={'request': request}).data,
+                'confirmed': ReservationSerializer(incoming.filter(status='confirmed'),                     many=True, context={'request': request}).data,
+                'rejected':  ReservationSerializer(incoming.filter(status__in=['rejected', 'cancelled']),   many=True, context={'request': request}).data,
             },
             'my_requests': {
-                'pending': ReservationSerializer(my_requests.filter(status='pending'), many=True, context={'request': request}).data,
-                'confirmed': ReservationSerializer(my_requests.filter(status='confirmed'), many=True, context={'request': request}).data,
-                'rejected': ReservationSerializer(my_requests.filter(status__in=['rejected', 'cancelled']), many=True, context={'request': request}).data,
+                'pending':   ReservationSerializer(my_requests.filter(status='pending'),                    many=True, context={'request': request}).data,
+                'confirmed': ReservationSerializer(my_requests.filter(status='confirmed'),                  many=True, context={'request': request}).data,
+                'rejected':  ReservationSerializer(my_requests.filter(status__in=['rejected', 'cancelled']), many=True, context={'request': request}).data,
             }
         })
-
-
 class MyReceivedReservationsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -521,3 +537,70 @@ class NotInterestedView(APIView):
         if deleted:
             return Response({'message': 'Donation restored to your feed.'})
         return Response({'error': 'No record found.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+# ─── Add this class to donations/views.py ────────────────────────────────────
+# Make sure Rating is imported from .models at the top of views.py:
+# from .models import Donation, Reservation, NotInterested, Rating
+
+
+class RateReservationView(APIView):
+    """
+    Rate the other party after a completed reservation.
+    POST /donations/reservations/<reservation_id>/rate/
+    Body: { "score": 4 }  (1-5)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, reservation_id):
+        score = request.data.get('score')
+
+        # Validate score
+        if not score or not isinstance(score, int) or not (1 <= score <= 5):
+            return Response(
+                {'error': 'Score must be an integer between 1 and 5.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Get reservation
+        try:
+            reservation = Reservation.objects.get(id=reservation_id)
+        except Reservation.DoesNotExist:
+            return Response({'error': 'Reservation not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Only allow rating if reservation is completed
+        if reservation.status != 'completed':
+            return Response(
+                {'error': 'You can only rate completed reservations.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Determine who is rating who
+        user = request.user
+        if user == reservation.beneficiary:
+            rated_user = reservation.donation.donor  # beneficiary rates the donor
+        elif user == reservation.donation.donor:
+            rated_user = reservation.beneficiary     # donor rates the beneficiary
+        else:
+            return Response({'error': 'You are not part of this reservation.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Check if already rated
+        if Rating.objects.filter(reservation=reservation, rater=user).exists():
+            return Response({'error': 'You have already rated this reservation.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create rating
+        Rating.objects.create(
+            reservation=reservation,
+            rater=user,
+            rated_user=rated_user,
+            score=score,
+        )
+
+        # Update rated user's reputation score
+        avg = Rating.objects.filter(rated_user=rated_user).aggregate(
+            avg=models.Avg('score')
+        )['avg'] or 0
+        rated_user.reputation_score = round(avg * 20)  # scale 1-5 → 0-100
+        rated_user.save()
+
+        return Response({'message': f'Rating submitted successfully. {rated_user.username} now has a score of {round(avg, 1)}/5.'})

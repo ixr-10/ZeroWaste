@@ -10,7 +10,6 @@ export default function RootLayout() {
         <Stack.Screen name="auth" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(Screens)/OnboardingScreen" />
-        <Stack.Screen name="(Screens)/ProfileScreen" />
         <Stack.Screen name="(Screens)/MapScreen" />
         <Stack.Screen name="(Screens)/SettingsScreen" />
         <Stack.Screen name="(Screens)/PersonalInfoScreen" />

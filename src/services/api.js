@@ -1,4 +1,4 @@
-const BASE_URL = 'http://192.168.43.100:8000/api';
+const BASE_URL = 'http://192.168.1.40:8000/api';
 
 // ── Token helpers ──
 export const saveTokens = (access, refresh) => {
@@ -152,7 +152,7 @@ export const logoutUser = async () => {
 // ── Admin Reports (Moderation) ──
 
 export const fetchAdminReports = async () => {
-  const res = await authFetch(`${BASE_URL}/reports/`); 
+  const res = await authFetch(`${BASE_URL}/moderation/reports/`); 
   const data = await res.json();
   
   if (!res.ok) throw new Error(data.detail || 'Failed to fetch reports.');
@@ -165,12 +165,20 @@ export const processReportAction = async (reportId, actionType) => {
   if (actionType === 'delete_account') backendAction = 'deactivate_account';
   if (actionType === 'ignore_report') backendAction = 'ignore';
 
-  const res = await authFetch(`${BASE_URL}/reports/${reportId}/action/`, {
+  const res = await authFetch(`${BASE_URL}/moderation/reports/${reportId}/action/`, {
     method: 'POST',
     body: JSON.stringify({ action: backendAction }),
   });
   
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || data.error || 'Failed to process action.');
+  return data;
+};
+export const toggleUserActive = async (userId) => {
+  const res = await authFetch(`${BASE_URL}/moderation/users/${userId}/toggle-active/`, {
+    method: 'POST',
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(JSON.stringify(data));
   return data;
 };

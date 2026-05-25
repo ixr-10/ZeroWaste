@@ -18,7 +18,7 @@ function LoginPage({ onNavigateToReset }) {
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    if (token) navigate('/admin/users', { replace: true });
+    if (token) navigate('/admin/statistics', { replace: true });
   }, [navigate]);
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
@@ -31,16 +31,16 @@ function LoginPage({ onNavigateToReset }) {
       const data = await loginUser(username, password);
       const profile = await getProfile(data.access);
 
-      if (profile.role !== 'admin') {
-        setError('Access denied. This login is for admins only.');
-        setLoading(false);
-        return;
-      }
+      if (profile.role !== 'admin' && profile.role !== 'localauthority') {
+      setError('Access denied. Only admins or local authorities can log in.');
+      setLoading(false);
+      return;
+    }
 
       localStorage.setItem('access_token', data.access);
       localStorage.setItem('refresh_token', data.refresh);
       localStorage.setItem('user', JSON.stringify(profile));
-      navigate('/admin/users', { replace: true });
+      navigate('/admin/statistics', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {

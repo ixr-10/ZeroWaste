@@ -6,6 +6,7 @@ import '../styles/AdminStatisticsPage.css';
 import {
   FiPieChart, FiFileText, FiUsers, FiDownload, FiLogOut, FiChevronLeft, FiChevronRight
 } from 'react-icons/fi';
+import { FaHandHoldingHeart } from 'react-icons/fa';
 
 const AdminStatisticsPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -105,6 +106,10 @@ const AdminStatisticsPage = () => {
           <div className="menu-item" onClick={() => navigate('/admin/users')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FiUsers /></span>
             {isSidebarOpen && <span className="menu-text">Users</span>}
+          </div>
+          <div className="menu-item" onClick={() => navigate('/admin/donations')} style={{ cursor: 'pointer' }}>
+            <span className="admin-icon"><FaHandHoldingHeart /></span>
+            {isSidebarOpen && <span className="menu-text">Donations</span>}
           </div>
           <div className="menu-item" onClick={() => navigate('/admin/export')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FiDownload /></span>

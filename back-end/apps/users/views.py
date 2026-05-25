@@ -471,7 +471,8 @@ class BlockedUsersListView(APIView):
 
     def get(self, request):
         blocked = BlockedUser.objects.filter(blocker=request.user).order_by('-created_at')
-        return Response(BlockedUserSerializer(blocked, many=True).data)
+        serializer = BlockedUserSerializer(blocked, many=True)
+        return Response(serializer.data)
 
 
 class AdminUserStatsView(APIView):

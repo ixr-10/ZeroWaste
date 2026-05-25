@@ -16,5 +16,6 @@
     "components/CustomButton.jsx",
     "components/CustomInput.jsx",
     "app/confirmation.jsx"
-  ]
+  ],
+  "files": []
 }
