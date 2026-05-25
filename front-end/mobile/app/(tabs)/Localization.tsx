@@ -18,8 +18,8 @@ import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useDonationStore } from '../../store/useDonationStore';
-import api from '../../constants/axios';
 import axios from "../../constants/axios";
+import { BASE_URL } from "../../constants/config";
 
 const UNIT_MAP: Record<string, string> = {
   'Kg': 'kg', 'g': 'g', 'L': 'L', 'Pieces': 'pieces'
@@ -60,10 +60,7 @@ export default function Step4Localization() {
   };
 
   const searchAddress = async (text: string) => {
-    if (text.length < 2) {
-      setSuggestions([]);
-      return;
-    }
+    if (text.length < 2) { setSuggestions([]); return; }
     try {
       const res = await axios.get(`https://api.mapbox.com/search/searchbox/v1/suggest`, {
         params: {
@@ -100,25 +97,15 @@ export default function Step4Localization() {
   };
 
   const handlePublish = async () => {
-    if (!address) {
-      Alert.alert('Error', 'Please select a location');
-      return;
-    }
-    if (!category) {
-      Alert.alert('Error', 'Please go back and select a category');
-      return;
-    }
-    if (!expiryDate) {
-      Alert.alert('Error', 'Please go back and select an expiry date');
-      return;
-    }
+    if (!address) { Alert.alert('Error', 'Please select a location'); return; }
+    if (!category) { Alert.alert('Error', 'Please go back and select a category'); return; }
+    if (!expiryDate) { Alert.alert('Error', 'Please go back and select an expiry date'); return; }
 
     setPublishing(true);
 
     try {
       const [day, month, year] = expiryDate.split('/');
       const backendDate = `${year}-${month}-${day}`;
-
       const today = new Date();
       const expiry = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
       const daysUntilExpiry = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -143,31 +130,39 @@ export default function Step4Localization() {
         formData.append('image', { uri: image, name: filename, type } as any);
       }
 
-      const response = await api.post('/donations/create_donation/', formData, {
+      // ✅ Use fetch directly — axios breaks multipart/form-data in React Native
+      const token = await AsyncStorage.getItem('access');
+      const response = await fetch(`${BASE_URL}donations/create_donation/`, {
+        method: 'POST',
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`,
+          // ✅ NO Content-Type — fetch sets multipart/form-data + boundary automatically
         },
+        body: formData,
       });
 
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        console.log('Publish error response:', responseData);
+        const errorMsg = responseData?.error || responseData?.detail || 'Failed to publish donation.';
+        Alert.alert('Error', errorMsg);
+        return;
+      }
+
+      console.log('Donation published:', responseData);
       reset();
 
       Alert.alert(
         'Success! 🎉',
         'Your donation has been published successfully!',
-        [{ 
-          text: 'OK', 
-          onPress: () => router.replace('/(tabs)/slides')
-        }]
+        [{ text: 'OK', onPress: () => router.replace('/(tabs)/slides') }]
       );
 
-      } catch (err: any) {
-  console.log('Publish error FULL:', JSON.stringify(err));
-  console.log('Publish error response:', err.response?.data);
-  console.log('Publish error message:', err.message);
-  console.log('Publish error code:', err.code);
-  Alert.alert('Error', err.response?.data?.error || err.response?.data?.detail || 'Failed to publish donation. Please try again.');
-}
-     finally {
+    } catch (err: any) {
+      console.log('Publish error:', err.message);
+      Alert.alert('Error', 'Network error. Make sure you are connected to the same WiFi as the server.');
+    } finally {
       setPublishing(false);
     }
   };
@@ -214,7 +209,10 @@ export default function Step4Localization() {
                 onChangeText={(text) => { setAddress(text); searchAddress(text); }}
               />
               <TouchableOpacity style={styles.locateBtn} onPress={getCurrentLocation}>
-                {loading ? <ActivityIndicator size="small" color="#2d5a2d" /> : <Ionicons name="locate-outline" size={18} color="#2d5a2d" />}
+                {loading
+                  ? <ActivityIndicator size="small" color="#2d5a2d" />
+                  : <Ionicons name="locate-outline" size={18} color="#2d5a2d" />
+                }
               </TouchableOpacity>
             </View>
 
@@ -245,12 +243,16 @@ export default function Step4Localization() {
                 if (result[0]) setAddress(`${result[0].street ?? ""}, ${result[0].city ?? ""}`);
               }}
             >
-              <Marker coordinate={marker} draggable onDragEnd={async (e) => {
-                const { latitude, longitude } = e.nativeEvent.coordinate;
-                setMarker({ latitude, longitude });
-                const result = await Location.reverseGeocodeAsync({ latitude, longitude });
-                if (result[0]) setAddress(`${result[0].street ?? ""}, ${result[0].city ?? ""}`);
-              }} />
+              <Marker
+                coordinate={marker}
+                draggable
+                onDragEnd={async (e) => {
+                  const { latitude, longitude } = e.nativeEvent.coordinate;
+                  setMarker({ latitude, longitude });
+                  const result = await Location.reverseGeocodeAsync({ latitude, longitude });
+                  if (result[0]) setAddress(`${result[0].street ?? ""}, ${result[0].city ?? ""}`);
+                }}
+              />
             </MapView>
           </View>
         ) : (
@@ -268,16 +270,15 @@ export default function Step4Localization() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity 
-          style={[styles.publishBtn, publishing && { opacity: 0.7 }]} 
-          onPress={handlePublish} 
+        <TouchableOpacity
+          style={[styles.publishBtn, publishing && { opacity: 0.7 }]}
+          onPress={handlePublish}
           disabled={publishing}
         >
-          {publishing ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.publishBtnText}>Publish Donation</Text>
-          )}
+          {publishing
+            ? <ActivityIndicator color="#fff" />
+            : <Text style={styles.publishBtnText}>Publish Donation</Text>
+          }
         </TouchableOpacity>
       </View>
     </SafeAreaView>

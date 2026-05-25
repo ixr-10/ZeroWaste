@@ -8,11 +8,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.notifications.utils import create_notification
-from .models import Donation, Reservation, NotInterested
+from .models import Donation, Reservation, NotInterested , Rating
 from .serializers import DonationSerializer, ReservationSerializer
 
 from django.utils.timezone import now
-
+from .models import Rating
 
 # ─────────────────────────────────────────────
 # DONATIONS
@@ -270,11 +270,30 @@ class DonationReservationsView(APIView):
 
     def get(self, request, donation_id):
         try:
-            donation = Donation.objects.get(id=donation_id, donor=request.user)
+            donation = Donation.objects.get(id=donation_id)
         except Donation.DoesNotExist:
-            return Response({'error': 'Donation not found or not yours.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Donation not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        reservations = Reservation.objects.filter(donation=donation).order_by('-created_at')
+        # ✅ Allow both donor AND beneficiary to see reservations
+        user = request.user
+        is_donor = donation.donor == user
+        is_beneficiary = Reservation.objects.filter(
+            donation=donation, beneficiary=user
+        ).exists()
+
+        if not is_donor and not is_beneficiary:
+            return Response({'error': 'Not authorized.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # ✅ If beneficiary — only return their own reservation
+        if is_beneficiary and not is_donor:
+            reservations = Reservation.objects.filter(
+                donation=donation, beneficiary=user
+            ).order_by('-created_at')
+        else:
+            reservations = Reservation.objects.filter(
+                donation=donation
+            ).order_by('-created_at')
+
         serializer = ReservationSerializer(reservations, many=True, context={'request': request})
         return Response({
             'donation': donation.title,
@@ -282,7 +301,6 @@ class DonationReservationsView(APIView):
             'available_quantity': donation.available_quantity,
             'reservations': serializer.data,
         })
-
 
 # ─────────────────────────────────────────────
 # RESERVATIONS
@@ -519,3 +537,70 @@ class NotInterestedView(APIView):
         if deleted:
             return Response({'message': 'Donation restored to your feed.'})
         return Response({'error': 'No record found.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+# ─── Add this class to donations/views.py ────────────────────────────────────
+# Make sure Rating is imported from .models at the top of views.py:
+# from .models import Donation, Reservation, NotInterested, Rating
+
+
+class RateReservationView(APIView):
+    """
+    Rate the other party after a completed reservation.
+    POST /donations/reservations/<reservation_id>/rate/
+    Body: { "score": 4 }  (1-5)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, reservation_id):
+        score = request.data.get('score')
+
+        # Validate score
+        if not score or not isinstance(score, int) or not (1 <= score <= 5):
+            return Response(
+                {'error': 'Score must be an integer between 1 and 5.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Get reservation
+        try:
+            reservation = Reservation.objects.get(id=reservation_id)
+        except Reservation.DoesNotExist:
+            return Response({'error': 'Reservation not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Only allow rating if reservation is completed
+        if reservation.status != 'completed':
+            return Response(
+                {'error': 'You can only rate completed reservations.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Determine who is rating who
+        user = request.user
+        if user == reservation.beneficiary:
+            rated_user = reservation.donation.donor  # beneficiary rates the donor
+        elif user == reservation.donation.donor:
+            rated_user = reservation.beneficiary     # donor rates the beneficiary
+        else:
+            return Response({'error': 'You are not part of this reservation.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Check if already rated
+        if Rating.objects.filter(reservation=reservation, rater=user).exists():
+            return Response({'error': 'You have already rated this reservation.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create rating
+        Rating.objects.create(
+            reservation=reservation,
+            rater=user,
+            rated_user=rated_user,
+            score=score,
+        )
+
+        # Update rated user's reputation score
+        avg = Rating.objects.filter(rated_user=rated_user).aggregate(
+            avg=models.Avg('score')
+        )['avg'] or 0
+        rated_user.reputation_score = round(avg * 20)  # scale 1-5 → 0-100
+        rated_user.save()
+
+        return Response({'message': f'Rating submitted successfully. {rated_user.username} now has a score of {round(avg, 1)}/5.'})

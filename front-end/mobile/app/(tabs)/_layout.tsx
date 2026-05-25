@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -23,27 +22,21 @@ const TAB_ITEMS = [
   { screen: '/(tabs)/HomeScreen', icon: 'home', label: 'Home' },
   { screen: '/(tabs)/ChatList', icon: 'chatbubble', label: 'Chat' },
   { screen: '/(tabs)/Picture', icon: 'add', label: '' },
-  { screen: '/(tabs)/notifications', icon: 'notifications', label: 'Notification' },
+  { screen: '/(tabs)/Notifications', icon: 'notifications', label: 'Notification' },
   { screen: '/(tabs)/ProfileScreen', icon: 'person', label: 'Profile' },
 ];
 
-=======
-import { Tabs } from 'expo-router';
-import 'react-native-reanimated';
-
->>>>>>> beec5ca7ed89bb4867c32357f8bd65ac61158756
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-<<<<<<< HEAD
 function CustomTabBar() {
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
 
   const handlePress = (index: number, screen: string) => {
     setActiveIndex(index);
-    router.push(screen as any);
+    router.push(screen as never);
   };
 
   return (
@@ -68,7 +61,7 @@ function CustomTabBar() {
 
       <TouchableOpacity
         style={styles.addWrapper}
-        onPress={() => router.push('/(tabs)/Picture' as any)}
+        onPress={() => router.push('/(tabs)/Picture' as never)}
         activeOpacity={0.85}
       >
         <View style={styles.addCircle}>
@@ -111,7 +104,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="HomeScreen" />
       <Tabs.Screen name="ChatList" />
       <Tabs.Screen name="Picture" />
-      <Tabs.Screen name="notifications" />
+      <Tabs.Screen name="Notifications" />
       <Tabs.Screen name="Notificationss" />
       <Tabs.Screen name="ProfileScreen" />
       <Tabs.Screen name="slides" />
@@ -178,21 +171,3 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
 });
-=======
-export default function TabLayout() {
-  return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: { display: 'none' }, 
-      }}
-    >
-      <Tabs.Screen name="index" />
-      <Tabs.Screen name="login" />
-      <Tabs.Screen name="Notifications" />
-      <Tabs.Screen name="Profile" />
-      <Tabs.Screen name="slides" />
-    </Tabs>
-  );
-}
->>>>>>> beec5ca7ed89bb4867c32357f8bd65ac61158756

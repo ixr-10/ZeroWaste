@@ -1,9 +1,6 @@
-<<<<<<< HEAD
-import React, { useState, useEffect, useMemo } from 'react';
-=======
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useIsFocused } from '@react-navigation/native';
->>>>>>> beec5ca7ed89bb4867c32357f8bd65ac61158756
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   FlatList,
@@ -16,17 +13,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Location from 'expo-location';
 import { SearchBar } from '../../components/SearchBar';
 import { FilterButton } from '../../components/FilterButton';
 import { BottomNavBar } from '../../components/ButtomNavBar';
 import { FoodCard } from '../../components/FoodCard';
-<<<<<<< HEAD
-import ReservationAcceptedModal from '../../components/ReservationAcceptedModal'; // ✅ added
-import axios from '../../constants/axios';
-=======
+import ReservationAcceptedModal from '../../components/ReservationAcceptedModal';
 import api from '../../constants/axios';
->>>>>>> beec5ca7ed89bb4867c32357f8bd65ac61158756
-import * as Location from 'expo-location';
 
 const COLORS = {
   primary: '#588157BF',
@@ -40,11 +33,10 @@ const COLORS = {
   tagBg: '#E8EEE5',
 };
 
-// Sort weight: red = 0 (top), yellow = 1, green = 2, none = 3
 const urgencyWeight = (urgency?: string | null): number => {
-  if (urgency === 'red')    return 0;
+  if (urgency === 'red') return 0;
   if (urgency === 'orange') return 1;
-  if (urgency === 'green')  return 2;
+  if (urgency === 'green') return 2;
   return 3;
 };
 
@@ -61,13 +53,20 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const checkStorage = async () => {
+    const keys = await AsyncStorage.getAllKeys();
+    const values = await AsyncStorage.multiGet(keys);
+    console.log('ALL STORAGE:', JSON.stringify(values));
+  };
+  checkStorage();
     if (isFocused) fetchDonations();
   }, [isFocused]);
-
+   
   const fetchDonations = async () => {
     try {
+      setLoading(true);
       const { status } = await Location.requestForegroundPermissionsAsync();
-      let params: any = {};
+      let params: Record<string, number> = {};
 
       if (status === 'granted') {
         try {
@@ -76,7 +75,7 @@ export default function HomeScreen() {
           api.put('users/profile/', {
             latitude: loc.coords.latitude,
             longitude: loc.coords.longitude,
-          }).catch(e => console.log('Location sync failed:', e));
+          }).catch((e) => console.log('Location sync failed:', e));
         } catch (locationError) {
           console.warn('Location unavailable, loading without distance.', locationError);
         }
@@ -92,8 +91,9 @@ export default function HomeScreen() {
       if (reservedRef.current) {
         const { id, quantity } = reservedRef.current;
         const stillExists = newDonations.find((d: any) => String(d.id) === id);
+
         if (!stillExists) {
-          const prevItem = donations.find(d => String(d.id) === id);
+          const prevItem = donations.find((d) => String(d.id) === id);
           if (prevItem) {
             const remainingQty = prevItem.available_quantity - quantity;
             if (remainingQty > 0) {
@@ -101,6 +101,7 @@ export default function HomeScreen() {
             }
           }
         }
+
         reservedRef.current = null;
       }
 
@@ -118,7 +119,9 @@ export default function HomeScreen() {
         searchQuery &&
         !item.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
         !item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      ) return false;
+      ) {
+        return false;
+      }
 
       if (selectedCategory && item.category !== selectedCategory) return false;
 
@@ -126,15 +129,15 @@ export default function HomeScreen() {
         selectedDistance !== null &&
         item.distance_km != null &&
         item.distance_km * 1000 > selectedDistance
-      ) return false;
+      ) {
+        return false;
+      }
 
-      // Shows any item with ANY urgency level (not just red)
       if (emergencyOnly && !item.urgency) return false;
 
       return true;
     });
 
-    // Sort Critical → High Priority → Urgent when emergency filter is active
     if (emergencyOnly) {
       filtered.sort((a, b) => urgencyWeight(a.urgency) - urgencyWeight(b.urgency));
     }
@@ -145,7 +148,7 @@ export default function HomeScreen() {
   const handleNotInterested = async (donationId: string) => {
     try {
       await api.post(`donations/available/${donationId}/not-interested/`);
-      setDonations(prev => prev.filter(d => String(d.id) !== donationId));
+      setDonations((prev) => prev.filter((d) => String(d.id) !== donationId));
     } catch (err: any) {
       console.error('Not interested failed:', err.response?.data);
     }
@@ -161,6 +164,7 @@ export default function HomeScreen() {
   const handleReserve = (donationId: string) => {
     const item = donations.find((d) => String(d.id) === donationId);
     if (!item) return;
+
     reservedRef.current = { id: donationId, quantity: 1 };
     router.push({
       pathname: '/(Screens)/ReservationScreen' as any,
@@ -176,19 +180,20 @@ export default function HomeScreen() {
     });
   };
 
+  const handlePressAvatar = (donorId: string) => {
+    router.push({
+      pathname: '/(Screens)/UserProfile' as any,
+      params: { userId: donorId },
+    });
+  };
+
   const hasActiveFilter = selectedCategory || selectedDistance !== null || emergencyOnly;
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-
-<<<<<<< HEAD
-      {/* ✅ Modal renders on top of everything */}
       <ReservationAcceptedModal />
 
-=======
-      {/* Header */}
->>>>>>> beec5ca7ed89bb4867c32357f8bd65ac61158756
       <View style={styles.header}>
         <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="" />
         <FilterButton
@@ -209,7 +214,6 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Active Filters Display */}
       {hasActiveFilter && (
         <View style={styles.activeFilterRow}>
           {selectedCategory && (
@@ -236,7 +240,6 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Content */}
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={COLORS.secondary} />
@@ -246,21 +249,12 @@ export default function HomeScreen() {
           data={filteredDonations}
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
-            // ✅ item passed as-is — FoodCard handles the urgency pin display
             <FoodCard
               item={item}
               onReserve={handleReserve}
-<<<<<<< HEAD
-              onPressAvatar={(donorId) =>
-                router.push({
-                  pathname: '/(Screens)/UserProfile' as any,
-                  params: { userId: donorId },
-                })
-              }
-=======
+              onPressAvatar={handlePressAvatar}
               onNotInterested={handleNotInterested}
               onReport={handleReport}
->>>>>>> beec5ca7ed89bb4867c32357f8bd65ac61158756
             />
           )}
           contentContainerStyle={styles.listContent}
