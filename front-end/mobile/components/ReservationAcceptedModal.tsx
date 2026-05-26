@@ -51,25 +51,19 @@ export default function ReservationAcceptedModal() {
       const check = async () => {
         try {
           const token = await AsyncStorage.getItem('access_token'); // ✅ fixed key
-          console.log('[Modal] token:', token ? 'EXISTS' : 'NULL');
           if (!token) {
-            console.log('[Modal] No token — skipping');
             return;
           }
 
           const res = await api.get('/donations/reservations/my-reservations/');
-          console.log('[Modal] API response:', JSON.stringify(res.data, null, 2));
 
           const all: AcceptedReservation[] = res.data?.my_requests?.confirmed || [];
-          console.log('[Modal] Confirmed reservations count:', all.length);
 
           if (all.length === 0) {
-            console.log('[Modal] No confirmed reservations');
             return;
           }
 
           const shownIds = await getShownIds();
-          console.log('[Modal] Already shown IDs:', shownIds);
 
           // Clean up stale shown IDs
           const allIds = all.map((r) => r.id);
@@ -79,7 +73,6 @@ export default function ReservationAcceptedModal() {
           }
 
           const unseen = all.find((r) => !cleanedShown.includes(r.id));
-          console.log('[Modal] Unseen confirmed:', unseen ? JSON.stringify(unseen) : 'none');
 
           if (unseen) {
             setReservation(unseen);

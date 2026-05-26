@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const COLORS = {
   primary: '#4A6741',
-  primaryLight: '#A4B18A80',
+  primaryLight: '#D7E1CF',
   white: '#FFFFFF',
   textSecondary: '#6B6B6B',
   black: '#1A1A1A',
@@ -40,7 +40,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ onAddPress }) => {
   return (
     <View style={[
       styles.container,
-      { paddingBottom: Math.max(insets.bottom, 10) }
+      {
+        bottom: Math.max(insets.bottom, 0),
+        paddingBottom: 18,
+      }
     ]}>
       {TABS.map((tab) => {
         if (tab.route === '__add__') {
@@ -52,7 +55,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ onAddPress }) => {
               activeOpacity={0.85}
             >
               <View style={styles.addCircle}>
-                <Ionicons name="add" size={30} color={COLORS.black} />
+                <Ionicons name="add" size={37} color={COLORS.black} />
               </View>
             </TouchableOpacity>
           );
@@ -69,10 +72,15 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ onAddPress }) => {
           >
             <Ionicons
               name={(active ? tab.icon : `${tab.icon}-outline`) as any}
-              size={22}
+              size={25}
               color={active ? COLORS.primary : COLORS.textSecondary}
             />
-            <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+            <Text
+              style={[styles.tabLabel, active && styles.tabLabelActive]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+            >
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -83,26 +91,27 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ onAddPress }) => {
 };
 
 const styles = StyleSheet.create({
- container: {
+  container: {
     flexDirection: 'row',
     backgroundColor: COLORS.primaryLight,
-    paddingTop: 8,
-    paddingHorizontal: 4,
+    paddingTop: 14,
+    paddingHorizontal: 10,
     alignItems: 'flex-end',
     borderTopWidth: 0,
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    // Remove borderRadius: 25 — it was rounding bottom corners too
+    borderTopLeftRadius: 31,
+    borderTopRightRadius: 31,
+    borderBottomLeftRadius: 31,
+    borderBottomRightRadius: 31,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 4,
-    gap: 3,
+    minHeight: 50,
+    gap: 4,
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '500',
     color: COLORS.textSecondary,
   },
@@ -114,21 +123,21 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -22,
+    marginTop: -42,
   },
   addCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 78,
+    height: 78,
+    borderRadius: 39,
     backgroundColor: COLORS.primaryLight,
-    borderWidth: 3,
+    borderWidth: 6,
     borderColor: COLORS.white,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 9,
   },
 });

@@ -5,9 +5,10 @@ import { router } from 'expo-router';
 interface HeaderProps {
   showBack?: boolean;
   onBack?: () => void;
+  showAvatar?: boolean;
 }
 
-export default function Header({ showBack = false }: HeaderProps) {
+export default function Header({ showBack = false, showAvatar = true }: HeaderProps) {
   return (
     <View style={styles.container}>
       {showBack ? (
@@ -19,7 +20,7 @@ export default function Header({ showBack = false }: HeaderProps) {
           <Ionicons name="arrow-back-outline" size={26} color="black" />
         </TouchableOpacity>
       ) : (
-        <View style={styles.backBtn} />
+        showAvatar && <View style={styles.backBtn} />
       )}
 
       <Image

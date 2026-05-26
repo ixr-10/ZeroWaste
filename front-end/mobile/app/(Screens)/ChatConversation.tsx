@@ -51,12 +51,9 @@ export default function ChatConversation() {
   // ─── Show rating banner if reservation is completed ──────────────────────────
  useEffect(() => {
   const checkRating = async () => {
-    console.log('reservationId:', reservationId);
-    console.log('reservationStatus:', reservationStatus);
     
     if (reservationStatus !== 'completed' || !reservationId) return;
     const rated = await AsyncStorage.getItem(`rated_reservation_${reservationId}`);
-    console.log('already rated:', rated);
     if (!rated) {
       setShowRatingBanner(true);
     }

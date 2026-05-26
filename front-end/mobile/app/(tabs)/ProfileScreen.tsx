@@ -1,48 +1,38 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  Pressable,
-  Modal,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  Alert,
-  RefreshControl,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  Image, Pressable, Modal, TextInput,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter, useFocusEffect, router } from 'expo-router';
-import { BottomNavBar } from '../../components/ButtomNavBar';
+import { useRouter, useFocusEffect } from 'expo-router';
 import api from '../../constants/axios';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 const COLORS = {
-  primary: '#4A6741', primaryMedium: '#7A9B71',
-  background: '#E8EDE5', white: '#FFFFFF',
-  textPrimary: '#1A1A1A', textSecondary: '#555555',
-  textMuted: '#888888', cardBg: '#FFFFFF',
-  sectionBg: '#DDE6D8', border: '#D5DED0',
-  red: '#D94F4F', orange: '#E07B39',
+  primary: '#4A6741',
+  primaryMedium: '#7A9B71',
+  background: '#E8EDE5',
+  white: '#FFFFFF',
+  textPrimary: '#1A1A1A',
+  textSecondary: '#555555',
+  textMuted: '#888888',
+  cardBg: '#FFFFFF',
+  sectionBg: '#DDE6D8',
+  border: '#D5DED0',
+  red: '#D94F4F',
+  orange: '#E07B39',
 };
 
-type MainTab    = 'posts' | 'reservations';
-type PostFilter = 'available' | 'reserved' | 'completed' | 'expired';
-type ResFilter  = 'pending' | 'confirmed' | 'rejected';
+type MainTab = 'posts' | 'reservations';
+type PostFilter = 'active' | 'expired' | 'donated';
+type ResTab = 'incoming' | 'my_requests';
+type ResFilter = 'pending' | 'confirmed' | 'rejected';
 
-// ─── Confirm Modal ────────────────────────────────────────────────────────────
-const ConfirmModal = ({
-  visible, message, confirmLabel = 'Delete', confirmColor = COLORS.red, onConfirm, onCancel,
-}: {
-  visible: boolean; message: string; confirmLabel?: string;
-  confirmColor?: string; onConfirm: () => void; onCancel: () => void;
-}) => (
+// ── Confirm Modal ──
+const ConfirmModal = ({ visible, message, confirmLabel = 'Delete', confirmColor = COLORS.red, onConfirm, onCancel }: any) => (
   <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
     <Pressable style={cStyles.backdrop} onPress={onCancel} />
     <View style={cStyles.centerer}>
@@ -62,36 +52,45 @@ const ConfirmModal = ({
 );
 
 const cStyles = StyleSheet.create({
-  backdrop:    { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
-  centerer:    { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  box:         { backgroundColor: COLORS.white, borderRadius: 18, padding: 24, width: '78%', elevation: 10 },
-  message:     { fontSize: 15, color: COLORS.textPrimary, textAlign: 'center', marginBottom: 20, lineHeight: 22 },
-  buttons:     { flexDirection: 'row', gap: 12 },
-  cancelBtn:   { flex: 1, paddingVertical: 11, borderRadius: 999, borderWidth: 1.5, borderColor: COLORS.border, alignItems: 'center' },
-  cancelText:  { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary },
-  confirmBtn:  { flex: 1, paddingVertical: 11, borderRadius: 999, alignItems: 'center' },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
+  centerer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  box: { backgroundColor: COLORS.white, borderRadius: 18, padding: 24, width: '78%', elevation: 10 },
+  message: { fontSize: 15, color: COLORS.textPrimary, textAlign: 'center', marginBottom: 20, lineHeight: 22 },
+  buttons: { flexDirection: 'row', gap: 12 },
+  cancelBtn: { flex: 1, paddingVertical: 11, borderRadius: 999, borderWidth: 1.5, borderColor: COLORS.border, alignItems: 'center' },
+  cancelText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary },
+  confirmBtn: { flex: 1, paddingVertical: 11, borderRadius: 999, alignItems: 'center' },
   confirmText: { fontSize: 14, fontWeight: '700', color: COLORS.white },
 });
 
-// ─── Edit Username Modal ──────────────────────────────────────────────────────
-const EditUsernameModal = ({
-  visible, currentUsername, onSave, onClose,
-}: {
-  visible: boolean; currentUsername: string;
-  onSave: (name: string) => void; onClose: () => void;
-}) => {
+// ── Edit Username Modal ──
+const EditUsernameModal = ({ visible, currentUsername, onSave, onClose }: any) => {
   const [value, setValue] = useState(currentUsername);
   useEffect(() => { if (visible) setValue(currentUsername); }, [visible, currentUsername]);
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <Pressable style={cStyles.backdrop} onPress={onClose} />
         <View style={eStyles.box}>
           <Text style={eStyles.title}>Edit Username</Text>
-          <TextInput style={eStyles.input} value={value} onChangeText={setValue} placeholder="Enter new username" placeholderTextColor={COLORS.textMuted} autoFocus maxLength={30} />
+          <TextInput
+            style={eStyles.input}
+            value={value}
+            onChangeText={setValue}
+            placeholder="Enter new username"
+            placeholderTextColor={COLORS.textMuted}
+            autoFocus
+            maxLength={30}
+          />
           <View style={cStyles.buttons}>
-            <TouchableOpacity style={cStyles.cancelBtn} onPress={onClose}><Text style={cStyles.cancelText}>Cancel</Text></TouchableOpacity>
-            <TouchableOpacity style={[cStyles.confirmBtn, { backgroundColor: COLORS.primary }]} onPress={() => { if (value.trim()) { onSave(value.trim()); onClose(); } }}>
+            <TouchableOpacity style={cStyles.cancelBtn} onPress={onClose}>
+              <Text style={cStyles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[cStyles.confirmBtn, { backgroundColor: COLORS.primary }]}
+              onPress={() => { if (value.trim()) { onSave(value.trim()); onClose(); } }}
+            >
               <Text style={cStyles.confirmText}>Save</Text>
             </TouchableOpacity>
           </View>
@@ -102,437 +101,469 @@ const EditUsernameModal = ({
 };
 
 const eStyles = StyleSheet.create({
-  box:   { backgroundColor: COLORS.white, borderRadius: 20, padding: 24, width: '82%', zIndex: 10, elevation: 10 },
+  box: { backgroundColor: COLORS.white, borderRadius: 20, padding: 24, width: '82%', elevation: 10 },
   title: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 16, textAlign: 'center' },
   input: { borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: COLORS.textPrimary, marginBottom: 20, backgroundColor: '#F7FAF5' },
 });
 
-// ─── View Photo Modal ─────────────────────────────────────────────────────────
-const ViewPhotoModal = ({ visible, imageUri, onClose }: { visible: boolean; imageUri: string | null; onClose: () => void; }) => (
-  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-    <Pressable style={vStyles.backdrop} onPress={onClose}>
-      <Image source={imageUri ? { uri: imageUri } : require('../../assets/images/me.png')} style={vStyles.fullImage} resizeMode="contain" />
-    </Pressable>
-  </Modal>
-);
-
-const vStyles = StyleSheet.create({
-  backdrop:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' },
-  fullImage: { width: 300, height: 300, borderRadius: 16 },
-});
-
-// ─── PostItem ─────────────────────────────────────────────────────────────────
-const PostItem = ({ item, onDelete, onEdit }: { item: any; onDelete: () => void; onEdit: () => void; }) => {
+// ── Post Item ── (matches Figma card style)
+const PostItem = ({ item, onDelete, onEdit, showEdit }: any) => {
   const getStatusColor = () => {
-    switch (item.status) {
-      case 'available': return COLORS.primary;
-      case 'reserved':  return COLORS.orange;
-      case 'completed': return COLORS.primary;
-      case 'expired':   return COLORS.red;
-      default:          return COLORS.textMuted;
-    }
+    if (item.status === 'expired') return COLORS.red;
+    if (item.status === 'completed') return COLORS.textMuted;
+    if (!item.expiry_date) return COLORS.orange;
+    const days = Math.ceil((new Date(item.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    return days <= 2 ? COLORS.red : COLORS.orange;
   };
-  const getStatusLabel = () => {
-    switch (item.status) {
-      case 'available': return `Expires: ${item.expiry_date}`;
-      case 'reserved':  return 'Reserved';
-      case 'completed': return 'Donated ✓';
-      case 'expired':   return 'Expired';
-      default:          return item.status;
-    }
+
+  const getStatusText = () => {
+    if (item.status === 'expired') return 'Expired';
+    if (item.status === 'completed') return 'Donation made';
+    if (!item.expiry_date) return 'Available';
+    const days = Math.ceil((new Date(item.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    if (days <= 0) return 'Expires today';
+    return `Expires in ${days} day${days > 1 ? 's' : ''}`;
   };
-  const canEdit = item.status === 'available';
+
   return (
-    <View style={pStyles.card}>
+    <View style={postStyles.card}>
       {item.image ? (
-        <Image source={{ uri: item.image }} style={pStyles.image} />
+        <Image source={{ uri: item.image }} style={postStyles.image} />
       ) : (
-        <View style={[pStyles.image, pStyles.imageFallback]}>
-          <Ionicons name="fast-food-outline" size={22} color={COLORS.primary} />
+        <View style={[postStyles.image, postStyles.imageFallback]}>
+          <Ionicons name="image-outline" size={22} color={COLORS.textMuted} />
         </View>
       )}
-      <View style={pStyles.info}>
-        <Text style={pStyles.title}>{item.title}</Text>
-        <Text style={pStyles.subtitle}>{item.available_quantity}/{item.quantity} {item.unit} • {item.category}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
-          {item.status === 'completed' && <Ionicons name="checkmark-circle" size={14} color={COLORS.primary} />}
-          <Text style={[pStyles.status, { color: getStatusColor() }]}>{getStatusLabel()}</Text>
-        </View>
+      <View style={postStyles.info}>
+        <Text style={postStyles.title} numberOfLines={1}>{item.title}</Text>
+        <Text style={postStyles.subtitle}>{item.quantity} {item.unit} · {item.category}</Text>
+        <Text style={[postStyles.status, { color: getStatusColor() }]}>{getStatusText()}</Text>
       </View>
-      <View style={pStyles.actions}>
-        {canEdit && (
-          <TouchableOpacity style={pStyles.actionBtn} onPress={onEdit} activeOpacity={0.7}>
+      <View style={postStyles.actions}>
+        {showEdit && (
+          <TouchableOpacity style={postStyles.actionBtn} onPress={onEdit} activeOpacity={0.7}>
             <Ionicons name="create-outline" size={22} color={COLORS.primary} />
           </TouchableOpacity>
         )}
-        {item.status !== 'completed' && (
-          <TouchableOpacity style={pStyles.actionBtn} onPress={onDelete} activeOpacity={0.7}>
-            <Ionicons name="trash-outline" size={22} color={COLORS.red} />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity style={postStyles.actionBtn} onPress={onDelete} activeOpacity={0.7}>
+          <Ionicons name="trash-outline" size={22} color={COLORS.red} />
+        </TouchableOpacity>
       </View>
     </View>
   );
 };
 
-const pStyles = StyleSheet.create({
-  card:          { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardBg, borderRadius: 14, padding: 10, marginBottom: 10 },
-  image:         { width: 56, height: 56, borderRadius: 10, backgroundColor: COLORS.border },
+const postStyles = StyleSheet.create({
+  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardBg, borderRadius: 14, padding: 10, marginBottom: 10 },
+  image: { width: 56, height: 56, borderRadius: 10, backgroundColor: COLORS.border },
   imageFallback: { alignItems: 'center', justifyContent: 'center' },
-  info:          { flex: 1, marginLeft: 12 },
-  title:         { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
-  subtitle:      { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
-  status:        { fontSize: 12, fontWeight: '600', marginTop: 3 },
-  actions:       { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 8 },
-  actionBtn:     { padding: 4 },
+  info: { flex: 1, marginLeft: 12 },
+  title: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
+  subtitle: { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
+  status: { fontSize: 12, fontWeight: '600', marginTop: 3 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 8 },
+  actionBtn: { padding: 4 },
 });
 
-// ─── ReservationItem ──────────────────────────────────────────────────────────
-const ReservationItem = ({ item, onAction }: { item: any; onAction: (id: number, action: 'confirm' | 'reject') => void; }) => {
+// ── Incoming Reservation Card ── (matches Figma with confirm/reject)
+const IncomingCard = ({ item, onAction }: any) => {
   const [menuOpen, setMenuOpen] = useState(false);
-  const isPending   = item.status === 'pending';
+  const isPending = item.status === 'pending';
   const isConfirmed = item.status === 'confirmed';
-  const isRejected  = item.status === 'rejected';
+  const isRejected = item.status === 'rejected' || item.status === 'cancelled';
+  const statusColor = isConfirmed ? COLORS.primary : isRejected ? COLORS.red : COLORS.orange;
+
   return (
-    <View style={[rStyles.card, isConfirmed && rStyles.cardConfirmed, isRejected && rStyles.cardRejected]}>
-      <View style={rStyles.avatar}>
+    <View style={[resStyles.card, isConfirmed && { borderColor: COLORS.primary }, isRejected && { borderColor: COLORS.red }]}>
+      <View style={resStyles.avatar}>
         <Ionicons name="person" size={20} color={COLORS.primaryMedium} />
       </View>
-      <View style={rStyles.textContainer}>
-        <Text style={rStyles.notifText}>
-          <Text style={rStyles.bold}>{item.beneficiary_username || 'User'}</Text> wants to reserve
-          <Text style={rStyles.productName}> "{item.donation_title || 'Donation'}"</Text>
-        </Text>
-        <Text style={rStyles.quantity}>Qty: {item.quantity_requested}</Text>
-      </View>
+      <Text style={resStyles.text}>
+        {isPending ? (
+          <>
+            <Text style={resStyles.bold}>{item.beneficiary_username}</Text>
+            <Text> wants to reserve </Text>
+            <Text style={resStyles.highlight}>{`'${item.donation_title}'`}</Text>
+          </>
+        ) : isConfirmed ? (
+          <>
+            <Text style={resStyles.bold}>{item.beneficiary_username}</Text>
+            <Text> has reserved </Text>
+            <Text style={resStyles.highlight}>{`'${item.donation_title}'`}</Text>
+          </>
+        ) : (
+          <>
+            <Text style={resStyles.bold}>{item.beneficiary_username}</Text>
+            <Text>{`'s reservation for `}</Text>
+            <Text style={resStyles.highlight}>{`'${item.donation_title}'`}</Text>
+            <Text> was rejected</Text>
+          </>
+        )}
+      </Text>
+
+      {/* 3-dot menu for pending */}
       {isPending ? (
         <View style={{ position: 'relative' }}>
-          <TouchableOpacity onPress={() => setMenuOpen(!menuOpen)} style={{ padding: 6 }}>
-            <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textMuted} />
+          <TouchableOpacity onPress={() => setMenuOpen(!menuOpen)} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="ellipsis-vertical" size={18} color={COLORS.textSecondary} />
           </TouchableOpacity>
           {menuOpen && (
             <>
-              <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setMenuOpen(false)} />
-              <View style={rStyles.menu}>
-                <TouchableOpacity style={rStyles.menuItem} onPress={() => { setMenuOpen(false); onAction(item.id, 'confirm'); }}>
-                  <Text style={rStyles.menuConfirm}>Confirm</Text>
+              <Pressable style={{ position: 'absolute', top: -500, left: -500, right: -500, bottom: -500, zIndex: 8 }} onPress={() => setMenuOpen(false)} />
+              <View style={resStyles.dotMenu}>
+                <TouchableOpacity style={resStyles.dotMenuItem} onPress={() => { setMenuOpen(false); onAction(item.id, 'confirm'); }}>
+                  <Text style={resStyles.dotMenuConfirm}>Confirm</Text>
                 </TouchableOpacity>
                 <View style={{ height: 1, backgroundColor: COLORS.border }} />
-                <TouchableOpacity style={rStyles.menuItem} onPress={() => { setMenuOpen(false); onAction(item.id, 'reject'); }}>
-                  <Text style={rStyles.menuReject}>Reject</Text>
+                <TouchableOpacity style={resStyles.dotMenuItem} onPress={() => { setMenuOpen(false); onAction(item.id, 'reject'); }}>
+                  <Text style={resStyles.dotMenuReject}>Reject</Text>
                 </TouchableOpacity>
               </View>
             </>
           )}
         </View>
-      ) : isConfirmed ? (
-        <Text style={rStyles.confirmedBadge}>Confirmed ✓</Text>
       ) : (
-        <Text style={rStyles.rejectedBadge}>Rejected</Text>
+        <View style={[resStyles.statusPill, { borderColor: statusColor }]}>
+          <Text style={[resStyles.statusText, { color: statusColor }]}>
+            {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+          </Text>
+        </View>
       )}
     </View>
   );
 };
 
-const rStyles = StyleSheet.create({
-  card:           { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardBg, borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1.5, borderColor: COLORS.border },
-  cardConfirmed:  { borderColor: COLORS.primary },
-  cardRejected:   { borderColor: COLORS.red },
-  avatar:         { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F5C6C6', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
-  textContainer:  { flex: 1 },
-  notifText:      { fontSize: 13, color: COLORS.textPrimary, lineHeight: 18 },
-  bold:           { fontWeight: '700' },
-  productName:    { color: COLORS.primary, fontWeight: '600' },
-  quantity:       { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-  confirmedBadge: { fontSize: 12, color: COLORS.primary, fontWeight: '700' },
-  rejectedBadge:  { fontSize: 12, color: COLORS.red, fontWeight: '600' },
-  menu:           { position: 'absolute', right: 0, top: 40, backgroundColor: COLORS.white, borderRadius: 10, elevation: 8, zIndex: 999, minWidth: 110, borderWidth: 1, borderColor: COLORS.border },
-  menuItem:       { paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center' },
-  menuConfirm:    { fontSize: 14, color: COLORS.primary, fontWeight: '600' },
-  menuReject:     { fontSize: 14, color: COLORS.red, fontWeight: '600' },
+// ── My Request Card ── (matches Figma)
+const MyRequestCard = ({ item, onCancel }: any) => {
+  const isConfirmed = item.status === 'confirmed';
+  const isRejected = item.status === 'rejected' || item.status === 'cancelled';
+  const isPending = item.status === 'pending';
+  const borderColor = isConfirmed ? COLORS.primary : isRejected ? COLORS.red : 'transparent';
+
+  return (
+    <View style={[resStyles.card, { borderColor }]}>
+      <View style={resStyles.avatar}>
+        <Ionicons name="person" size={20} color={COLORS.primaryMedium} />
+      </View>
+      <Text style={resStyles.text}>
+        {isPending ? (
+          <>
+            <Text style={resStyles.bold}>{item.donor_username || 'Donor'}</Text>
+            <Text> wants to reserve </Text>
+            <Text style={resStyles.highlight}>{`'${item.donation_title}'`}</Text>
+          </>
+        ) : isConfirmed ? (
+          <>
+            <Text style={resStyles.bold}>{item.donor_username || 'Donor'}</Text>
+            <Text> confirmed your reservation for </Text>
+            <Text style={resStyles.highlight}>{`'${item.donation_title}'`}</Text>
+          </>
+        ) : (
+          <>
+            <Text style={resStyles.bold}>{item.donor_username || 'Donor'}</Text>
+            <Text> rejected your reservation for </Text>
+            <Text style={resStyles.highlight}>{`'${item.donation_title}'`}</Text>
+          </>
+        )}
+      </Text>
+      {isPending ? (
+        <TouchableOpacity onPress={onCancel} style={resStyles.cancelBtn}>
+          <Text style={resStyles.cancelText}>Cancel</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity onPress={onCancel} style={{ marginLeft: 8, padding: 4 }}>
+          <Ionicons name="trash-outline" size={18} color={COLORS.red} />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+};
+
+const resStyles = StyleSheet.create({
+  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardBg, borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1.5, borderColor: 'transparent' },
+  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F5C6C6', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  text: { flex: 1, fontSize: 13, color: COLORS.textPrimary, lineHeight: 19 },
+  bold: { fontWeight: '700' },
+  highlight: { color: COLORS.primary, fontWeight: '600' },
+  statusPill: { borderWidth: 1.5, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, marginLeft: 8 },
+  statusText: { fontSize: 11, fontWeight: '700' },
+  dotMenu: { position: 'absolute', right: 0, top: 24, backgroundColor: COLORS.white, borderRadius: 10, minWidth: 110, zIndex: 20, elevation: 8, overflow: 'hidden' },
+  dotMenuItem: { paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center' },
+  dotMenuConfirm: { fontSize: 14, fontWeight: '600', color: COLORS.primary },
+  dotMenuReject: { fontSize: 14, fontWeight: '600', color: COLORS.red },
+  cancelBtn: { backgroundColor: '#D94F4F15', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: COLORS.red, marginLeft: 8 },
+  cancelText: { fontSize: 11, fontWeight: '700', color: COLORS.red },
 });
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
+// ── Main Profile Screen ──
 export default function ProfileScreen() {
   const router = useRouter();
 
-  const [username, setUsername]                 = useState('');
-  const [role, setRole]                         = useState('');
-  const [score, setScore]                       = useState<number | null>(null);
-  const [donationCount, setDonationCount]       = useState(0);
-  const [profileImage, setProfileImage]         = useState<string | null>(null);
-  const [editModalVisible, setEditModal]         = useState(false);
-  const [menuOpen, setMenuOpen]                 = useState(false);
-  const [photoMenuOpen, setPhotoMenuOpen]       = useState(false);
-  const [viewPhotoVisible, setViewPhotoVisible] = useState(false);
-  const [mainTab, setMainTab]                   = useState<MainTab>('posts');
-  const [postFilter, setPostFilter]             = useState<PostFilter>('available');
-  const [resFilter, setResFilter]               = useState<ResFilter>('pending');
-  const [donations, setDonations]               = useState<any[]>([]);
-  const [reservations, setReservations]         = useState<any[]>([]);
-  const [loading, setLoading]                   = useState(true);
-  const [refreshing, setRefreshing]             = useState(false);
-  const [confirmVisible, setConfirmVisible]     = useState(false);
-  const [confirmMsg, setConfirmMsg]             = useState('');
-  const [confirmAct, setConfirmAct]             = useState<() => void>(() => {});
-  const [confirmLabel, setConfirmLabel]         = useState('Delete');
-  const [confirmColor, setConfirmColor]         = useState(COLORS.red);
+  const [username, setUsername] = useState('');
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [reputationScore, setReputationScore] = useState(0);
+  const [editModalVisible, setEditModal] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [mainTab, setMainTab] = useState<MainTab>('posts');
+  const [postFilter, setPostFilter] = useState<PostFilter>('active');
+  const [resTab, setResTab] = useState<ResTab>('incoming');
+  const [resFilter, setResFilter] = useState<ResFilter>('pending');
+  const [loading, setLoading] = useState(true);
+
+  const [activeDonations, setActiveDonations] = useState<any[]>([]);
+  const [expiredDonations, setExpiredDonations] = useState<any[]>([]);
+  const [donatedDonations, setDonatedDonations] = useState<any[]>([]);
+
+  const [incomingPending, setIncomingPending] = useState<any[]>([]);
+  const [incomingConfirmed, setIncomingConfirmed] = useState<any[]>([]);
+  const [incomingRejected, setIncomingRejected] = useState<any[]>([]);
+  const [myPending, setMyPending] = useState<any[]>([]);
+  const [myConfirmed, setMyConfirmed] = useState<any[]>([]);
+  const [myRejected, setMyRejected] = useState<any[]>([]);
+
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [confirmMsg, setConfirmMsg] = useState('');
+  const [confirmAct, setConfirmAct] = useState<() => void>(() => {});
+  const [confirmLabel, setConfirmLabel] = useState('Delete');
+  const [confirmColor, setConfirmColor] = useState(COLORS.red);
 
   const showConfirm = (msg: string, action: () => void, label = 'Delete', color = COLORS.red) => {
-    setConfirmMsg(msg); setConfirmAct(() => action);
-    setConfirmLabel(label); setConfirmColor(color); setConfirmVisible(true);
+    setConfirmMsg(msg);
+    setConfirmAct(() => action);
+    setConfirmLabel(label);
+    setConfirmColor(color);
+    setConfirmVisible(true);
   };
-
-  // ── Recalculate donation count whenever donations list changes ──────────────
-  useEffect(() => {
-    setDonationCount(donations.length);
-  }, [donations]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      // ── Load persisted profile image ──
-      const savedImage = await AsyncStorage.getItem('profileImage');
-      if (savedImage) setProfileImage(savedImage);
-
-      // ── Fetch donations, reservations, profile in parallel ──
-      const [donRes, resRes, profileRes] = await Promise.all([
-        api.get('/donations/my-donations/'),
-        api.get('/donations/reservations/received/'),
+      const [profileRes, donRes, resRes] = await Promise.all([
         api.get('/users/profile/'),
+        api.get('/donations/my-donations/'),
+        api.get('/donations/reservations/my-reservations/'),
       ]);
 
-      // API returns { active: [], donated: [], expired: [] }
+      const user = profileRes.data;
+      setUsername(user.username || 'Username');
+      setAvatar(user.avatar || null);
+      setReputationScore(user.reputation_score || 0);
+
       const donData = donRes.data;
-      const allDonations = [
-        ...(donData?.active  || []),
-        ...(donData?.donated || []),
-        ...(donData?.expired || []),
-      ];
-      setDonations(allDonations);
+      setActiveDonations(donData.active || []);
+      setExpiredDonations(donData.expired || []);
+      setDonatedDonations(donData.donated || []);
 
-      // API returns { incoming: {...}, my_requests: {...} }
       const resData = resRes.data;
-      const allReservations = Array.isArray(resData)
-        ? resData
-        : [
-            ...(resData?.incoming?.pending   || []),
-            ...(resData?.incoming?.confirmed || []),
-            ...(resData?.incoming?.rejected  || []),
-          ];
-      setReservations(allReservations);
+      setIncomingPending(resData.incoming?.pending || []);
+      setIncomingConfirmed(resData.incoming?.confirmed || []);
+      setIncomingRejected(resData.incoming?.rejected || []);
+      setMyPending(resData.my_requests?.pending || []);
+      setMyConfirmed(resData.my_requests?.confirmed || []);
+      setMyRejected(resData.my_requests?.rejected || []);
 
-      // Profile data
-      const p = profileRes.data;
-      setUsername(p.username || 'Username');
-      setRole(p.role || '');
-      setScore(p?.score ?? p?.rating ?? p?.average_rating ?? null);
-
-    } catch (err) {
-      console.log('Error loading profile data:', err);
+    } catch (err: any) {
+      Alert.alert('Error', 'Failed to load profile data.');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, []);
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    loadData();
-  }, [loadData]);
-
-  // ── Reload every time screen comes into focus ────────────────────────────────
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
-  // ── Photo handlers ────────────────────────────────────────────────────────
-  const handleViewPhoto = () => { setPhotoMenuOpen(false); setViewPhotoVisible(true); };
+  const getCurrentDonations = () => {
+    if (postFilter === 'active') return activeDonations;
+    if (postFilter === 'expired') return expiredDonations;
+    return donatedDonations;
+  };
 
-  const handleChangePhoto = async () => {
-    setPhotoMenuOpen(false);
+  const getCurrentReservations = () => {
+    if (resTab === 'incoming') {
+      if (resFilter === 'pending') return incomingPending;
+      if (resFilter === 'confirmed') return incomingConfirmed;
+      return incomingRejected;
+    } else {
+      if (resFilter === 'pending') return myPending;
+      if (resFilter === 'confirmed') return myConfirmed;
+      return myRejected;
+    }
+  };
+
+  const totalDonations = activeDonations.length + expiredDonations.length + donatedDonations.length;
+
+  // Score display: scale 0-100 → 0.0-5.0
+  const scoreDisplay = reputationScore > 0
+    ? (reputationScore / 20).toFixed(1)
+    : '—';
+
+  const pickAndUploadAvatar = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('Permission Denied', 'We need access to your photos.'); return; }
+    if (status !== 'granted') { Alert.alert('Permission Denied'); return; }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true, aspect: [1, 1], quality: 0.8,
+      allowsEditing: true, aspect: [1, 1], quality: 0.7,
     });
-    if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
-      setProfileImage(uri);
-      await AsyncStorage.setItem('profileImage', uri);
+
+    if (result.canceled || !result.assets?.[0]) return;
+    const uri = result.assets[0].uri;
+    const formData = new FormData();
+    const filename = uri.split('/').pop() || 'avatar.jpg';
+    const type = `image/${filename.split('.').pop() || 'jpeg'}`;
+    formData.append('avatar', { uri, name: filename, type } as any);
+
+    try {
+      const token = await AsyncStorage.getItem('access');
+      const response = await fetch(
+        `${require('../../constants/config').BASE_URL}users/profile/`,
+        {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData,
+        }
+      );
+      const data = await response.json();
+      setAvatar(data.avatar || uri);
+      Alert.alert('Success', 'Profile picture updated!');
+    } catch {
+      Alert.alert('Error', 'Failed to upload avatar');
     }
   };
 
-  const handleDeletePhoto = () => {
-    setPhotoMenuOpen(false);
-    showConfirm('Delete your profile photo?', async () => {
-      setProfileImage(null);
-      await AsyncStorage.removeItem('profileImage');
-    }, 'Delete', COLORS.red);
+  const handleUpdateUsername = async (newUsername: string) => {
+    try {
+      const response = await api.put('/users/profile/', { username: newUsername });
+      setUsername(response.data.username);
+    } catch (err: any) {
+      Alert.alert('Error', err.response?.data?.username?.[0] || 'Failed to update username');
+    }
   };
 
-  // ── Reservation handlers ──────────────────────────────────────────────────
   const handleReservationAction = async (id: number, action: 'confirm' | 'reject') => {
     try {
-      const endpoint = action === 'confirm'
-        ? `/donations/reservations/${id}/confirm/`
-        : `/donations/reservations/${id}/reject/`;
-      await api.post(endpoint);
-      setReservations((prev) =>
-        prev.map((r) => r.id === id ? { ...r, status: action === 'confirm' ? 'confirmed' : 'rejected' } : r)
-      );
-      if (action === 'confirm') {
-        const updatedRes = reservations.find(r => r.id === id);
-        setDonations((prev) =>
-          prev.map((d) => {
-            if (d.id !== updatedRes?.donation) return d;
-            const newAvailable = d.available_quantity - updatedRes.quantity_requested;
-            return { ...d, available_quantity: newAvailable, status: newAvailable <= 0 ? 'completed' : 'available' };
-          })
-        );
-        // Refresh score from backend after a donation is completed
-        try {
-          const profileRes = await api.get('/users/profile/');
-          const p = profileRes.data;
-          setScore(p?.score ?? p?.rating ?? p?.average_rating ?? null);
-        } catch (_) {}
-      }
-      Alert.alert('Success', `Reservation ${action}ed successfully!`);
+      await api.post(`/donations/reservations/${id}/${action}/`);
+      loadData();
     } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.error || 'Failed to update reservation');
+      Alert.alert('Error', err.response?.data?.error || 'Failed');
     }
   };
 
-  // ── Post handlers ─────────────────────────────────────────────────────────
   const handleDeletePost = (id: number) => {
-    showConfirm('Delete this donation? This cannot be undone.', async () => {
+    showConfirm('Delete this donation?', async () => {
       try {
-        await api.delete(`/donations/${id}/`);
-        setDonations((prev) => prev.filter((d) => d.id !== id));
+        await api.delete(`/donations/${id}/delete/`);
+        loadData();
       } catch (err: any) {
-        Alert.alert('Error', err?.response?.data?.error || 'Failed to delete donation');
+        Alert.alert('Error', err.response?.data?.error || 'Failed to delete');
       }
     });
+  };
+
+  const handleCancelReservation = async (id: number) => {
+    try {
+      await api.post(`/donations/reservations/${id}/cancel/`);
+      loadData();
+    } catch (err: any) {
+      Alert.alert('Error', err.response?.data?.error || 'Failed to cancel');
+    }
   };
 
   const handleEditPost = (item: any) => {
-    router.push({ pathname: '/(Screens)/EditPostScreen', params: { post: JSON.stringify(item) } });
+    router.push({
+      pathname: '/(Screens)/EditPostScreen' as any,
+      params: { post: JSON.stringify(item) },
+    });
   };
 
   const handleLogout = () => {
     setMenuOpen(false);
-    showConfirm('Are you sure you want to logout?', async () => {
-      await AsyncStorage.multiRemove(['access', 'refresh', 'user']);
-      router.replace('/auth/login');
-    }, 'Logout', COLORS.red);
+    showConfirm(
+      'Are you sure you want to logout?',
+      async () => {
+        try {
+          const refresh = await AsyncStorage.getItem('refresh');
+          if (refresh) await api.post('/users/logout/', { refresh });
+        } catch {}
+        await AsyncStorage.multiRemove(['access', 'refresh', 'access_token', 'refresh_token', 'isLoggedIn', 'user']);
+        router.replace('/auth/login');
+      },
+      'Logout',
+      COLORS.red
+    );
   };
 
-  const filteredDonations    = donations.filter((d) => d.status === postFilter);
-  const filteredReservations = reservations.filter((r) =>
-    resFilter === 'rejected' ? r.status === 'rejected' : r.status === resFilter
-  );
-
-  const scoreDisplay = score !== null ? `${Number(score).toFixed(1)} ⭐` : '— ⭐';
-
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ConfirmModal
-        visible={confirmVisible} message={confirmMsg}
-        confirmLabel={confirmLabel} confirmColor={confirmColor}
+        visible={confirmVisible}
+        message={confirmMsg}
+        confirmLabel={confirmLabel}
+        confirmColor={confirmColor}
         onConfirm={() => { confirmAct(); setConfirmVisible(false); }}
         onCancel={() => setConfirmVisible(false)}
       />
-      <EditUsernameModal visible={editModalVisible} currentUsername={username} onSave={setUsername} onClose={() => setEditModal(false)} />
-      <ViewPhotoModal visible={viewPhotoVisible} imageUri={profileImage} onClose={() => setViewPhotoVisible(false)} />
+      <EditUsernameModal
+        visible={editModalVisible}
+        currentUsername={username}
+        onSave={handleUpdateUsername}
+        onClose={() => setEditModal(false)}
+      />
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
-        }
-      >
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+        {/* Dropdown Menu */}
+        {menuOpen && (
+          <>
+            <Pressable style={styles.menuBackdrop} onPress={() => setMenuOpen(false)} />
+            <View style={styles.dropdown}>
+              <TouchableOpacity style={styles.dropdownItem} onPress={() => { setMenuOpen(false); router.push('/(Screens)/SettingsScreen' as any); }}>
+                <Text style={styles.dropdownText}>Settings</Text>
+              </TouchableOpacity>
+              <View style={styles.dropdownDivider} />
+              <TouchableOpacity style={styles.dropdownItem} onPress={handleLogout}>
+                <Text style={[styles.dropdownText, { color: COLORS.red }]}>Logout</Text>
+                <Ionicons name="log-out-outline" size={16} color={COLORS.red} style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
         {/* ── Profile Card ── */}
         <View style={styles.profileCard}>
-
-          {/* ⋮ top-right menu */}
           <TouchableOpacity style={styles.menuBtn} onPress={() => setMenuOpen(!menuOpen)}>
-            <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textSecondary} />
+            <Ionicons name="ellipsis-vertical" size={22} color={COLORS.textSecondary} />
           </TouchableOpacity>
-          {menuOpen && (
-            <>
-              <Pressable style={styles.menuBackdrop} onPress={() => setMenuOpen(false)} />
-              <View style={styles.dropdown}>
-                <TouchableOpacity style={styles.dropdownItem} onPress={() => { setMenuOpen(false); router.push('/(Screens)/SettingsScreen' as any); }}>
-                  <Text style={styles.dropdownText}>Settings</Text>
-                </TouchableOpacity>
-                <View style={styles.dropdownDivider} />
-                <TouchableOpacity style={styles.dropdownItem} onPress={handleLogout}>
-                  <Text style={[styles.dropdownText, { color: COLORS.red }]}>Logout</Text>
-                  <Ionicons name="log-out-outline" size={16} color={COLORS.red} style={{ marginLeft: 6 }} />
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
 
-          {/* ── Avatar ── */}
-          <TouchableOpacity onPress={() => setPhotoMenuOpen(!photoMenuOpen)} style={styles.avatarWrapper} activeOpacity={0.85}>
-            <View style={[
-              styles.avatarCircle,
-              role === 'food_saver' && { borderColor: '#E09F3E', borderWidth: 3 },
-            ]}>
-              {profileImage
-                ? <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+          {/* Avatar with camera badge */}
+          <TouchableOpacity onPress={pickAndUploadAvatar} style={styles.avatarWrapper} activeOpacity={0.8}>
+            <View style={styles.avatarCircle}>
+              {avatar
+                ? <Image source={{ uri: avatar }} style={styles.avatarImage} />
                 : <Image source={require('../../assets/images/me.png')} style={styles.avatarImage} />
               }
             </View>
-            <View style={styles.editPhotoBadge}>
-              <Ionicons name="camera" size={14} color="#fff" />
+            <View style={styles.cameraBadge}>
+              <Ionicons name="camera" size={14} color={COLORS.white} />
             </View>
           </TouchableOpacity>
 
-          {/* ── Photo dropdown ── */}
-          {photoMenuOpen && (
-            <>
-              <Pressable style={{ position: 'absolute', top: -300, left: -300, right: -300, bottom: -300, zIndex: 15 }} onPress={() => setPhotoMenuOpen(false)} />
-              <View style={styles.photoMenu}>
-                <TouchableOpacity style={styles.photoMenuItem} onPress={handleViewPhoto} activeOpacity={0.7}>
-                  <Text style={styles.photoMenuText}>View photo</Text>
-                </TouchableOpacity>
-                <View style={styles.photoMenuDivider} />
-                <TouchableOpacity style={styles.photoMenuItem} onPress={handleChangePhoto} activeOpacity={0.7}>
-                  <Text style={styles.photoMenuText}>Change photo</Text>
-                </TouchableOpacity>
-                <View style={styles.photoMenuDivider} />
-                <TouchableOpacity style={styles.photoMenuItem} onPress={handleDeletePhoto} activeOpacity={0.7}>
-                  <Text style={[styles.photoMenuText, { color: COLORS.red }]}>Delete photo</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-
+          {/* Username + edit */}
           <View style={styles.nameRow}>
             <Text style={styles.username}>{username}</Text>
-            {role === 'food_saver' && (
-              <Ionicons name="trophy" size={20} color="orange" style={{ marginLeft: 6 }} />
-            )}
-            <TouchableOpacity style={{ marginLeft: 6 }} onPress={() => setEditModal(true)}>
+            <TouchableOpacity style={{ marginLeft: 6 }} onPress={() => setEditModal(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Ionicons name="pencil" size={16} color={COLORS.textMuted} />
             </TouchableOpacity>
           </View>
 
-          {/* ── Stats ── */}
-          <View style={[
-            styles.statsRow,
-            role === 'food_saver' && { borderColor: '#E09F3E' },
-          ]}>
+          {/* Stats: Donations + Score (matches Figma) */}
+          <View style={styles.statsRow}>
             <View style={styles.statBox}>
-              <Text style={styles.statValue}>{donationCount}</Text>
+              <Text style={styles.statValue}>{totalDonations}</Text>
               <Text style={styles.statLabel}>Donations</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
-              <Text style={styles.statValue}>{scoreDisplay}</Text>
+              <Text style={styles.statValue}>{scoreDisplay} ⭐</Text>
               <Text style={styles.statLabel}>Score</Text>
             </View>
           </View>
@@ -540,9 +571,15 @@ export default function ProfileScreen() {
 
         {/* ── Content Card ── */}
         <View style={styles.contentCard}>
+
+          {/* Main Tabs */}
           <View style={styles.mainTabs}>
             {(['posts', 'reservations'] as MainTab[]).map((tab) => (
-              <TouchableOpacity key={tab} style={[styles.mainTab, mainTab === tab && styles.mainTabActive]} onPress={() => setMainTab(tab)}>
+              <TouchableOpacity
+                key={tab}
+                style={[styles.mainTab, mainTab === tab && styles.mainTabActive]}
+                onPress={() => setMainTab(tab)}
+              >
                 <Text style={[styles.mainTabText, mainTab === tab && styles.mainTabTextActive]}>
                   {tab === 'posts' ? 'My Posts' : 'My Reservations'}
                 </Text>
@@ -554,123 +591,154 @@ export default function ProfileScreen() {
             <ActivityIndicator size="large" color={COLORS.primary} style={{ paddingVertical: 40 }} />
           ) : mainTab === 'posts' ? (
             <>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  {(['available', 'reserved', 'completed', 'expired'] as PostFilter[]).map((f) => (
-                    <TouchableOpacity key={f} style={[styles.filterChip, postFilter === f && styles.filterChipActive]} onPress={() => setPostFilter(f)}>
-                      <Text style={[styles.filterChipText, postFilter === f && styles.filterChipTextActive]}>
-                        {f.charAt(0).toUpperCase() + f.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-              {filteredDonations.length === 0 ? (
+              {/* Post filters: Actif / Expired / Donated (matches Figma labels) */}
+              <View style={styles.filterRow}>
+                {([
+                  { key: 'active', label: 'Actif' },
+                  { key: 'expired', label: 'Expired' },
+                  { key: 'donated', label: 'Donated' },
+                ] as { key: PostFilter; label: string }[]).map(({ key, label }) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={[styles.filterChip, postFilter === key && styles.filterChipActive]}
+                    onPress={() => setPostFilter(key)}
+                  >
+                    <Text style={[styles.filterChipText, postFilter === key && styles.filterChipTextActive]}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {getCurrentDonations().length === 0 ? (
                 <Text style={styles.emptyText}>No {postFilter} donations found</Text>
               ) : (
-                filteredDonations.map((item) => (
-                  <PostItem key={item.id} item={item} onDelete={() => handleDeletePost(item.id)} onEdit={() => handleEditPost(item)} />
+                getCurrentDonations().map((item) => (
+                  <PostItem
+                    key={item.id}
+                    item={item}
+                    showEdit={postFilter === 'active'}
+                    onEdit={() => handleEditPost(item)}
+                    onDelete={() => handleDeletePost(item.id)}
+                  />
                 ))
               )}
             </>
           ) : (
             <>
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+              {/* Reservation sub-tabs: Incoming / My Requests (matches Figma) */}
+              <View style={styles.subTabRow}>
+                {([
+                  { key: 'incoming', label: 'Incoming' },
+                  { key: 'my_requests', label: 'My Requests' },
+                ] as { key: ResTab; label: string }[]).map(({ key, label }) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={[styles.subTab, resTab === key && styles.subTabActive]}
+                    onPress={() => setResTab(key)}
+                  >
+                    <Text style={[styles.subTabText, resTab === key && styles.subTabTextActive]}>{label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Status filter: Pending / Confirmed / Rejected */}
+              <View style={styles.filterRow}>
                 {(['pending', 'confirmed', 'rejected'] as ResFilter[]).map((f) => (
-                  <TouchableOpacity key={f} style={[styles.filterChip, resFilter === f && styles.filterChipActive]} onPress={() => setResFilter(f)}>
+                  <TouchableOpacity
+                    key={f}
+                    style={[styles.filterChip, resFilter === f && styles.filterChipActive]}
+                    onPress={() => setResFilter(f)}
+                  >
                     <Text style={[styles.filterChipText, resFilter === f && styles.filterChipTextActive]}>
                       {f.charAt(0).toUpperCase() + f.slice(1)}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
-              {filteredReservations.length === 0 ? (
-                <Text style={styles.emptyText}>No {resFilter} reservations found</Text>
+
+              {getCurrentReservations().length === 0 ? (
+                <Text style={styles.emptyText}>No {resFilter} {resTab === 'incoming' ? 'incoming' : ''} reservations found</Text>
+              ) : resTab === 'incoming' ? (
+                getCurrentReservations().map((item) => (
+                  <IncomingCard key={item.id} item={item} onAction={handleReservationAction} />
+                ))
               ) : (
-                filteredReservations.map((item) => (
-                  <ReservationItem key={item.id} item={item} onAction={handleReservationAction} />
+                getCurrentReservations().map((item) => (
+                  <MyRequestCard
+                    key={item.id}
+                    item={item}
+                    onCancel={() =>
+                      showConfirm(
+                        `Cancel reservation for "${item.donation_title}"?`,
+                        () => handleCancelReservation(item.id),
+                        'Cancel',
+                        COLORS.red
+                      )
+                    }
+                  />
                 ))
               )}
             </>
           )}
         </View>
       </ScrollView>
-
-      <BottomNavBar />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea:      { flex: 1, backgroundColor: COLORS.background },
-  scroll:        { flex: 1 },
+  safeArea: { flex: 1, backgroundColor: COLORS.background },
+  scroll: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 100 },
 
-  profileCard:     { backgroundColor: COLORS.sectionBg, borderRadius: 20, padding: 20, alignItems: 'center', marginBottom: 16, position: 'relative' },
-  menuBtn:         { position: 'absolute', top: 14, right: 14, zIndex: 10 },
-  menuBackdrop:    { position: 'absolute', top: -300, left: -300, right: -300, bottom: -300, zIndex: 15 },
-  dropdown:        { position: 'absolute', top: 40, right: 14, backgroundColor: COLORS.white, borderRadius: 12, minWidth: 140, zIndex: 20, elevation: 6, overflow: 'hidden' },
-  dropdownItem:    { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16 },
+  // Profile card
+  profileCard: { backgroundColor: COLORS.sectionBg, borderRadius: 20, padding: 20, alignItems: 'center', marginBottom: 16, position: 'relative' },
+  menuBtn: { position: 'absolute', top: 16, right: 16, zIndex: 30, padding: 8 },
+  menuBackdrop: { ...StyleSheet.absoluteFillObject, zIndex: 40 },
+  dropdown: { position: 'absolute', top: 70, right: 20, backgroundColor: COLORS.white, borderRadius: 12, minWidth: 170, zIndex: 50, elevation: 10, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
+  dropdownItem: { paddingVertical: 14, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center' },
   dropdownDivider: { height: 1, backgroundColor: COLORS.border },
-  dropdownText:    { fontSize: 15, color: COLORS.textPrimary, fontWeight: '500' },
+  dropdownText: { fontSize: 15, color: COLORS.textPrimary, fontWeight: '500' },
 
-  avatarWrapper:    { marginTop: 8, marginBottom: 12, position: 'relative' },
-  avatarCircle:     { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: COLORS.primary, overflow: 'hidden', backgroundColor: '#B8D4E8' },
-  avatarImage:      { width: '100%', height: '100%' },
-  editPhotoBadge:   { position: 'absolute', bottom: 4, right: 4, backgroundColor: COLORS.primary, borderRadius: 12, padding: 4 },
+  avatarWrapper: { marginTop: 8, marginBottom: 12, position: 'relative' },
+  avatarCircle: { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: COLORS.primary, overflow: 'hidden', backgroundColor: '#B8D4E8' },
+  avatarImage: { width: '100%', height: '100%' },
+  cameraBadge: { position: 'absolute', bottom: 4, right: 4, backgroundColor: COLORS.primary, borderRadius: 12, padding: 5, borderWidth: 2, borderColor: COLORS.white },
 
-  photoMenu:        { position: 'absolute', top: 145, right: 30, backgroundColor: COLORS.white, borderRadius: 12, borderWidth: 1.5, borderColor: COLORS.border, minWidth: 160, zIndex: 30, elevation: 10, overflow: 'hidden' },
-  photoMenuItem:    { paddingVertical: 13, paddingHorizontal: 18, alignItems: 'center' },
-  photoMenuDivider: { height: 1, backgroundColor: COLORS.border },
-  photoMenuText:    { fontSize: 15, color: COLORS.textPrimary, fontWeight: '500' },
-
-  nameRow:  { flexDirection: 'row', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', justifyContent: 'center' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   username: { fontSize: 20, fontWeight: '700', color: COLORS.textPrimary },
-  foodSaverBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, marginLeft: 8 },
-  foodSaverText:  { color: '#fff', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
 
-  statsRow:    { flexDirection: 'row', borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: 12, overflow: 'hidden', width: '80%' },
-  statBox:     { flex: 1, alignItems: 'center', paddingVertical: 10 },
+  // Stats: 2 boxes (Donations + Score) matching Figma
+  statsRow: { flexDirection: 'row', borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: 12, overflow: 'hidden', width: '80%' },
+  statBox: { flex: 1, alignItems: 'center', paddingVertical: 10 },
   statDivider: { width: 1.5, backgroundColor: COLORS.primary },
-  statValue:   { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
-  statLabel:   { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  statValue: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  statLabel: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
 
-  contentCard:          { backgroundColor: COLORS.sectionBg, borderRadius: 20, padding: 16 },
-  mainTabs:             { flexDirection: 'row', marginBottom: 14, gap: 10 },
-  mainTab:              { flex: 1, paddingVertical: 9, borderRadius: 999, borderWidth: 1.5, borderColor: COLORS.border, alignItems: 'center' },
-  mainTabActive:        { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  mainTabText:          { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
-  mainTabTextActive:    { color: COLORS.white, fontWeight: '700' },
+  // Content card
+  contentCard: { backgroundColor: COLORS.sectionBg, borderRadius: 20, padding: 16 },
 
-  filterChip:           { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1.5, borderColor: COLORS.border, alignItems: 'center' },
-  filterChipActive:     { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  filterChipText:       { fontSize: 13, color: COLORS.textSecondary, fontWeight: '500' },
+  // Main tabs (My Posts / My Reservations)
+  mainTabs: { flexDirection: 'row', marginBottom: 14, gap: 10 },
+  mainTab: { flex: 1, paddingVertical: 9, borderRadius: 999, borderWidth: 1.5, borderColor: COLORS.border, alignItems: 'center' },
+  mainTabActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  mainTabText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
+  mainTabTextActive: { color: COLORS.white, fontWeight: '700' },
+
+  // Sub-tabs (Incoming / My Requests) — pill toggle style matching Figma
+  subTabRow: { flexDirection: 'row', backgroundColor: COLORS.border, borderRadius: 999, padding: 3, marginBottom: 14, gap: 4 },
+  subTab: { flex: 1, paddingVertical: 8, borderRadius: 999, alignItems: 'center' },
+  subTabActive: { backgroundColor: COLORS.white },
+  subTabText: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
+  subTabTextActive: { color: COLORS.primary, fontWeight: '700' },
+
+  // Filters (Actif/Expired/Donated and Pending/Confirmed/Rejected)
+  filterRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  filterChip: { flex: 1, paddingVertical: 8, borderRadius: 999, borderWidth: 1.5, borderColor: COLORS.border, alignItems: 'center' },
+  filterChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  filterChipText: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '500' },
   filterChipTextActive: { color: COLORS.white, fontWeight: '700' },
 
   emptyText: { textAlign: 'center', color: COLORS.textMuted, marginTop: 24, fontSize: 14 },
-
-  postCard:          { flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: 12, padding: 8, marginBottom: 8, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
-  postImage:         { width: 55, height: 55, borderRadius: 8, backgroundColor: '#f0f4ef' },
-  postImageFallback: { alignItems: 'center', justifyContent: 'center' },
-  postInfo:          { flex: 1, marginLeft: 12, justifyContent: 'center' },
-  postTitle:         { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
-  postDetails:       { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-  postExpiry:        { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
-  postActions:       { flexDirection: 'row', gap: 12, marginTop: 4 },
-  postActionBtn:     { padding: 2 },
-
-  resItemWrapper:     { marginBottom: 10, position: 'relative', zIndex: 10 },
-  resItemCard:        { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FDFCF0', borderRadius: 25, paddingVertical: 10, paddingHorizontal: 15, borderWidth: 1, borderColor: '#F1F1E6', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
-  resAvatar:          { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F7D774', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  resContent:         { flex: 1 },
-  resText:            { fontSize: 13, color: COLORS.textPrimary, lineHeight: 18 },
-  resUser:            { fontWeight: '700' },
-  resProduct:         { color: COLORS.primary, fontWeight: '600' },
-  resTime:            { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
-  resMenuBtn:         { padding: 5 },
-  resDropdown:        { position: 'absolute', right: 10, top: 45, backgroundColor: COLORS.white, borderRadius: 8, elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, zIndex: 100, borderWidth: 1, borderColor: COLORS.border, minWidth: 100 },
-  resDropdownItem:    { paddingVertical: 10, paddingHorizontal: 15 },
-  resDropdownDivider: { height: 1, backgroundColor: COLORS.border },
-  resConfirmText:     { fontSize: 13, fontWeight: '600', color: COLORS.primary, textAlign: 'center' },
-  resRejectText:      { fontSize: 13, fontWeight: '600', color: COLORS.red, textAlign: 'center' },
 });

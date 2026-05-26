@@ -1,26 +1,58 @@
 import React, { useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router'; // ✅ add useLocalSearchParams
 import { 
-  View, StyleSheet, StatusBar, 
-  Platform, ActivityIndicator, TouchableOpacity 
+  View, StyleSheet,
+  ActivityIndicator, TouchableOpacity 
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AvatarPicker from '../../components/AvatarPicker';
 import AppText from '../../components/AppText';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '../../constants/config';
 
 const ProfileSetupScreen = () => {
   const router = useRouter();
+  const { email } = useLocalSearchParams<{ email: string }>(); // ✅ get email from params
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleDone = async () => {
     setLoading(true);
-    // Logic for upload would go here
-    setTimeout(() => {
+    try {
+      // ✅ Upload avatar if selected
+      if (selectedImage) {
+        const token = await AsyncStorage.getItem('access');
+        const formData = new FormData();
+        const filename = selectedImage.split('/').pop() || 'avatar.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+        formData.append('avatar', { uri: selectedImage, name: filename, type } as any);
+
+        await fetch(`${BASE_URL}users/profile/`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData,
+        });
+      }
+    } catch (e) {
+      // silently fail — don't block the flow
+    } finally {
       setLoading(false);
-      router.push('./finish-confirm');
-    }, 1500);
+      // ✅ Pass email to confirmation screen
+      router.push({
+        pathname: '/auth/confirmationEmail' as any,
+        params: { email },
+      });
+    }
+  };
+
+  const handleSkip = () => {
+    // ✅ Pass email even when skipping
+    router.push({
+      pathname: '/auth/confirmationEmail' as any,
+      params: { email },
+    });
   };
 
   return (
@@ -55,7 +87,7 @@ const ProfileSetupScreen = () => {
           <View style={styles.divider} />
           <AppText style={styles.footerText}>
             Or you can{' '}
-            <AppText weight="bold" style={styles.linkText} onPress={() => router.push('./finish-confirm')}>
+            <AppText weight="bold" style={styles.linkText} onPress={handleSkip}>
               Skip
             </AppText>{' '}
             for now
@@ -82,7 +114,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#588157',
     paddingVertical: 12,
     paddingHorizontal: 35,
-    borderRadius: 25, // Pill shape
+    borderRadius: 25,
     marginTop: 60,
   },
   doneText: { color: 'white', fontSize: 16 },

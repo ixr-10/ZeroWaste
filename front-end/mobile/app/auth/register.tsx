@@ -5,6 +5,7 @@ import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../components/Header';
 import api from '../../constants/axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -36,12 +37,14 @@ export default function RegisterScreen() {
         password2: confirmPass,
         role: 'user',
       });
+      await AsyncStorage.setItem('access', data.access);
+await AsyncStorage.setItem('refresh', data.refresh);
+await AsyncStorage.setItem('user', JSON.stringify(data.user));
 
       router.push({
-        pathname: '/auth/confirmationEmail' as any,
-        params: { email: data.user?.email || email },
-      });
-
+  pathname: '/auth/ProfileSetupScreen' as any,
+  params: { email: data.user?.email || email },
+});
     } catch (err: any) {
       const errors = err.response?.data;
       if (errors?.email) {

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { 
   View, 
   Text, 
@@ -48,15 +48,40 @@ export default function Step4Localization() {
   const [suggestions, setSuggestions] = useState<any[]>([]);
 
   const getCurrentLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") return;
     setLoading(true);
-    const loc = await Location.getCurrentPositionAsync({});
-    const { latitude, longitude } = loc.coords;
-    setMarker({ latitude, longitude });
-    const result = await Location.reverseGeocodeAsync({ latitude, longitude });
-    if (result[0]) setAddress(`${result[0].street ?? ""}, ${result[0].city ?? ""}`);
-    setLoading(false);
+    try {
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        Alert.alert("Location unavailable", "Please enable location services or search for an address manually.");
+        return;
+      }
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission denied", "Location permission is needed to use your current location.");
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const { latitude, longitude } = loc.coords;
+      setMarker({ latitude, longitude });
+
+      try {
+        const result = await Location.reverseGeocodeAsync({ latitude, longitude });
+        if (result[0]) {
+          setAddress(`${result[0].street ?? ""}, ${result[0].city ?? ""}`.replace(/^, |, $/g, ""));
+        } else {
+          setAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+        }
+      } catch {
+        setAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+      }
+    } catch (error) {
+      console.log("Current location unavailable:", error);
+      Alert.alert("Location unavailable", "Please enable location services or search for an address manually.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const searchAddress = async (text: string) => {
@@ -73,7 +98,7 @@ export default function Step4Localization() {
         },
       });
       setSuggestions(res.data.suggestions || []);
-    } catch (e) {
+    } catch {
       setSuggestions([]);
     }
   };
@@ -150,7 +175,6 @@ export default function Step4Localization() {
         return;
       }
 
-      console.log('Donation published:', responseData);
       reset();
 
       Alert.alert(

@@ -16,7 +16,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { SearchBar } from '../../components/SearchBar';
 import { FilterButton } from '../../components/FilterButton';
-import { BottomNavBar } from '../../components/ButtomNavBar';
 import { FoodCard } from '../../components/FoodCard';
 import ReservationAcceptedModal from '../../components/ReservationAcceptedModal';
 import api from '../../constants/axios';
@@ -53,45 +52,48 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkStorage = async () => {
-    const keys = await AsyncStorage.getAllKeys();
-    const values = await AsyncStorage.multiGet(keys);
-    console.log('ALL STORAGE:', JSON.stringify(values));
-  };
-  checkStorage();
     if (isFocused) fetchDonations();
   }, [isFocused]);
-   
+
   const fetchDonations = async () => {
     try {
       setLoading(true);
-      const { status } = await Location.requestForegroundPermissionsAsync();
       let params: Record<string, number> = {};
 
-      if (status === 'granted') {
+      // ✅ Try location with a 3s timeout, but don't block the fetch
+      const locationPromise = (async () => {
         try {
-          const loc = await Location.getCurrentPositionAsync({});
+          const enabled = await Location.hasServicesEnabledAsync();
+          if (!enabled) return;
+
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== 'granted') return;
+
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
           params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
           api.put('users/profile/', {
             latitude: loc.coords.latitude,
             longitude: loc.coords.longitude,
           }).catch((e) => console.log('Location sync failed:', e));
-        } catch (locationError) {
-          console.warn('Location unavailable, loading without distance.', locationError);
+        } catch {
+          console.log('Location unavailable, loading without distance.');
         }
-      }
+      })();
 
-      const [donRes] = await Promise.all([
-        api.get('donations/available/', { params }),
-        api.get('users/profile/'),
+      // ✅ Wait max 3 seconds for location, then proceed anyway
+      await Promise.race([
+        locationPromise,
+        new Promise((resolve) => setTimeout(resolve, 3000)),
       ]);
 
+      const donRes = await api.get('donations/available/', { params });
       let newDonations = donRes.data;
 
       if (reservedRef.current) {
         const { id, quantity } = reservedRef.current;
         const stillExists = newDonations.find((d: any) => String(d.id) === id);
-
         if (!stillExists) {
           const prevItem = donations.find((d) => String(d.id) === id);
           if (prevItem) {
@@ -101,7 +103,6 @@ export default function HomeScreen() {
             }
           }
         }
-
         reservedRef.current = null;
       }
 
@@ -190,7 +191,7 @@ export default function HomeScreen() {
   const hasActiveFilter = selectedCategory || selectedDistance !== null || emergencyOnly;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       <ReservationAcceptedModal />
 
@@ -267,8 +268,6 @@ export default function HomeScreen() {
           }
         />
       )}
-
-      <BottomNavBar />
     </SafeAreaView>
   );
 }

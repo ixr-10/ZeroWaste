@@ -10,25 +10,43 @@ const api = axios.create({
   },
 });
 
-// ✅ Attach access token to every request
+// ✅ Public routes — no token attached, no refresh attempted
+const AUTH_ROUTES = [
+  '/register/',
+  '/login/',
+  '/verify-email/',
+  '/forgot-password/',
+  '/reset-password/',
+  '/token/refresh/',
+  '/set-password/',
+  '/verify-reset-code/',
+];
+
+// ✅ Request interceptor — skip token for public routes
 api.interceptors.request.use(
   async (config) => {
-    const access = await AsyncStorage.getItem('access');
-    if (access) {
-      config.headers.Authorization = `Bearer ${access}`;
+    const isAuthRoute = AUTH_ROUTES.some(route => config.url?.includes(route));
+    if (!isAuthRoute) {
+      const access = await AsyncStorage.getItem('access');
+      if (access) {
+        config.headers.Authorization = `Bearer ${access}`;
+      }
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// ✅ Auto-refresh token on 401
+// ✅ Response interceptor — auto-refresh token on 401, skip for public routes
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const isAuthRoute = AUTH_ROUTES.some(route =>
+      originalRequest.url?.includes(route)
+    );
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true;
 
       try {
@@ -40,17 +58,15 @@ api.interceptors.response.use(
           { refresh }
         );
 
-        // Save new access token
         await AsyncStorage.setItem('access', data.access);
-
-        // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${data.access}`;
         return api(originalRequest);
 
       } catch (refreshError) {
-        // Refresh failed — clear storage and redirect to login
-        await AsyncStorage.multiRemove(['access', 'refresh', 'access_token', 'refresh_token', 'isLoggedIn', 'user']);
-        // You can add navigation to login here if needed
+        await AsyncStorage.multiRemove([
+          'access', 'refresh', 'access_token',
+          'refresh_token', 'isLoggedIn', 'user'
+        ]);
         return Promise.reject(refreshError);
       }
     }

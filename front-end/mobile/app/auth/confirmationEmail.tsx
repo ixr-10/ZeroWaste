@@ -18,7 +18,6 @@ export default function ConfirmationEmail() {
   const [isResending, setIsResending] = useState<boolean>(false);
 
   useEffect(() => {
-    console.log(' Confirmation page loaded with email:', email);
   }, [email]);
 
   // ====================== VERIFY CODE ======================

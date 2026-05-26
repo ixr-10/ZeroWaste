@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FONTS } from "../../constants/fonts";
-import Header from '../../components/Header';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../constants/axios';
 
@@ -24,10 +23,9 @@ export default function LoginScreen() {
         password: password,
       });
 
-      // ✅ Standardized keys — must match what the rest of the app reads
       await AsyncStorage.setItem('access', data.access);
-await AsyncStorage.setItem('refresh', data.refresh);
-await AsyncStorage.setItem('isLoggedIn', 'true');
+      await AsyncStorage.setItem('refresh', data.refresh);
+      await AsyncStorage.setItem('isLoggedIn', 'true');
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
 
       router.replace('/(tabs)/slides' as any);
@@ -50,7 +48,14 @@ await AsyncStorage.setItem('isLoggedIn', 'true');
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff', marginTop: 0 }}>
-      <Header showBack={false} />
+      {/* Custom header with logo on the right only */}
+      <View style={styles.header}>
+        <Image
+          source={require('../../assets/images/logo.png')}
+          style={styles.logo}
+        />
+      </View>
+
       <ScrollView contentContainerStyle={styles.container}>
         <Image source={require('../../assets/images/login1.png')} style={styles.image} />
         <Text style={styles.title}>LOGIN</Text>
@@ -102,6 +107,17 @@ await AsyncStorage.setItem('isLoggedIn', 'true');
 }
 
 const styles = StyleSheet.create({
+  header: {
+    alignItems: 'flex-end',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginBottom: 25,
+  },
+  logo: {
+    width: 36,
+    height: 29.03,
+    resizeMode: 'contain',
+  },
   container: { flexGrow: 1, padding: 24, justifyContent: 'center', backgroundColor: '#fff' },
   title: { fontSize: 24, fontFamily: FONTS.bold, textAlign: 'center', marginBottom: 32, color: '#1a1a1a' },
   label: { fontSize: 16, fontFamily: FONTS.regular, color: 'black', marginBottom: 6 },

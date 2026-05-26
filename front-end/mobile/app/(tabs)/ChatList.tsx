@@ -148,8 +148,6 @@ export default function ChatList() {
                 <TouchableOpacity
                   style={styles.chatCard}
                   onPress={async () => {
-                    console.log('=== CONV TAPPED ===');
-  console.log('conv:', JSON.stringify(item));
                     // Optimistically clear unread count
                     setConversations((prev) =>
                       prev.map((c) => c.id === item.id ? { ...c, unread_count: 0 } : c)

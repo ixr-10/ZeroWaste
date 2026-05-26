@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { Tabs, usePathname, useRouter } from 'expo-router';
+import React from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,7 +12,7 @@ import 'react-native-reanimated';
 
 const COLORS = {
   primary: '#4A6741',
-  primaryLight: '#A4B18A80',
+  primaryLight: '#D7E1CF',
   white: '#FFFFFF',
   textSecondary: '#6B6B6B',
   black: '#1A1A1A',
@@ -32,28 +32,43 @@ export const unstable_settings = {
 
 function CustomTabBar() {
   const router = useRouter();
-  const [activeIndex, setActiveIndex] = useState(0);
+  const pathname = usePathname();
+  const insets = useSafeAreaInsets();
 
-  const handlePress = (index: number, screen: string) => {
-    setActiveIndex(index);
+  const handlePress = (screen: string) => {
     router.push(screen as never);
   };
 
+  const isActive = (screen: string) => pathname.includes(screen.split('/').pop() || '');
+
   return (
-    <View style={styles.container}>
-      {TAB_ITEMS.slice(0, 2).map((tab, i) => (
+    <View
+      style={[
+        styles.container,
+        {
+          bottom: Math.max(insets.bottom, 0),
+          paddingBottom: 18,
+        },
+      ]}
+    >
+      {TAB_ITEMS.slice(0, 2).map((tab) => (
         <TouchableOpacity
           key={tab.screen}
           style={styles.tabItem}
-          onPress={() => handlePress(i, tab.screen)}
+          onPress={() => handlePress(tab.screen)}
           activeOpacity={0.7}
         >
           <Ionicons
-            name={(i === activeIndex ? tab.icon : `${tab.icon}-outline`) as any}
-            size={22}
-            color={i === activeIndex ? COLORS.primary : COLORS.textSecondary}
+            name={(isActive(tab.screen) ? tab.icon : `${tab.icon}-outline`) as any}
+            size={25}
+            color={isActive(tab.screen) ? COLORS.primary : COLORS.textSecondary}
           />
-          <Text style={[styles.tabLabel, i === activeIndex && styles.tabLabelActive]}>
+          <Text
+            style={[styles.tabLabel, isActive(tab.screen) && styles.tabLabelActive]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+          >
             {tab.label}
           </Text>
         </TouchableOpacity>
@@ -65,25 +80,29 @@ function CustomTabBar() {
         activeOpacity={0.85}
       >
         <View style={styles.addCircle}>
-          <Ionicons name="add" size={32} color={COLORS.black} />
+          <Ionicons name="add" size={37} color={COLORS.black} />
         </View>
       </TouchableOpacity>
 
-      {TAB_ITEMS.slice(3).map((tab, i) => {
-        const index = i + 3;
+      {TAB_ITEMS.slice(3).map((tab) => {
         return (
           <TouchableOpacity
             key={tab.screen}
             style={styles.tabItem}
-            onPress={() => handlePress(index, tab.screen)}
+            onPress={() => handlePress(tab.screen)}
             activeOpacity={0.7}
           >
             <Ionicons
-              name={(index === activeIndex ? tab.icon : `${tab.icon}-outline`) as any}
-              size={22}
-              color={index === activeIndex ? COLORS.primary : COLORS.textSecondary}
+              name={(isActive(tab.screen) ? tab.icon : `${tab.icon}-outline`) as any}
+              size={25}
+              color={isActive(tab.screen) ? COLORS.primary : COLORS.textSecondary}
             />
-            <Text style={[styles.tabLabel, index === activeIndex && styles.tabLabelActive]}>
+            <Text
+              style={[styles.tabLabel, isActive(tab.screen) && styles.tabLabelActive]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+            >
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -122,14 +141,15 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     backgroundColor: COLORS.primaryLight,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
-    paddingTop: 8,
-    paddingHorizontal: 4,
+    paddingTop: 14,
+    paddingHorizontal: 10,
     alignItems: 'flex-end',
     borderTopWidth: 0,
-    borderRadius: 25,
+    borderTopLeftRadius: 31,
+    borderTopRightRadius: 31,
+    borderBottomLeftRadius: 31,
+    borderBottomRightRadius: 31,
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
     zIndex: 100,
@@ -138,36 +158,37 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 4,
-    gap: 3,
+    minHeight: 50,
+    gap: 4,
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '500',
     color: COLORS.textSecondary,
   },
   tabLabelActive: {
     color: COLORS.primary,
+    fontWeight: '700',
   },
   addWrapper: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -26,
+    marginTop: -42,
   },
   addCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 78,
+    height: 78,
+    borderRadius: 39,
     backgroundColor: COLORS.primaryLight,
-    borderWidth: 4,
+    borderWidth: 6,
     borderColor: COLORS.white,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 9,
   },
 });

@@ -51,6 +51,8 @@ interface Listing {
   distance_km?: number | null;
 }
 
+const DEFAULT_COORDS: Coords = { latitude: 35.1897, longitude: -0.6311 };
+
 const markerColor = (urgency?: string | null) => {
   if (urgency === 'red') return COLORS.red;
   if (urgency === 'orange') return COLORS.orange;
@@ -263,30 +265,42 @@ export default function MapScreen() {
       setStatus('Requesting permission...');
 
       const { status: permission } = await Location.requestForegroundPermissionsAsync();
-      let userCoords: Coords;
+      let userCoords: Coords = DEFAULT_COORDS;
+      let hasUserCoords = false;
 
       if (permission !== 'granted') {
         setStatus('Permission denied. Using default location.');
-        userCoords = { latitude: 35.1897, longitude: -0.6311 };
       } else {
-        setStatus('Getting your position...');
-        const last = await Location.getLastKnownPositionAsync({ maxAge: 300000 });
+        const servicesEnabled = await Location.hasServicesEnabledAsync().catch(() => false);
 
-        if (last) {
-          userCoords = { latitude: last.coords.latitude, longitude: last.coords.longitude };
+        if (!servicesEnabled) {
+          setStatus('Location services are off. Using default location.');
         } else {
-          setStatus('Acquiring GPS signal...');
-          const current = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          });
-          userCoords = { latitude: current.coords.latitude, longitude: current.coords.longitude };
+          try {
+            setStatus('Getting your position...');
+            const last = await Location.getLastKnownPositionAsync({ maxAge: 300000 });
+
+            if (last) {
+              userCoords = { latitude: last.coords.latitude, longitude: last.coords.longitude };
+            } else {
+              setStatus('Acquiring GPS signal...');
+              const current = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+              });
+              userCoords = { latitude: current.coords.latitude, longitude: current.coords.longitude };
+            }
+            hasUserCoords = true;
+          } catch (locationError) {
+            console.log('Location unavailable, using default map location.', locationError);
+            setStatus('Location unavailable. Using default location.');
+          }
         }
       }
 
       setCoords(userCoords);
       setStatus('Loading donations...');
 
-      const params = { lat: userCoords.latitude, lng: userCoords.longitude };
+      const params = hasUserCoords ? { lat: userCoords.latitude, lng: userCoords.longitude } : undefined;
       const res = await api.get('donations/available/', { params });
       const donations = Array.isArray(res.data) ? res.data : res.data?.results ?? [];
 
