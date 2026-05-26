@@ -58,7 +58,7 @@ const AdminDonationPage = () => {
         prod: d.title,
         user: d.donor_username,
         date: new Date(d.created_at).toLocaleDateString('fr-FR'),
-        qty: `${d.quantity} ${d.unit}`,
+        qty: `${d.available_quantity} ${d.unit}`,
         status: STATUS_MAP[d.status] || d.status,
         coords: `${d.latitude}, ${d.longitude}`,
         category: d.category,
