@@ -9,7 +9,7 @@ export default function SplashScreen() {
   useEffect(() => {
     const init = async () => {
       const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
-      const accessToken = await AsyncStorage.getItem('access');
+      const accessToken = await AsyncStorage.getItem('access_token');
 
       setTimeout(() => {
         if (!hasSeenOnboarding) {
@@ -30,3 +30,4 @@ export default function SplashScreen() {
     </View>
   );
 }
+//export { default } from './(Screens)/tuto';

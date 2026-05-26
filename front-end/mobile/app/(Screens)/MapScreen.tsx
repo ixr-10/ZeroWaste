@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -24,6 +25,8 @@ const COLORS = {
   green: '#4A6741',
 };
 
+type Filter = 'all' | 'urgent' | 'superUrgent' | 'superSuperUrgent';
+type Urgency = 'green' | 'orange' | 'red';
 type ListingStatus = 'available' | 'reserved' | 'expired';
 
 interface Coords {
@@ -36,15 +39,16 @@ interface Listing {
   title: string;
   category: string;
   status: ListingStatus;
-  urgency?: 'green' | 'orange' | 'red' | null;
+  urgency?: Urgency | null;
   latitude: number;
   longitude: number;
   donor_username: string;
   donor: string | number;
-  image?: string;
+  image?: string | null;
   available_quantity: number;
+  unit?: string | null;
   expiry_date: string;
-  distance_km?: number;
+  distance_km?: number | null;
 }
 
 const markerColor = (urgency?: string | null) => {
@@ -59,16 +63,15 @@ const statusLabel = (urgency?: string | null) => {
   return 'Urgent';
 };
 
-// ─── Emergency Color Buttons (icon only, no labels) ──────────────────────────
 const EmergencyColorButtons = ({
   filter,
   setFilter,
 }: {
-  filter: 'all' | 'urgent' | 'superUrgent' | 'superSuperUrgent';
-  setFilter: React.Dispatch<React.SetStateAction<'all' | 'urgent' | 'superUrgent' | 'superSuperUrgent'>>;
+  filter: Filter;
+  setFilter: React.Dispatch<React.SetStateAction<Filter>>;
 }) => {
   const options = [
-    { key: 'all', color: '#A8B5A0' as const },
+    { key: 'all', color: '#A8B5A0' },
     { key: 'urgent', color: COLORS.green },
     { key: 'superUrgent', color: COLORS.orange },
     { key: 'superSuperUrgent', color: COLORS.red },
@@ -83,12 +86,11 @@ const EmergencyColorButtons = ({
             key={option.key}
             style={[
               emergency.button,
-              isActive && { backgroundColor: option.color + '15', borderColor: option.color },
+              isActive && { backgroundColor: `${option.color}15`, borderColor: option.color },
             ]}
             onPress={() => setFilter(option.key)}
             activeOpacity={0.8}
           >
-            {/* Pin icon only — no label text */}
             <View style={[emergency.pinContainer, { backgroundColor: option.color }]}>
               <View style={emergency.pinDot} />
             </View>
@@ -99,24 +101,23 @@ const EmergencyColorButtons = ({
   );
 };
 
-// ─── Map Content ──────────────────────────────────────────────────────────────
 function MapContent({ coords, listings }: { coords: Coords; listings: Listing[] }) {
   const MapView = require('react-native-maps').default;
   const { Marker, Circle } = require('react-native-maps');
   const router = useRouter();
 
   const [selected, setSelected] = useState<Listing | null>(null);
-  const [filter, setFilter] = useState<'all' | 'urgent' | 'superUrgent' | 'superSuperUrgent'>('all');
+  const [filter, setFilter] = useState<Filter>('all');
 
   const visible = useMemo(() => {
     if (filter === 'all') return listings;
-    return listings.filter((l) => {
-      if (filter === 'superSuperUrgent') return l.urgency === 'red';
-      if (filter === 'superUrgent') return l.urgency === 'orange';
-      if (filter === 'urgent') return l.urgency === 'green' || !l.urgency;
+    return listings.filter((listing) => {
+      if (filter === 'superSuperUrgent') return listing.urgency === 'red';
+      if (filter === 'superUrgent') return listing.urgency === 'orange';
+      if (filter === 'urgent') return listing.urgency === 'green' || !listing.urgency;
       return true;
     });
-  }, [listings, filter]);
+  }, [filter, listings]);
 
   const region = {
     latitude: coords.latitude,
@@ -148,6 +149,7 @@ function MapContent({ coords, listings }: { coords: Coords; listings: Listing[] 
         mapType="standard"
         initialRegion={region}
         showsUserLocation
+        onPress={() => setSelected(null)}
       >
         <Circle
           center={coords}
@@ -157,62 +159,75 @@ function MapContent({ coords, listings }: { coords: Coords; listings: Listing[] 
           strokeWidth={1.5}
         />
 
-        {visible.map((l) => (
+        {visible.map((listing) => (
           <Marker
-            key={String(l.id)}
-            coordinate={{ latitude: l.latitude, longitude: l.longitude }}
-            onPress={() => setSelected(l)}
+            key={String(listing.id)}
+            coordinate={{ latitude: listing.latitude, longitude: listing.longitude }}
+            onPress={() => setSelected(listing)}
           >
-            <View style={[pin.wrap, { borderColor: markerColor(l.urgency) }]}>
-              <View style={[pin.dot, { backgroundColor: markerColor(l.urgency) }]} />
+            <View style={[pin.wrap, { borderColor: markerColor(listing.urgency) }]}>
+              <View style={[pin.dot, { backgroundColor: markerColor(listing.urgency) }]} />
             </View>
           </Marker>
         ))}
       </MapView>
 
-      {/* Back Button */}
       <View style={overlay.topRow}>
         <TouchableOpacity style={overlay.backBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={20} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
 
-      {/* Emergency Filter Buttons — icon only */}
       <EmergencyColorButtons filter={filter} setFilter={setFilter} />
 
-      {/* Legend — proper emergency level names */}
       <View style={overlay.legend}>
         {[
           { color: COLORS.green, label: 'Urgent' },
           { color: COLORS.orange, label: 'High Priority' },
           { color: COLORS.red, label: 'Critical' },
-        ].map((i) => (
-          <View key={i.label} style={overlay.legendRow}>
-            <View style={[overlay.legendDot, { backgroundColor: i.color }]} />
-            <Text style={overlay.legendTxt}>{i.label}</Text>
+        ].map((item) => (
+          <View key={item.label} style={overlay.legendRow}>
+            <View style={[overlay.legendDot, { backgroundColor: item.color }]} />
+            <Text style={overlay.legendTxt}>{item.label}</Text>
           </View>
         ))}
       </View>
 
-      {/* Selected Card */}
       {selected && (
         <View style={overlay.card}>
           <TouchableOpacity style={overlay.cardClose} onPress={() => setSelected(null)}>
             <Ionicons name="close" size={16} color={COLORS.textMuted} />
           </TouchableOpacity>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <View style={overlay.statusRow}>
             <View style={[overlay.statusDot, { backgroundColor: markerColor(selected.urgency) }]} />
             <Text style={[overlay.statusTxt, { color: markerColor(selected.urgency) }]}>
               {statusLabel(selected.urgency)}
             </Text>
+            {selected.distance_km != null && (
+              <Text style={overlay.distanceTxt}>{selected.distance_km} km away</Text>
+            )}
           </View>
 
-          <Text style={overlay.cardTitle}>{selected.title}</Text>
-          <Text style={overlay.cardCat}>{selected.category}</Text>
-          {selected.distance_km && (
-            <Text style={overlay.cardDistance}>📍 {selected.distance_km} km away</Text>
-          )}
+          <View style={overlay.cardBody}>
+            {selected.image ? (
+              <Image source={{ uri: selected.image }} style={overlay.cardImage} />
+            ) : (
+              <View style={[overlay.cardImage, overlay.cardImagePlaceholder]}>
+                <Ionicons name="image-outline" size={24} color={COLORS.textMuted} />
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={overlay.cardTitle} numberOfLines={1}>
+                {selected.title}
+              </Text>
+              <Text style={overlay.cardCat}>{selected.category}</Text>
+              <Text style={overlay.cardMeta}>
+                {selected.available_quantity} {selected.unit ?? 'items'} available
+              </Text>
+              <Text style={overlay.cardMeta}>By {selected.donor_username}</Text>
+            </View>
+          </View>
 
           <TouchableOpacity style={overlay.reserveBtn} onPress={handleReserve}>
             <Text style={overlay.reserveTxt}>Reserve</Text>
@@ -220,15 +235,15 @@ function MapContent({ coords, listings }: { coords: Coords; listings: Listing[] 
         </View>
       )}
 
-      {/* Count */}
       <View style={overlay.countBadge}>
-        <Text style={overlay.countTxt}>{visible.length} listings near you</Text>
+        <Text style={overlay.countTxt}>
+          {visible.length} donation{visible.length !== 1 ? 's' : ''} near you
+        </Text>
       </View>
     </View>
   );
 }
 
-// ─── Main MapScreen ───────────────────────────────────────────────────────────
 export default function MapScreen() {
   const router = useRouter();
   const [coords, setCoords] = useState<Coords | null>(null);
@@ -244,17 +259,19 @@ export default function MapScreen() {
   const init = async () => {
     try {
       setError(false);
+      setLoading(true);
       setStatus('Requesting permission...');
 
-      const { status: perm } = await Location.requestForegroundPermissionsAsync();
+      const { status: permission } = await Location.requestForegroundPermissionsAsync();
       let userCoords: Coords;
 
-      if (perm !== 'granted') {
-        setStatus('Permission denied — using default location');
+      if (permission !== 'granted') {
+        setStatus('Permission denied. Using default location.');
         userCoords = { latitude: 35.1897, longitude: -0.6311 };
       } else {
         setStatus('Getting your position...');
         const last = await Location.getLastKnownPositionAsync({ maxAge: 300000 });
+
         if (last) {
           userCoords = { latitude: last.coords.latitude, longitude: last.coords.longitude };
         } else {
@@ -271,30 +288,32 @@ export default function MapScreen() {
 
       const params = { lat: userCoords.latitude, lng: userCoords.longitude };
       const res = await api.get('donations/available/', { params });
+      const donations = Array.isArray(res.data) ? res.data : res.data?.results ?? [];
 
-      const donations = Array.isArray(res.data) ? res.data : [];
-
-      const mapped: Listing[] = donations.map((d: any) => ({
-        id: d.id,
-        title: d.title,
-        category: d.category,
-        status: d.status || 'available',
-        urgency: d.urgency,
-        latitude: d.latitude,
-        longitude: d.longitude,
-        donor_username: d.donor_username,
-        donor: d.donor,
-        image: d.image,
-        available_quantity: d.available_quantity,
-        expiry_date: d.expiry_date,
-        distance_km: d.distance_km,
-      }));
+      const mapped: Listing[] = donations
+        .filter((donation: any) => donation.latitude != null && donation.longitude != null)
+        .map((donation: any) => ({
+          id: donation.id,
+          title: donation.title,
+          category: donation.category,
+          status: donation.status || 'available',
+          urgency: donation.urgency,
+          latitude: Number(donation.latitude),
+          longitude: Number(donation.longitude),
+          donor_username: donation.donor_username,
+          donor: donation.donor,
+          image: donation.image,
+          available_quantity: donation.available_quantity,
+          unit: donation.unit,
+          expiry_date: donation.expiry_date,
+          distance_km: donation.distance_km,
+        }));
 
       setListings(mapped);
-      setLoading(false);
     } catch (e: any) {
       setError(true);
       setStatus(`Error: ${e?.message ?? 'Unknown error'}`);
+    } finally {
       setLoading(false);
     }
   };
@@ -328,7 +347,6 @@ export default function MapScreen() {
   return <MapContent coords={coords} listings={listings} />;
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const pin = StyleSheet.create({
   wrap: {
     width: 30,
@@ -361,7 +379,6 @@ const emergency = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.white,
     borderRadius: 999,
-    // Reduced vertical padding since there's no label anymore
     paddingVertical: 8,
     paddingHorizontal: 8,
     alignItems: 'center',
@@ -373,7 +390,6 @@ const emergency = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  // Smaller pin icon (was 28×28)
   pinContainer: {
     width: 22,
     height: 22,
@@ -381,18 +397,11 @@ const emergency = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Smaller inner dot (was 10×10)
   pinDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#fff',
-  },
-  label: {
-    fontSize: 11.5,
-    fontWeight: '500',
-    color: '#333',
-    textAlign: 'center',
+    backgroundColor: COLORS.white,
   },
 });
 
@@ -418,7 +427,7 @@ const overlay = StyleSheet.create({
   },
   legend: {
     position: 'absolute',
-    bottom: 130,
+    bottom: 160,
     left: 16,
     backgroundColor: COLORS.white,
     borderRadius: 12,
@@ -433,10 +442,9 @@ const overlay = StyleSheet.create({
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendTxt: { fontSize: 12, color: COLORS.textPrimary, fontWeight: '500' },
-
   card: {
     position: 'absolute',
-    bottom: 70,
+    bottom: 80,
     left: 16,
     right: 16,
     backgroundColor: COLORS.white,
@@ -449,21 +457,40 @@ const overlay = StyleSheet.create({
     elevation: 8,
   },
   cardClose: { position: 'absolute', top: 12, right: 12, padding: 4 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   statusTxt: { fontSize: 12, fontWeight: '600' },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 2 },
-  cardCat: { fontSize: 13, color: COLORS.textMuted, marginBottom: 8 },
-  cardDistance: { fontSize: 12, color: COLORS.textMuted, marginBottom: 12, fontWeight: '500' },
+  distanceTxt: { fontSize: 11, color: COLORS.textMuted },
+  cardBody: { flexDirection: 'row', gap: 12, marginBottom: 10 },
+  cardImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 10,
+    backgroundColor: COLORS.background,
+  },
+  cardImagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: 2,
+  },
+  cardCat: { fontSize: 12, color: COLORS.textMuted, marginBottom: 4 },
+  cardMeta: { fontSize: 12, color: COLORS.textMuted },
   reserveBtn: {
     backgroundColor: COLORS.primary,
     borderRadius: 999,
     paddingVertical: 10,
     alignItems: 'center',
+    marginTop: 8,
   },
   reserveTxt: { color: COLORS.white, fontSize: 14, fontWeight: '700' },
   countBadge: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 24,
     alignSelf: 'center',
     backgroundColor: 'rgba(0,0,0,0.6)',
     borderRadius: 999,

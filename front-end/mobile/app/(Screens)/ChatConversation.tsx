@@ -9,8 +9,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SPACING, BORDER_RADIUS } from "../../constants/theme";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import api from "../../constants/axios";
-import { markMessagesRead } from "../../constants/axios";
+import api, { markMessagesRead } from "../../constants/axios";
+import { WS_URL } from "../../constants/config";
 
 type Message = {
   id: string;
@@ -22,10 +22,18 @@ type Message = {
 
 export default function ChatConversation() {
   const router = useRouter();
-  const { conversationId, otherUsername, otherUserId } = useLocalSearchParams<{
+  const {
+    conversationId,
+    otherUsername,
+    otherUserId,
+    reservationId,       // ✅ new — pass this when navigating to chat
+    reservationStatus,   // ✅ new — 'completed' shows the banner
+  } = useLocalSearchParams<{
     conversationId: string;
     otherUsername: string;
     otherUserId: string;
+    reservationId?: string;
+    reservationStatus?: string;
   }>();
 
   const flatListRef = useRef<FlatList>(null);
@@ -34,7 +42,27 @@ export default function ChatConversation() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [isBlocked, setIsBlocked] = useState(false); // ← tracks if WE blocked them
+  const [isBlocked, setIsBlocked] = useState(false);
+
+  // ✅ Rating banner state
+  const [showRatingBanner, setShowRatingBanner] = useState(false);
+  const [alreadyRated, setAlreadyRated] = useState(false);
+
+  // ─── Show rating banner if reservation is completed ──────────────────────────
+ useEffect(() => {
+  const checkRating = async () => {
+    console.log('reservationId:', reservationId);
+    console.log('reservationStatus:', reservationStatus);
+    
+    if (reservationStatus !== 'completed' || !reservationId) return;
+    const rated = await AsyncStorage.getItem(`rated_reservation_${reservationId}`);
+    console.log('already rated:', rated);
+    if (!rated) {
+      setShowRatingBanner(true);
+    }
+  };
+  checkRating();
+}, [reservationId, reservationStatus]);
 
   // ─── Check block status on mount ────────────────────────────────────────────
   useEffect(() => {
@@ -59,7 +87,9 @@ export default function ChatConversation() {
       if (conversationId) await markMessagesRead(Number(conversationId));
 
       const ws = new WebSocket(
+
         `ws://192.168.1.38:8000/ws/chat/${conversationId}/?token=${token}`
+
       );
       wsRef.current = ws;
 
@@ -106,12 +136,30 @@ export default function ChatConversation() {
     return () => wsRef.current?.close();
   }, [conversationId]);
 
+  // ─── Rating banner handlers ───────────────────────────────────────────────────
+  const handleRateNow = () => {
+    setShowRatingBanner(false);
+    router.push({
+      pathname: '/(Screens)/Rateexperiencescreen' as any,
+      params: {
+        reservationId: reservationId,
+        donorName: otherUsername,
+      },
+    });
+  };
+
+  const handleRemindLater = async () => {
+    setShowRatingBanner(false);
+    // Store a reminder flag — banner will show again next time they open chat
+    // (we don't mark as rated, so it reappears)
+  };
+
   // ─── Actions ─────────────────────────────────────────────────────────────────
   const handleBlock = async () => {
     try {
       await api.post(`users/block/${otherUserId}/`);
       setIsBlocked(true);
-      Alert.alert("Blocked", `${otherUsername} has been blocked. You can no longer message each other.`);
+      Alert.alert("Blocked", `${otherUsername} has been blocked.`);
     } catch (err: any) {
       Alert.alert("Error", err.response?.data?.error || "Failed to block user.");
     }
@@ -155,7 +203,6 @@ export default function ChatConversation() {
     }
   };
 
-  // ─── Menu options — show Block OR Unblock, not both ──────────────────────────
   const menuOptions = [
     { label: "View Profile", action: () => router.push({ pathname: "/(Screens)/UserProfile", params: { id: otherUserId } }) },
     isBlocked
@@ -188,10 +235,7 @@ export default function ChatConversation() {
                 {menuOptions.map((opt) => (
                   <TouchableOpacity
                     key={opt.label}
-                    style={[
-                      styles.menuItem,
-                      opt.label === "Block" && styles.menuItemDanger,
-                    ]}
+                    style={[styles.menuItem, opt.label === "Block" && styles.menuItemDanger]}
                     onPress={() => { setMenuVisible(false); opt.action(); }}
                   >
                     <Text style={[styles.menuText, opt.label === "Block" && styles.menuTextDanger]}>
@@ -204,6 +248,23 @@ export default function ChatConversation() {
           </Modal>
         </View>
       </View>
+
+      {/* ✅ Rating banner */}
+      {showRatingBanner && (
+        <View style={styles.ratingBanner}>
+          <Text style={styles.ratingBannerText}>
+            Take a moment to rate this interaction
+          </Text>
+          <View style={styles.ratingBannerButtons}>
+            <TouchableOpacity onPress={handleRemindLater} style={styles.remindBtn}>
+              <Text style={styles.remindBtnText}>Remind me later</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleRateNow} style={styles.rateNowBtn}>
+              <Text style={styles.rateNowBtnText}>Rate Now</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Blocked banner */}
       {isBlocked && (
@@ -243,7 +304,7 @@ export default function ChatConversation() {
           )}
         />
 
-        {/* INPUT — disabled when blocked */}
+        {/* INPUT */}
         <View style={[styles.inputRow, isBlocked && styles.inputRowBlocked]}>
           <TextInput
             style={styles.input}
@@ -297,6 +358,51 @@ const styles = StyleSheet.create({
   menuItemDanger: { borderTopWidth: 1, borderTopColor: "#f0e0e0" },
   menuText: { fontSize: 14, color: COLORS.textPrimary, textAlign: "center" },
   menuTextDanger: { color: "#c0392b" },
+
+  // ✅ Rating banner styles
+  ratingBanner: {
+    backgroundColor: '#F5F7F3',
+    borderWidth: 1,
+    borderColor: '#D5DED0',
+    borderRadius: 12,
+    margin: 12,
+    padding: 12,
+    gap: 8,
+  },
+  ratingBannerText: {
+    fontSize: 13,
+    color: '#1A1A1A',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  ratingBannerButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  remindBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#D5DED0',
+  },
+  remindBtnText: {
+    fontSize: 12,
+    color: '#555555',
+    fontWeight: '600',
+  },
+  rateNowBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: '#4A6741',
+  },
+  rateNowBtnText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
 
   blockedBanner: {
     flexDirection: "row", alignItems: "center", gap: 6,

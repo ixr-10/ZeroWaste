@@ -58,8 +58,8 @@ export default function OnboardingScreen() {
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
   const finishOnboarding = async () => {
-    await AsyncStorage.setItem('hasSeenOnboarding', 'true'); // ✅ mark as seen
-    router.replace('/auth/login'); // ✅ go to login, not slides
+    await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+    router.replace('/auth/login');
   };
 
   const handleNext = async () => {

@@ -24,8 +24,10 @@ export default function LoginScreen() {
         password: password,
       });
 
+      // ✅ Standardized keys — must match what the rest of the app reads
       await AsyncStorage.setItem('access', data.access);
-      await AsyncStorage.setItem('refresh', data.refresh);
+await AsyncStorage.setItem('refresh', data.refresh);
+await AsyncStorage.setItem('isLoggedIn', 'true');
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
 
       router.replace('/(tabs)/slides' as any);

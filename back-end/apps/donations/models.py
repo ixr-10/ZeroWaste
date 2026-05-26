@@ -119,3 +119,31 @@ class NotInterested(models.Model):
 
     def __str__(self):
         return f"{self.user.username} not interested in {self.donation.title}"
+
+
+        # ─── Add this class at the bottom of donations/models.py ─────────────────────
+
+class Rating(models.Model):
+    reservation = models.OneToOneField(
+        Reservation,
+        on_delete=models.CASCADE,
+        related_name='rating'
+    )
+    rater = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='ratings_given'
+    )
+    rated_user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='ratings_received'
+    )
+    score = models.PositiveSmallIntegerField()  # 1 to 5
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('reservation', 'rater')
+
+    def __str__(self):
+        return f"{self.rater.username} rated {self.rated_user.username} {self.score}/5"

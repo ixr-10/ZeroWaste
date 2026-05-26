@@ -1,5 +1,4 @@
 {
-
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "types": ["expo/types/global"],
@@ -17,6 +16,6 @@
     "components/CustomButton.jsx",
     "components/CustomInput.jsx",
     "app/confirmation.jsx"
-  ]
+  ],
+  "files": []
 }
-

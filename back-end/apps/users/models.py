@@ -20,9 +20,9 @@ class User(AbstractUser):
     phone = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
     reputation_score = models.IntegerField(default=0)
-    is_verified = models.BooleanField(default=False)  # verified by food saver
-    is_email_confirmed = models.BooleanField(default=False)  # confirmed via OTP email
-    is_active = models.BooleanField(default=False)  #  inactive until email confirmed
+    is_verified = models.BooleanField(default=False)
+    is_email_confirmed = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=False)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     push_token = models.CharField(max_length=255, blank=True, null=True)
@@ -41,7 +41,6 @@ class OTPCode(models.Model):
     is_used = models.BooleanField(default=False)
 
     def is_valid(self):
-        # Code expires after 10 minutes
         return not self.is_used and (timezone.now() - self.created_at).total_seconds() < 600
 
     @staticmethod
@@ -49,18 +48,29 @@ class OTPCode(models.Model):
         return str(random.randint(100000, 999999))
 
     def send_to_email(self, subject, message_prefix):
-        """Generate a code, save it, and send it to the user’s email."""
+        """Generate a code, save it, and send it to the user's email."""
         self.code = OTPCode.generate_code()
         self.save()
-
-        subject_line = subject
         message = f"{message_prefix}\nYour verification code is: {self.code}\nThis code expires in 10 minutes."
         send_mail(
-            subject=subject_line,
+            subject=subject,
             message=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[self.user.email],
         )
+
+    def send_to_email_address(self, email, subject, message_prefix):
+        """Generate a code, save it, and send it to a specific email address."""
+        self.code = OTPCode.generate_code()
+        self.save()
+        message = f"{message_prefix}\nYour verification code is: {self.code}\nThis code expires in 10 minutes."
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+        )
+
 
 class BlockedUser(models.Model):
     """Stores which users a person has blocked"""

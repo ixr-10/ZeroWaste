@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import api from '../../constants/axios';   // ← real API client
+import api from '../../constants/axios';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 const COLORS = {
@@ -204,10 +204,9 @@ export default function EditPostScreen() {
       if (parsed.category)        setCategory(parsed.category);
       if (parsed.quantity)        setQuantity(String(parsed.quantity));
       if (parsed.unit)            setUnit(parsed.unit);
-
+      if (parsed.pickup_address)  setMeetingPoint(parsed.pickup_address);
       if (parsed.description)     setDescription(parsed.description);
-      if (parsed.pickup_address) setMeetingPoint(parsed.pickup_address);
-      if (parsed.urgency)        setEmergencyColor(parsed.urgency as EmergencyColor);
+      if (parsed.urgency)         setEmergencyColor(parsed.urgency as EmergencyColor);
       // expiry_date from backend: "YYYY-MM-DD" → display "DD/MM/YYYY"
       if (parsed.expiry_date) {
         const parts = String(parsed.expiry_date).split('-');
@@ -270,7 +269,7 @@ export default function EditPostScreen() {
     }
   };
 
-  // ── "DD/MM/YYYY" → "YYYY-MM-DD" for backend, with validation ─────────────
+  // ── "DD/MM/YYYY" → "YYYY-MM-DD" for backend ──────────────────────────────
   const toISO = (ddmmyyyy: string): string | null => {
     const parts = ddmmyyyy.split('/');
     if (parts.length !== 3) return null;
@@ -285,28 +284,24 @@ export default function EditPostScreen() {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  // ── Save — real API call ──────────────────────────────────────────────────
+  // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = async () => {
-    // ── Guard: post ID must exist ────────────────────────────────────────
     if (!post?.id) {
       Alert.alert('Error', 'Post ID is missing. Please go back and try again.');
       return;
     }
 
-    // ── Guard: required fields including unit ────────────────────────────
     if (!category || !quantity || !unit || !expirationDate || !meetingPoint) {
-      Alert.alert('Missing fields', 'Please fill in all required fields (category, quantity, unit, expiration date, and meeting point).');
+      Alert.alert('Missing fields', 'Please fill in all required fields.');
       return;
     }
 
-    // ── Guard: quantity must be a valid positive number ──────────────────
     const parsedQty = Number(quantity);
     if (isNaN(parsedQty) || parsedQty <= 0) {
       Alert.alert('Invalid quantity', 'Please enter a valid quantity greater than 0.');
       return;
     }
 
-    // ── Guard: date must be properly formatted ───────────────────────────
     const isoDate = toISO(expirationDate);
     if (!isoDate) {
       Alert.alert('Invalid date', 'Please enter the expiration date in DD/MM/YYYY format.');
@@ -315,24 +310,20 @@ export default function EditPostScreen() {
 
     setLoading(true);
     try {
-     await api.patch(`donations/${post.id}/edit/`, {
+      await api.patch(`/donations/${post.id}/edit/`, {
         category,
         quantity:        parsedQty,
         unit,
         expiry_date:     isoDate,          // "YYYY-MM-DD"
-        urgency: emergencyColor,         
-        pickup_address: meetingPoint, 
+        urgency:         emergencyColor,
+        pickup_address:  meetingPoint,
         description,
       });
 
       Alert.alert('Success', 'Post updated successfully!', [
-        {
-          text: 'OK',
-          onPress: handleBack,
-        },
+        { text: 'OK', onPress: handleBack },
       ]);
     } catch (err: any) {
-      // ── Detailed logging to help debug future issues ─────────────────
       console.log('Edit error — status:', err.response?.status);
       console.log('Edit error — data:', JSON.stringify(err.response?.data));
       console.log('Edit error — message:', err.message);
