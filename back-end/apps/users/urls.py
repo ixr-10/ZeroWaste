@@ -11,6 +11,7 @@ from .views import (
     ResendOTPView, PublicProfileView,
     BlockUserView, UnblockUserView, BlockedUsersListView,
     AdminUserStatsView, FoodSaverThresholdView,
+    AdminToggleActiveView, AdminToggleVerifyView,
 )
 
 urlpatterns = [
@@ -51,6 +52,8 @@ urlpatterns = [
     path('admin/users/stats/', AdminUserStatsView.as_view(), name='admin_user_stats'),
     path('admin/users/<int:user_id>/delete/', AdminDeleteUserView.as_view(), name='admin-delete-user'),
     path('admin/food-saver-threshold/', FoodSaverThresholdView.as_view(), name='food_saver_threshold'),
+    path('admin/users/<int:user_id>/toggle-active/', AdminToggleActiveView.as_view(), name='admin-toggle-active'),
+    path('admin/users/<int:user_id>/toggle-verify/', AdminToggleVerifyView.as_view(), name='admin-toggle-verify'),
 
     # Food Saver
     path('verify/<int:user_id>/', VerifyUserView.as_view(), name='verify_user'),

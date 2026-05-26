@@ -245,7 +245,7 @@ class AdminListUsersView(APIView):
 
     def get(self, request):
         role = request.query_params.get('role')
-        users = User.objects.exclude(role='admin').order_by('-created_at')
+        users = User.objects.exclude(role__in=['admin', 'localauthority']).order_by('-reputation_score')
         if role:
             users = users.filter(role=role)
         serializer = UserSerializer(users, many=True)
@@ -500,3 +500,32 @@ class FoodSaverThresholdView(APIView):
             serializer.save()
             return Response({'message': 'Threshold updated.', **serializer.data})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    
+class AdminToggleActiveView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def post(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+            user.is_active = not user.is_active
+            user.save()
+            state = "activated" if user.is_active else "deactivated"
+            return Response({'message': f'{user.username} has been {state}.', 'is_active': user.is_active})
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class AdminToggleVerifyView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def post(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+            user.is_verified = not user.is_verified
+            user.save()
+            state = "verified" if user.is_verified else "unverified"
+            return Response({'message': f'{user.username} has been {state}.', 'is_verified': user.is_verified})
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+

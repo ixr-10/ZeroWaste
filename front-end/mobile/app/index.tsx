@@ -30,3 +30,4 @@ export default function SplashScreen() {
     </View>
   );
 }
+//export { default } from './(Screens)/tuto';

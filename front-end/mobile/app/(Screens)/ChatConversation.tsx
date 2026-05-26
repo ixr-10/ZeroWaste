@@ -84,7 +84,9 @@ export default function ChatConversation() {
       if (conversationId) await markMessagesRead(Number(conversationId));
 
       const ws = new WebSocket(
-        `${WS_URL}/ws/chat/${conversationId}/?token=${token}`
+
+        `ws://192.168.1.38:8000/ws/chat/${conversationId}/?token=${token}`
+
       );
       wsRef.current = ws;
 
@@ -135,7 +137,7 @@ export default function ChatConversation() {
   const handleRateNow = () => {
     setShowRatingBanner(false);
     router.push({
-      pathname: '/(Screens)/Rateexperiencescreen',
+      pathname: '/(Screens)/Rateexperiencescreen' as any,
       params: {
         reservationId: reservationId,
         donorName: otherUsername,

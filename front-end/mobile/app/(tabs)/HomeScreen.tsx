@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useIsFocused } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   FlatList,
@@ -60,7 +59,7 @@ export default function HomeScreen() {
       setLoading(true);
       let params: Record<string, number> = {};
 
-      // ✅ Try location with a 3s timeout, but don't block the fetch
+      // Try location with a 3s timeout, but don't block the fetch
       const locationPromise = (async () => {
         try {
           const enabled = await Location.hasServicesEnabledAsync();
@@ -82,7 +81,7 @@ export default function HomeScreen() {
         }
       })();
 
-      // ✅ Wait max 3 seconds for location, then proceed anyway
+      // Wait max 3 seconds for location, then proceed anyway
       await Promise.race([
         locationPromise,
         new Promise((resolve) => setTimeout(resolve, 3000)),
