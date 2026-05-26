@@ -59,7 +59,7 @@ export default function ChatConversation() {
       if (conversationId) await markMessagesRead(Number(conversationId));
 
       const ws = new WebSocket(
-        `ws://192.168.1.36:8000/ws/chat/${conversationId}/?token=${token}`
+        `ws://192.168.1.38:8000/ws/chat/${conversationId}/?token=${token}`
       );
       wsRef.current = ws;
 

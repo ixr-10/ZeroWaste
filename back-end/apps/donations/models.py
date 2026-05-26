@@ -7,18 +7,20 @@ User = get_user_model()
 
 class Donation(models.Model):
     CATEGORY_CHOICES = [
-        ('fruits', 'Fruits'),
-        ('legumes', 'Légumes'),
-        ('pain', 'Pain'),
-        ('conserves', 'Conserves'),
-        ('produits_laitiers', 'Produits Laitiers'),
-        ('autre', 'Autre'),
+        ('Fruit', 'Fruit & Vegetables'),
+        ('Pastries', 'Pastries'),
+        ('Milk', 'Milk Products'),
+        ('Meat', 'Meat & Fish'),
+        ('Preserved', 'Preserved Food'),
+        ('Cooked', 'Cooked Meals'),
+        ('Drinks', 'Drinks'),
+        ('Other', 'Other'),
     ]
     STATUS_CHOICES = [
-        ('available', 'Available'),
-        ('reserved', 'Reserved'),
-        ('completed', 'Completed'),
-        ('expired', 'Expired'),
+        ('active', 'Active'),        # has available quantity & not expired
+        ('donated', 'Donated'),      # all quantity confirmed/completed
+        ('expired', 'Expired'),      # past expiry_date
+        ('deleted', 'Deleted'),      # soft-deleted, hidden from app
     ]
     URGENCY_CHOICES = [
         ('green', 'Fresh but not urgent'),
@@ -37,11 +39,11 @@ class Donation(models.Model):
     pickup_address = models.TextField()
     latitude = models.FloatField()
     longitude = models.FloatField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     urgency = models.CharField(max_length=10, choices=URGENCY_CHOICES, default='green')
     image = models.ImageField(upload_to='donations/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)  
+    updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
         if not self.pk:
@@ -50,6 +52,22 @@ class Donation(models.Model):
 
     def is_expired(self):
         return self.expiry_date < timezone.now().date()
+
+    def recalculate_status(self):
+        """Call this after any reservation change to sync donation status."""
+        if self.status == 'deleted':
+            return  # never auto-change a deleted donation
+        if self.is_expired():
+            self.status = 'expired'
+        elif self.available_quantity <= 0:
+            # check if there's at least one confirmed reservation
+            if self.reservations.filter(status='confirmed').exists():
+                self.status = 'donated'
+            else:
+                self.status = 'active'  # all pending, nothing confirmed yet
+        else:
+            self.status = 'active'
+        self.save(update_fields=['status'])
 
     def __str__(self):
         return f"{self.title} by {self.donor.username}"
@@ -68,6 +86,8 @@ class Reservation(models.Model):
     donation = models.ForeignKey(Donation, on_delete=models.CASCADE, related_name='reservations')
     beneficiary = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reservations')
     quantity_requested = models.PositiveIntegerField()
+    # How much was actually confirmed (deducted from available_quantity)
+    quantity_confirmed = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     pickup_date = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
@@ -87,6 +107,7 @@ class Reservation(models.Model):
 
     def __str__(self):
         return f"{self.beneficiary.username} reserved {self.quantity_requested} of {self.donation.title}"
+
 
 class NotInterested(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='not_interested')

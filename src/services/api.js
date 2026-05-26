@@ -1,4 +1,4 @@
-const BASE_URL = 'http://192.168.1.36:8000/api';
+const BASE_URL = 'http://192.168.1.38:8000/api';
 
 // ── Token helpers ──
 export const saveTokens = (access, refresh) => {
@@ -98,9 +98,6 @@ export const promoteToFoodSaver = async (userId) => {
   });
   return res.json();
 };
-// fIXME: temporary workaround - the backend currently requires 'phone' and 'address' 
-// fields to be mandatory, but they are not yet included in the frontend design. 
-// These hardcoded values should be removed once the backend API is updated.
 
 export const adminCreateUser = async (userData) => {
   const completeUserData = {
@@ -108,14 +105,12 @@ export const adminCreateUser = async (userData) => {
     phone: "0555000000",
     address: "Not provided"
   };
-
   const res = await authFetch(`${BASE_URL}/users/admin/create-user/`, {
     method: 'POST',
     body: JSON.stringify(completeUserData),
   });
-
   const data = await res.json();
-  if (!res.ok) throw new Error(JSON.stringify(data)); 
+  if (!res.ok) throw new Error(JSON.stringify(data));
   return data;
 };
 
@@ -150,14 +145,11 @@ export const logoutUser = async () => {
 };
 
 // ── Admin Reports (Moderation) ──
-
 export const fetchAdminReports = async () => {
-  const res = await authFetch(`${BASE_URL}/moderation/reports/`); 
+  const res = await authFetch(`${BASE_URL}/moderation/reports/`);
   const data = await res.json();
-  
   if (!res.ok) throw new Error(data.detail || 'Failed to fetch reports.');
-  
-  return data.reports ? data.reports : data; 
+  return data.reports ? data.reports : data;
 };
 
 export const processReportAction = async (reportId, actionType) => {
@@ -169,16 +161,108 @@ export const processReportAction = async (reportId, actionType) => {
     method: 'POST',
     body: JSON.stringify({ action: backendAction }),
   });
-  
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || data.error || 'Failed to process action.');
   return data;
 };
+
 export const toggleUserActive = async (userId) => {
-  const res = await authFetch(`${BASE_URL}/moderation/users/${userId}/toggle-active/`, {
+  const res = await authFetch(`${BASE_URL}/users/admin/users/${userId}/toggle-active/`, {
     method: 'POST',
   });
   const data = await res.json();
   if (!res.ok) throw new Error(JSON.stringify(data));
+  return data;
+};
+
+export const adminGetUserStats = async () => {
+  const res = await authFetch(`${BASE_URL}/users/admin/users/stats/`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || 'Failed to fetch stats.');
+  return data;
+};
+
+export const adminToggleActive = async (userId) => {
+  const res = await authFetch(`${BASE_URL}/users/admin/users/${userId}/toggle-active/`, {
+    method: 'POST',
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(JSON.stringify(data));
+  return data;
+};
+
+export const adminToggleVerify = async (userId) => {
+  const res = await authFetch(`${BASE_URL}/users/admin/users/${userId}/toggle-verify/`, {
+    method: 'POST',
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(JSON.stringify(data));
+  return data;
+};
+
+export const adminPromoteOrDemoteFoodSaver = async (userId, isFoodSaver) => {
+  const endpoint = isFoodSaver
+    ? `${BASE_URL}/users/demote/${userId}/`
+    : `${BASE_URL}/users/promote/${userId}/`;
+  const res = await authFetch(endpoint, { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(JSON.stringify(data));
+  return data;
+};
+
+// ── Donations (Admin) ──
+export const fetchAdminDonations = async ({ status, category, urgency } = {}) => {
+  const params = new URLSearchParams();
+  if (status && status !== 'All') {
+    if (status === 'Active') params.append('status', 'available');
+    else if (status === 'Donated') params.append('status', 'completed');
+    else if (status === 'Expired') params.append('status', 'expired');
+  }
+  if (category) params.append('category', category);
+  if (urgency) params.append('urgency', urgency);
+
+  const res = await authFetch(`${BASE_URL}/donations/admin/all/?${params.toString()}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || 'Failed to fetch donations.');
+
+  if (data.active !== undefined) {
+    return [...(data.active || []), ...(data.expired || []), ...(data.donated || [])];
+  }
+  return data;
+};
+
+export const deleteDonation = async (donationId) => {
+  const res = await authFetch(`${BASE_URL}/donations/${donationId}/delete/`, {
+    method: 'DELETE',
+  });
+  if (res.status === 204) return { success: true };
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to delete donation.');
+  return data;
+};
+
+// ── Admin Statistics ──
+export const fetchAdminStatistics = async () => {
+  const res = await authFetch(`${BASE_URL}/donations/admin/statistics/`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || 'Failed to fetch statistics.');
+  return data;
+};
+
+// ── Promotion Criteria (FoodSaver Threshold) ──
+export const fetchPromotionCriteria = async () => {
+  const res = await authFetch(`${BASE_URL}/users/admin/food-saver-threshold/`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || 'Failed to fetch criteria.');
+  return data;
+};
+
+export const updatePromotionCriteria = async ({ min_score }) => {
+  const res = await authFetch(`${BASE_URL}/users/admin/food-saver-threshold/`, {
+    method: 'POST',
+    body: JSON.stringify({ min_score }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || 'Failed to update criteria.');
   return data;
 };

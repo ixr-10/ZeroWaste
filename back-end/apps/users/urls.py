@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (PromoteToFoodSaverView,AdminListUsersView, RegisterView, ProfileView, LogoutView, ChangePasswordView,LoginView,
-                    VerifyUserView, ForgotPasswordView, ResetPasswordView, VerifyEmailView , AdminCreateUserView,SetPasswordView,AdminDeleteUserView,DemoteFromFoodSaverView,ResendOTPView, PublicProfileView,BlockUserView, UnblockUserView, BlockedUsersListView,DeactivateAccountView, DeleteAccountView,ChangeEmailRequestView, ChangeEmailConfirmView,AdminUserStatsView, FoodSaverThresholdView,)
+                    VerifyUserView, ForgotPasswordView, ResetPasswordView, VerifyEmailView , AdminCreateUserView,SetPasswordView,AdminDeleteUserView,DemoteFromFoodSaverView,ResendOTPView, PublicProfileView,BlockUserView, UnblockUserView, BlockedUsersListView,DeactivateAccountView, DeleteAccountView,ChangeEmailRequestView, ChangeEmailConfirmView,AdminUserStatsView, FoodSaverThresholdView,AdminToggleActiveView,AdminToggleVerifyView)
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -31,4 +31,6 @@ urlpatterns = [
     path('change-email/request/', ChangeEmailRequestView.as_view(), name='change_email_request'),
     path('change-email/confirm/', ChangeEmailConfirmView.as_view(), name='change_email_confirm'),
     path('admin/food-saver-threshold/', FoodSaverThresholdView.as_view(), name='food_saver_threshold'),
-]
+    path('admin/users/<int:user_id>/toggle-active/', AdminToggleActiveView.as_view(), name='admin-toggle-active'),
+    path('admin/users/<int:user_id>/toggle-verify/', AdminToggleVerifyView.as_view(), name='admin-toggle-verify'),
+    ]

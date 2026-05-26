@@ -15,6 +15,8 @@ from .views import (
     CancelReservationView,
     MyReservationsView,
     NotInterestedView,
+    AdminAllDonationsView,
+    AdminStatisticsView,
 )
 
 urlpatterns = [
@@ -38,4 +40,8 @@ urlpatterns = [
     path('reservations/<int:reservation_id>/confirm/', ConfirmReservationView.as_view(), name='confirm_reservation'),
     path('reservations/<int:reservation_id>/reject/', RejectReservationView.as_view(), name='reject_reservation'),
     path('reservations/<int:reservation_id>/cancel/', CancelReservationView.as_view(), name='cancel_reservation'),
+
+    # ── Admin ──────────────────────────────────────────
+    path('admin/all/', AdminAllDonationsView.as_view(), name='admin_all_donations'),
+    path('admin/statistics/', AdminStatisticsView.as_view(), name='admin_statistics'),
 ]

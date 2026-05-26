@@ -42,7 +42,7 @@ const urgencyWeight = (urgency?: string | null): number => {
 export default function HomeScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
-  const reservedRef = useRef<{ id: string; quantity: number } | null>(null);
+  //const reservedRef = useRef<{ id: string; quantity: number } | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -55,53 +55,32 @@ export default function HomeScreen() {
     if (isFocused) fetchDonations();
   }, [isFocused]);
 
-  const fetchDonations = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      let params: any = {};
+ const fetchDonations = async () => {
+  try {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    let params: any = {};
 
-      if (status === 'granted') {
-        try {
-          const loc = await Location.getCurrentPositionAsync({});
-          params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
-          api.put('users/profile/', {
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-          }).catch(e => console.log('Location sync failed:', e));
-        } catch (locationError) {
-          console.warn('Location unavailable, loading without distance.', locationError);
-        }
+    if (status === 'granted') {
+      try {
+        const loc = await Location.getCurrentPositionAsync({});
+        params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+        api.put('users/profile/', {
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        }).catch(e => console.log('Location sync failed:', e));
+      } catch (locationError) {
+        console.warn('Location unavailable, loading without distance.', locationError);
       }
-
-      const [donRes] = await Promise.all([
-        api.get('donations/available/', { params }),
-        api.get('users/profile/'),
-      ]);
-
-      let newDonations = donRes.data;
-
-      if (reservedRef.current) {
-        const { id, quantity } = reservedRef.current;
-        const stillExists = newDonations.find((d: any) => String(d.id) === id);
-        if (!stillExists) {
-          const prevItem = donations.find(d => String(d.id) === id);
-          if (prevItem) {
-            const remainingQty = prevItem.available_quantity - quantity;
-            if (remainingQty > 0) {
-              newDonations = [...newDonations, { ...prevItem, available_quantity: remainingQty }];
-            }
-          }
-        }
-        reservedRef.current = null;
-      }
-
-      setDonations(newDonations);
-    } catch (err) {
-      console.log('Error fetching donations:', err);
-    } finally {
-      setLoading(false);
     }
-  };
+
+    const res = await api.get('donations/available/', { params });
+    setDonations(res.data);
+  } catch (err) {
+    console.log('Error fetching donations:', err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const filteredDonations = useMemo(() => {
     const filtered = donations.filter((item) => {
@@ -152,7 +131,7 @@ export default function HomeScreen() {
   const handleReserve = (donationId: string) => {
     const item = donations.find((d) => String(d.id) === donationId);
     if (!item) return;
-    reservedRef.current = { id: donationId, quantity: 1 };
+    //reservedRef.current = { id: donationId, quantity: 1 };
     router.push({
       pathname: '/(Screens)/ReservationScreen' as any,
       params: {

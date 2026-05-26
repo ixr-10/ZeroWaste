@@ -13,7 +13,7 @@ import { FaHandHoldingHeart } from 'react-icons/fa';
 import '../styles/PromotionCriteria.css';
 
 
-// import { fetchPromotionCriteria, updatePromotionCriteria } from '../services/api';
+ import { fetchPromotionCriteria, updatePromotionCriteria } from '../services/api';
 
 const PromotionCriteria = () => {
   const [score, setScore] = useState(100);
@@ -27,38 +27,37 @@ const PromotionCriteria = () => {
 
   // ====================================================
   // ====================================================
-  useEffect(() => {
-    const getCriteria = async () => {
-      try {
-        // const data = await fetchPromotionCriteria();
-        // setScore(data.min_score);
-      } catch (err) {
-        console.error("Failed to fetch criteria:", err);
-      }
-    };
-    getCriteria();
-  }, []);
+useEffect(() => {
+  const getCriteria = async () => {
+    try {
+      const data = await fetchPromotionCriteria();
+      setScore(data.min_score);
+    } catch (err) {
+      console.error("Failed to fetch criteria:", err);
+    }
+  };
+  getCriteria();
+}, []);
+
 
   const handleIncrement = () => setScore(prev => prev + 10);
   const handleDecrement = () => setScore(prev => (prev > 0 ? prev - 10 : 0));
 
   // ====================================================
   // ====================================================
-  const handleSave = async () => {
-    setIsLoading(true);
-    try {
-      // await updatePromotionCriteria({ min_score: score });
-      
-      alert(`✅ Minimum score updated to ${score} successfully!`);
-      navigate('/admin/users');
-    } catch (err) {
-      console.error("Error saving criteria:", err);
-      alert('❌ Failed to save criteria: ' + err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+const handleSave = async () => {
+  setIsLoading(true);
+  try {
+    await updatePromotionCriteria({ min_score: score });
+    alert(`✅ Minimum score updated to ${score} successfully!`);
+    navigate('/admin/users');
+  } catch (err) {
+    console.error("Error saving criteria:", err);
+    alert('❌ Failed to save criteria: ' + err.message);
+  } finally {
+    setIsLoading(false);
+  }
+};
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (

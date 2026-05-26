@@ -1,5 +1,8 @@
 {
   "expo": {
+    "updates": {
+      "checkAutomatically": "NEVER"
+    },
     "name": "ZeroWaste",
     "slug": "zerowaste",
     "version": "1.0.0",
@@ -55,7 +58,8 @@
         }
       ],
       "expo-audio",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

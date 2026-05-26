@@ -26,15 +26,17 @@ const UNIT_MAP: Record<string, string> = {
 };
 
 const CATEGORY_MAP: Record<string, string> = {
-  'fruits': 'fruits', 
-  'pastries': 'pain',
-  'produits_laitiers': 'produits_laitiers',
-  'conserves': 'conserves', 
-  'autre': 'autre',
-  'other': 'autre', 
-  'meat': 'autre', 
-  'drinks': 'autre',
+  
+  'fruits': 'Fruit',
+  'pastries': 'Pastries',
+  'produits_laitiers': 'Milk',
+  'conserves': 'Preserved',
+  'other': 'Other',
+  'autre': 'Other',
+  'meat': 'Meat',
+  'drinks': 'Drinks',
 };
+
 
 export default function Step4Localization() {
   const router = useRouter();

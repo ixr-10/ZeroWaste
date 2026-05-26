@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../styles/AdminUsersPage.css'; 
-import '../styles/AdminStatisticsPage.css'; 
+import '../styles/AdminUsersPage.css';
+import '../styles/AdminStatisticsPage.css';
+import { fetchAdminStatistics } from '../services/api';
 
 import {
   FiPieChart, FiFileText, FiUsers, FiDownload, FiLogOut, FiChevronLeft, FiChevronRight
@@ -12,7 +13,6 @@ const AdminStatisticsPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
 
- 
   const [stats, setStats] = useState({
     totalDonations: 0,
     donationsAddedThisMonth: 0,
@@ -21,68 +21,43 @@ const AdminStatisticsPage = () => {
     activeUsers: 0,
     thisMonthDonations: 0,
     thisMonthFoodSaved: 0,
-    thisMonthCo2: 0
+    thisMonthCo2: 0,
   });
 
-  // 2. State ta3 les graphes 
   const [donationsData, setDonationsData] = useState([]);
   const [foodSavedData, setFoodSavedData] = useState([]);
-  
-  
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setIsLoading(true);
-        
-        const mockDataFromBackend = {
-          generalStats: {
-            totalDonations: 1500,
-            donationsAddedThisMonth: 150,
-            totalFoodSaved: 420,
-            totalCo2Avoided: 350,
-            activeUsers: 85,
-            thisMonthDonations: 150,
-            thisMonthFoodSaved: 60,
-            thisMonthCo2: 25
-          },
-          charts: {
-            donations: [
-              { month: 'Sept', value: 30 }, { month: 'Oct', value: 55 },
-              { month: 'Nov', value: 40 }, { month: 'Dec', value: 45 },
-              { month: 'Jan', value: 80 }, { month: 'Feb', value: 50 },
-              { month: 'Mar', value: 90 },
-            ],
-            foodSaved: [
-              { month: 'Sept', value: 70 }, { month: 'Oct', value: 30 },
-              { month: 'Nov', value: 85 }, { month: 'Dec', value: 50 },
-              { month: 'Jan', value: 60 }, { month: 'Feb', value: 45 },
-              { month: 'Mar', value: 100 },
-            ]
-          }
-        };
+        setError(null);
 
-      
-        setStats(mockDataFromBackend.generalStats);
-        setDonationsData(mockDataFromBackend.charts.donations);
-        setFoodSavedData(mockDataFromBackend.charts.foodSaved);
+        const data = await fetchAdminStatistics();
 
-      } catch (error) {
-        console.error("Error fetching statistics:", error);
+        setStats(data.generalStats);
+        setDonationsData(data.charts.donations);
+        setFoodSavedData(data.charts.foodSaved);
+      } catch (err) {
+        console.error('Error fetching statistics:', err);
+        setError('Failed to load statistics. Please try again.');
       } finally {
-        setIsLoading(false); 
+        setIsLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, []); 
+  }, []);
 
- 
   const maxDonation = Math.max(...donationsData.map(d => d.value), 0);
   const maxFood = Math.max(...foodSavedData.map(d => d.value), 0);
   const chartMaxValue = Math.max(maxDonation, maxFood) * 1.1 || 100;
+
+  const currentMonthLabel = new Date().toLocaleString('default', {
+    month: 'long', year: 'numeric'
+  });
 
   return (
     <div className="admin-dashboard">
@@ -128,14 +103,22 @@ const AdminStatisticsPage = () => {
 
       <main className="main-content stat-scroll">
         {isLoading ? (
-          <div style={{ padding: '2rem', textAlign: 'center', fontSize: '1.2rem' }}>Loading data... ⏳</div>
+          <div style={{ padding: '2rem', textAlign: 'center', fontSize: '1.2rem' }}>
+            Loading data... ⏳
+          </div>
+        ) : error ? (
+          <div style={{ padding: '2rem', textAlign: 'center', color: 'red', fontSize: '1.1rem' }}>
+            {error}
+          </div>
         ) : (
           <>
-            
             <div className="stats-container">
               <div className="stat-card">
                 <div className="stat-title">🎁 Total Donations</div>
-                <div className="stat-value">{stats.totalDonations} <span className="stat-subtitle">+{stats.donationsAddedThisMonth} this month</span></div>
+                <div className="stat-value">
+                  {stats.totalDonations}{' '}
+                  <span className="stat-subtitle">+{stats.donationsAddedThisMonth} this month</span>
+                </div>
               </div>
               <div className="stat-card">
                 <div className="stat-title">🥗 Food Saved</div>
@@ -151,9 +134,8 @@ const AdminStatisticsPage = () => {
               </div>
             </div>
 
-            
             <div className="month-summary-section">
-              <h3 className="section-title">This month — March 2026</h3>
+              <h3 className="section-title">This month — {currentMonthLabel}</h3>
               <div className="month-cards-container">
                 <div className="month-card">
                   <span className="month-card-title">Donations</span>
@@ -170,7 +152,6 @@ const AdminStatisticsPage = () => {
               </div>
             </div>
 
-           
             <div className="charts-section">
               <div className="chart-box">
                 <h3 className="section-title">Monthly Donations</h3>
@@ -178,8 +159,8 @@ const AdminStatisticsPage = () => {
                   {donationsData.map((data, index) => (
                     <div className="bar-wrapper" key={index}>
                       <span className="bar-value">{data.value}</span>
-                      <div 
-                        className={`bar ${data.month === 'Mar' ? 'bar-dark-green' : 'bar-light-green'}`} 
+                      <div
+                        className={`bar ${index === donationsData.length - 1 ? 'bar-dark-green' : 'bar-light-green'}`}
                         style={{ height: `${(data.value / chartMaxValue) * 100}%` }}
                       ></div>
                       <span className="bar-label">{data.month}</span>
@@ -194,15 +175,15 @@ const AdminStatisticsPage = () => {
                   {foodSavedData.map((data, index) => (
                     <div className="bar-wrapper" key={index}>
                       <span className="bar-value">{data.value}</span>
-                      <div 
-                        className={`bar ${data.month === 'Mar' ? 'bar-orange' : 'bar-yellow'}`} 
+                      <div
+                        className={`bar ${index === foodSavedData.length - 1 ? 'bar-orange' : 'bar-yellow'}`}
                         style={{ height: `${(data.value / chartMaxValue) * 100}%` }}
                       ></div>
                       <span className="bar-label">{data.month}</span>
                     </div>
                   ))}
                 </div>
-              </div>
+          </div>
             </div>
           </>
         )}

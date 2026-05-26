@@ -5,7 +5,7 @@ from .models import Donation, Reservation
 class DonationSerializer(serializers.ModelSerializer):
     donor_username = serializers.CharField(source='donor.username', read_only=True)
     distance_km = serializers.SerializerMethodField()
-
+    
     class Meta:
         model = Donation
         fields = [
