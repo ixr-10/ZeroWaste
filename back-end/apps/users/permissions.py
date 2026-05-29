@@ -8,8 +8,7 @@ class IsFoodSaver(BasePermission):
     def has_permission(self, request, view):
         return (
             request.user.is_authenticated and
-            request.user.role == 'food_saver' and
-            request.user.is_verified
+            request.user.role == 'food_saver'
         )
 
 class IsCollectivite(BasePermission):

@@ -5,6 +5,7 @@ from .views import (
     EditDonationView,
     DeleteDonationView,
     MyDonationsView,
+    ReservationByConversationView,
     ReserveDonationView,
     ConfirmReservationView,
     RejectReservationView,
@@ -48,5 +49,9 @@ urlpatterns = [
     path('admin/statistics/', AdminStatisticsView.as_view(), name='admin_statistics'),
          
 path('reservations/<int:reservation_id>/rate/', RateReservationView.as_view(), name='rate-reservation'),
+path(
+    'donations/reservations/by-conversation/<int:conversation_id>/',
+    ReservationByConversationView.as_view()
+),
 
 ]

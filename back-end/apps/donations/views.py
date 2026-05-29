@@ -1203,7 +1203,6 @@ class RateReservationView(APIView):
 
         try:
             score = int(score)
-
         except (TypeError, ValueError):
             return Response(
                 {'error': 'Score must be an integer between 1 and 5.'},
@@ -1217,51 +1216,28 @@ class RateReservationView(APIView):
             )
 
         try:
-            reservation = Reservation.objects.get(
-                id=reservation_id
-            )
-
+            reservation = Reservation.objects.get(id=reservation_id)
         except Reservation.DoesNotExist:
             return Response(
                 {'error': 'Reservation not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        if reservation.status != 'completed':
-            return Response(
-                {
-                    'error': (
-                        'You can only rate completed reservations.'
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         user = request.user
 
         if user == reservation.beneficiary:
             rated_user = reservation.donation.donor
-
         elif user == reservation.donation.donor:
             rated_user = reservation.beneficiary
-
         else:
             return Response(
                 {'error': 'You are not part of this reservation.'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        if Rating.objects.filter(
-            reservation=reservation,
-            rater=user
-        ).exists():
-
+        if Rating.objects.filter(reservation=reservation, rater=user).exists():
             return Response(
-                {
-                    'error': (
-                        'You have already rated this reservation.'
-                    )
-                },
+                {'error': 'You have already rated this reservation.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -1279,13 +1255,13 @@ class RateReservationView(APIView):
         )['avg'] or 0
 
         rated_user.reputation_score = round(avg * 20)
-
         rated_user.save(update_fields=['reputation_score'])
 
         return Response({
             'message': (
                 f'Rating submitted successfully. '
-                f'{rated_user.username} now has a score '
-                f'of {round(avg, 1)}/5.'
+                f'{rated_user.username} now has a score of {round(avg, 1)}/5.'
             )
         })
+    
+    

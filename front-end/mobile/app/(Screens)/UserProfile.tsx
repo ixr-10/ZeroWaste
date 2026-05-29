@@ -17,15 +17,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLORS, SPACING, BORDER_RADIUS } from "../../constants/theme";
 import api from "../../constants/axios";
 
-type Tab = "donations" | "reservations";
-
 export default function UserProfile() {
   const router = useRouter();
   const params = useLocalSearchParams<{ userId?: string; id?: string; username?: string }>();
   const profileUserId = params.userId ?? params.id;
 
   const [menuVisible, setMenuVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("donations");
   const [donations, setDonations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
@@ -54,7 +51,6 @@ export default function UserProfile() {
           api.get(`/users/users/${profileUserId}/`),
           api.get(`/donations/available/?donor=${profileUserId}`),
         ]);
-
         setUser(profileRes.data);
         setDonations(normalizeDonations(donationsRes.data));
       } else {
@@ -82,34 +78,25 @@ export default function UserProfile() {
 
   const menuOptions = useMemo(() => {
     const options = ["Block", "Report"];
-
-    if (profileUserId) {
-      options.unshift("Send Message");
-    }
-
-    if (canPromote) {
-      options.unshift("Promote to Food Saver");
-    }
-
+    if (profileUserId) options.unshift("Send Message");
+    if (canPromote) options.unshift("Promote to Food Saver");
     return options;
   }, [canPromote, profileUserId]);
 
   const handlePromote = async () => {
     if (!profileUserId) return;
-
     try {
       await api.post(`/users/promote/${profileUserId}/`);
       Alert.alert("Success", `${user?.username ?? "This user"} is now a Food Saver.`);
       const res = await api.get(`/users/users/${profileUserId}/`);
       setUser(res.data);
-    } catch (err) {
+    } catch {
       Alert.alert("Promotion failed", "Could not promote this user.");
     }
   };
 
   const handleMessage = () => {
     if (!profileUserId) return;
-
     router.push({
       pathname: "/(Screens)/ChatConversation" as any,
       params: {
@@ -121,7 +108,6 @@ export default function UserProfile() {
 
   const handleReport = () => {
     if (!profileUserId) return;
-
     router.push({
       pathname: "/(Screens)/ReportProfile" as any,
       params: {
@@ -133,7 +119,6 @@ export default function UserProfile() {
 
   const handleMenuOption = (option: string) => {
     setMenuVisible(false);
-
     if (option === "Promote to Food Saver") handlePromote();
     if (option === "Send Message") handleMessage();
     if (option === "Report") handleReport();
@@ -188,6 +173,8 @@ export default function UserProfile() {
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
       <ScrollView contentContainerStyle={styles.content}>
+
+        {/* ── PROFILE CARD ─────────────────────────────────────────────────────── */}
         <View style={[styles.card, isFoodSaver && styles.cardFoodSaver]}>
           <View style={styles.topRow}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -204,14 +191,18 @@ export default function UserProfile() {
                   {menuOptions.map((option, index) => (
                     <TouchableOpacity
                       key={option}
-                      style={[styles.menuItem, index < menuOptions.length - 1 && styles.menuItemBorder]}
+                      style={[
+                        styles.menuItem,
+                        index < menuOptions.length - 1 && styles.menuItemBorder,
+                      ]}
                       onPress={() => handleMenuOption(option)}
                     >
                       <Text
                         style={[
                           styles.menuText,
                           option === "Report" && { color: COLORS.emergencyRed },
-                          (option === "Promote to Food Saver" || option === "Send Message") && styles.menuTextPrimary,
+                          (option === "Promote to Food Saver" || option === "Send Message") &&
+                            styles.menuTextPrimary,
                         ]}
                       >
                         {option}
@@ -223,6 +214,7 @@ export default function UserProfile() {
             </View>
           </View>
 
+          {/* Avatar */}
           <View style={styles.avatarWrapper}>
             <View style={[styles.avatarRing, isFoodSaver && styles.avatarRingFoodSaver]}>
               {user?.avatar ? (
@@ -238,6 +230,7 @@ export default function UserProfile() {
             )}
           </View>
 
+          {/* Name */}
           <View style={styles.nameRow}>
             <Text style={[styles.name, isFoodSaver && styles.nameFoodSaver]}>
               {user?.username ?? "Username"}
@@ -258,13 +251,14 @@ export default function UserProfile() {
             </View>
           )}
 
+          {/* Stats */}
           <View style={styles.statsRow}>
             <View style={[styles.statCard, isFoodSaver && styles.statCardFoodSaver]}>
               <Text style={[styles.statValue, isFoodSaver && styles.statValueFoodSaver]}>
                 {donations.length}
               </Text>
               <Text style={[styles.statLabel, isFoodSaver && styles.statLabelFoodSaver]}>
-                Donations
+                Posts
               </Text>
             </View>
             <View style={[styles.statCard, isFoodSaver && styles.statCardFoodSaver]}>
@@ -281,65 +275,48 @@ export default function UserProfile() {
           </View>
         </View>
 
-        <View style={[styles.tabRow, isFoodSaver && styles.tabRowFoodSaver]}>
-          <TouchableOpacity
-            style={[
-              styles.tab,
-              activeTab === "donations" && (isFoodSaver ? styles.tabActiveFoodSaver : styles.tabActive),
-            ]}
-            onPress={() => setActiveTab("donations")}
-          >
-            <Text style={[styles.tabText, activeTab === "donations" && styles.tabTextActive]}>
-              Donations
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tab,
-              activeTab === "reservations" && (isFoodSaver ? styles.tabActiveFoodSaver : styles.tabActive),
-            ]}
-            onPress={() => setActiveTab("reservations")}
-          >
-            <Text style={[styles.tabText, activeTab === "reservations" && styles.tabTextActive]}>
-              Reservations
-            </Text>
-          </TouchableOpacity>
+        {/* ── POSTS SECTION ────────────────────────────────────────────────────── */}
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, isFoodSaver && styles.sectionTitleFoodSaver]}>
+            Posts
+          </Text>
         </View>
 
         <View style={[styles.postsCard, isFoodSaver && styles.postsCardFoodSaver]}>
-          {activeTab === "donations" ? (
-            donations.length === 0 ? (
-              <Text style={styles.emptyText}>No donations yet</Text>
-            ) : (
-              donations.map((item) => (
-                <View key={item.id} style={styles.postItem}>
-                  {item.image ? (
-                    <Image source={{ uri: item.image }} style={styles.postImage} />
-                  ) : (
-                    <View style={[styles.postImage, styles.imageFallback]}>
-                      <Ionicons name="fast-food-outline" size={22} color={COLORS.primary} />
-                    </View>
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.postTitle}>{item.title}</Text>
-                    <Text style={styles.postDetails}>
-                      {item.available_quantity} / {item.quantity} {item.unit} - {item.category}
-                    </Text>
-                    <Text style={styles.postExpiry}>Expires: {item.expiry_date}</Text>
-                  </View>
-                  <View style={[styles.statusBadge, { borderColor: getStatusColor(item.status) }]}>
-                    <Ionicons name={getStatusIcon(item.status) as any} size={10} color={getStatusColor(item.status)} />
-                    <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                      {item.status}
-                    </Text>
-                  </View>
-                </View>
-              ))
-            )
+          {donations.length === 0 ? (
+            <Text style={styles.emptyText}>No posts yet</Text>
           ) : (
-            <Text style={styles.emptyText}>Reservations are private</Text>
+            donations.map((item) => (
+              <View key={item.id} style={styles.postItem}>
+                {item.image ? (
+                  <Image source={{ uri: item.image }} style={styles.postImage} />
+                ) : (
+                  <View style={[styles.postImage, styles.imageFallback]}>
+                    <Ionicons name="fast-food-outline" size={22} color={COLORS.primary} />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.postTitle}>{item.title}</Text>
+                  <Text style={styles.postDetails}>
+                    {item.available_quantity} / {item.quantity} {item.unit} - {item.category}
+                  </Text>
+                  <Text style={styles.postExpiry}>Expires: {item.expiry_date}</Text>
+                </View>
+                <View style={[styles.statusBadge, { borderColor: getStatusColor(item.status) }]}>
+                  <Ionicons
+                    name={getStatusIcon(item.status) as any}
+                    size={10}
+                    color={getStatusColor(item.status)}
+                  />
+                  <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+                    {item.status}
+                  </Text>
+                </View>
+              </View>
+            ))
           )}
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -351,10 +328,16 @@ const styles = StyleSheet.create({
   errorBackBtn: { padding: SPACING.lg },
   errorState: { flex: 1, justifyContent: "center", alignItems: "center" },
 
+  // Profile card
   card: { backgroundColor: "#E8EBE1", borderRadius: BORDER_RADIUS.xl, padding: SPACING.lg },
   cardFoodSaver: { backgroundColor: "#FFF8EC", borderWidth: 2, borderColor: "#F5A623" },
 
-  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: SPACING.md },
+  topRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: SPACING.md,
+  },
   backBtn: {
     width: 32,
     height: 32,
@@ -382,6 +365,7 @@ const styles = StyleSheet.create({
   menuText: { fontSize: 14, color: COLORS.textPrimary, textAlign: "center" },
   menuTextPrimary: { color: COLORS.primary, fontWeight: "700" },
 
+  // Avatar
   avatarWrapper: { alignItems: "center", marginBottom: SPACING.md, position: "relative" },
   avatarRing: {
     width: 104,
@@ -404,7 +388,14 @@ const styles = StyleSheet.create({
     borderColor: "#F5A623",
   },
 
-  nameRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 6, marginBottom: SPACING.sm },
+  // Name
+  nameRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: SPACING.sm,
+  },
   name: { fontSize: 18, fontWeight: "700", color: COLORS.textPrimary },
   nameFoodSaver: { color: "#B8860B" },
   certifiedBanner: {
@@ -421,6 +412,7 @@ const styles = StyleSheet.create({
   },
   certifiedText: { fontSize: 11, color: "#B8860B", fontWeight: "600", fontStyle: "italic" },
 
+  // Stats
   statsRow: { flexDirection: "row", gap: 8 },
   statCard: {
     flex: 1,
@@ -438,23 +430,46 @@ const styles = StyleSheet.create({
   statLabelFoodSaver: { color: "#B8860B" },
   scoreRow: { flexDirection: "row", alignItems: "center", gap: 3 },
 
-  tabRow: { flexDirection: "row", backgroundColor: "#E8EBE1", borderRadius: 12, padding: 4 },
-  tabRowFoodSaver: { backgroundColor: "#FEF3C7" },
-  tab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 10 },
-  tabActive: { backgroundColor: COLORS.primary },
-  tabActiveFoodSaver: { backgroundColor: "#F5A623" },
-  tabText: { fontSize: 13, fontWeight: "600", color: COLORS.textMuted },
-  tabTextActive: { color: COLORS.white },
+  // Posts section
+  sectionHeader: { paddingHorizontal: SPACING.xs },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+  },
+  sectionTitleFoodSaver: { color: "#B8860B" },
 
-  postsCard: { backgroundColor: "#E8EBE1", borderRadius: BORDER_RADIUS.xl, padding: SPACING.lg, gap: SPACING.md, marginBottom: 20 },
+  postsCard: {
+    backgroundColor: "#E8EBE1",
+    borderRadius: BORDER_RADIUS.xl,
+    padding: SPACING.lg,
+    gap: SPACING.md,
+    marginBottom: 20,
+  },
   postsCardFoodSaver: { backgroundColor: "#FFF8EC", borderWidth: 1.5, borderColor: "#F5A623" },
-  postItem: { flexDirection: "row", alignItems: "center", gap: SPACING.md, backgroundColor: COLORS.white, borderRadius: 15, padding: SPACING.sm, elevation: 1 },
+  postItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    backgroundColor: COLORS.white,
+    borderRadius: 15,
+    padding: SPACING.sm,
+    elevation: 1,
+  },
   postImage: { width: 50, height: 50, borderRadius: 10 },
   imageFallback: { backgroundColor: "#D9E0C9", alignItems: "center", justifyContent: "center" },
   postTitle: { fontSize: 14, fontWeight: "600", color: COLORS.textPrimary },
   postDetails: { fontSize: 12, color: "#A29F9F" },
   postExpiry: { fontSize: 11, marginTop: 2, fontWeight: "500", color: COLORS.textMuted },
-  statusBadge: { flexDirection: "row", alignItems: "center", gap: 3, borderWidth: 1, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3 },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
   statusText: { fontSize: 10, fontWeight: "700" },
   emptyText: { textAlign: "center", color: COLORS.textMuted, paddingVertical: 30 },
 });
