@@ -28,17 +28,43 @@ class Donation(models.Model):
         ('red', 'Urgent - pick up fast'),
     ]
 
-    donor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='donations')
-    title = models.CharField(max_length=255)
-    description = models.TextField(blank=True)
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
-    quantity = models.PositiveIntegerField()
-    available_quantity = models.PositiveIntegerField()
-    unit = models.CharField(max_length=50)
-    expiry_date = models.DateField()
-    pickup_address = models.TextField()
-    latitude = models.FloatField()
-    longitude = models.FloatField()
+    UNIT_TO_KG = {
+        'kg':     1.0,
+        'g':      0.001,
+        'gram':   0.001,
+        'grams':  0.001,
+        'l':      1.0,
+        'litre':  1.0,
+        'litres': 1.0,
+        'ml':     0.001,
+        'pieces': 0.3,
+        'piece':  0.3,
+        'pcs':    0.3,
+     }
+
+    CATEGORY_CO2_FACTOR = {
+        'Meat':      6.0,
+        'Milk':      3.2,
+        'Fruit':     1.1,
+        'Pastries':  2.0,
+        'Cooked':    2.5,
+        'Preserved': 1.8,
+        'Drinks':    1.0,
+        'Other':     2.5,
+    }
+
+
+    donor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='donations',null=True, blank=True)
+    title = models.CharField(max_length=255, default="Untitled Donation")
+    description = models.TextField(blank=True, default="")
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='Other')
+    quantity = models.PositiveIntegerField(default=1)
+    available_quantity = models.PositiveIntegerField(default=0)
+    unit = models.CharField(max_length=50, default="pieces")
+    expiry_date = models.DateField(default=timezone.now)   # fallback: today
+    pickup_address = models.TextField(default="Not provided")
+    latitude = models.FloatField(default=0.0)
+    longitude = models.FloatField(default=0.0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     urgency = models.CharField(max_length=10, choices=URGENCY_CHOICES, default='green')
     image = models.ImageField(upload_to='donations/', blank=True, null=True)
@@ -71,6 +97,13 @@ class Donation(models.Model):
 
     def __str__(self):
         return f"{self.title} by {self.donor.username}"
+    def quantity_in_kg(self):
+        factor = self.UNIT_TO_KG.get(self.unit.lower().strip(), 0.3)
+        return round(self.quantity * factor, 2)
+
+    def co2_avoided_kg(self):
+        co2_factor = self.CATEGORY_CO2_FACTOR.get(self.category, 2.5)
+        return round(self.quantity_in_kg() * co2_factor, 2)
 
 
 class Reservation(models.Model):

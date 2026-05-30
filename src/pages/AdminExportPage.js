@@ -1,17 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-import '../styles/AdminExportPage.css'; 
+import '../styles/AdminExportPage.css';
+import { exportAdminData, logoutUser } from '../services/api';
 
 import {
-  FiPieChart,
-  FiFileText,
-  FiUsers,
-  FiDownload,
-  FiLogOut,
-  FiChevronLeft,
-  FiChevronRight,
-  FiLayers
+  FiPieChart, FiFileText, FiUsers, FiDownload,
+  FiLogOut, FiChevronLeft, FiChevronRight, FiLayers
 } from 'react-icons/fi';
 import { FaHandHoldingHeart } from 'react-icons/fa';
 
@@ -19,17 +13,44 @@ const AdminExportPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
 
-  const [selectedFormat, setSelectedFormat] = useState('.CSV');
-  const [selectedDate, setSelectedDate] = useState('Last 30 days');
-  const [selectedData, setSelectedData] = useState('Donations');
+  const user            = JSON.parse(localStorage.getItem('user') || '{}');
+  const adminName       = user.username || 'Admin';
+  const isLocalAuthority = user.role === 'localauthority';
 
-  const handleDownload = () => {
-    alert(`Downloading ${selectedData} as ${selectedFormat} for ${selectedDate}...`);
+  const dataOptions = isLocalAuthority
+    ? ['Donations', 'Statistics']
+    : ['Donations', 'Users', 'Statistics', 'Reports'];
+
+  const [selectedFormat, setSelectedFormat] = useState('.CSV');
+  const [selectedDate,   setSelectedDate]   = useState('Last 30 days');
+  const [selectedData,   setSelectedData]   = useState('Donations');
+  const [isLoading,      setIsLoading]      = useState(false);
+  const [error,          setError]          = useState('');
+  const [success,        setSuccess]        = useState('');
+
+  useEffect(() => {
+    if (isLocalAuthority && ['Users', 'Reports'].includes(selectedData)) {
+      setSelectedData('Donations');
+    }
+  }, []);
+
+  const handleDownload = async () => {
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      await exportAdminData(selectedFormat, selectedDate, selectedData);
+      setSuccess(`✅ ${selectedData} exported as ${selectedFormat} successfully!`);
+    } catch (err) {
+      setError('❌ ' + err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="admin-dashboard">
-      {/* ================= SIDEBAR ================= */}
+
       <aside className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
           {isSidebarOpen && <h2 className="logo-text">ZER0<br />WASTE</h2>}
@@ -43,19 +64,23 @@ const AdminExportPage = () => {
             <span className="admin-icon"><FiPieChart /></span>
             {isSidebarOpen && <span className="menu-text">Statistics</span>}
           </div>
-          <div className="menu-item" onClick={() => navigate('/admin/reports')} style={{ cursor: 'pointer' }}>
-            <span className="admin-icon"><FiFileText /></span>
-            {isSidebarOpen && <span className="menu-text">Reports</span>}
-          </div>
-          <div className="menu-item" onClick={() => navigate('/admin/users')} style={{ cursor: 'pointer' }}>
-            <span className="admin-icon"><FiUsers /></span>
-            {isSidebarOpen && <span className="menu-text">Users</span>}
-          </div>
-          <div className="menu-item" onClick={() => navigate('/admin/donations')} style={{ cursor: 'pointer' }}>
-            <span className="admin-icon"><FaHandHoldingHeart /></span>
-            {isSidebarOpen && <span className="menu-text">Donations</span>}
-          </div>
-          <div className="menu-item active">
+          {!isLocalAuthority && (
+            <>
+              <div className="menu-item" onClick={() => navigate('/admin/reports')} style={{ cursor: 'pointer' }}>
+                <span className="admin-icon"><FiFileText /></span>
+                {isSidebarOpen && <span className="menu-text">Reports</span>}
+              </div>
+              <div className="menu-item" onClick={() => navigate('/admin/users')} style={{ cursor: 'pointer' }}>
+                <span className="admin-icon"><FiUsers /></span>
+                {isSidebarOpen && <span className="menu-text">Users</span>}
+              </div>
+              <div className="menu-item" onClick={() => navigate('/admin/donations')} style={{ cursor: 'pointer' }}>
+                <span className="admin-icon"><FaHandHoldingHeart /></span>
+                {isSidebarOpen && <span className="menu-text">Donations</span>}
+              </div>
+            </>
+          )}
+          <div className="menu-item active" style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FiDownload /></span>
             {isSidebarOpen && <span className="menu-text">Export data</span>}
           </div>
@@ -64,27 +89,25 @@ const AdminExportPage = () => {
         <div className="sidebar-footer">
           <div className="admin-profile">
             <div className="avatar">👩‍💼</div>
-            {isSidebarOpen && <span className="admin-name">Admin Name</span>}
+            {isSidebarOpen && <span className="admin-name">{adminName}</span>}
           </div>
-          <FiLogOut className="logout-icon" onClick={() => navigate('/')} style={{ cursor: 'pointer' }} />
+          <FiLogOut className="logout-icon" style={{ cursor: 'pointer' }} onClick={async () => { await logoutUser(); navigate('/login'); }} />
         </div>
       </aside>
 
-      {/* ================= MAIN CONTENT ================= */}
       <main className="main-content export-page-wrapper">
         <div className="export-card">
-          
+
           <div className="export-header">
             <h2><FiLayers className="title-icon" /> Export data</h2>
             <p>Download platform data for analysis and reporting.</p>
           </div>
 
-          {/* Section 1: File Format */}
           <div className="export-section">
             <h3>File Format</h3>
             <div className="pills-container">
               {['.CSV', '.JSON', '.XLSX'].map(format => (
-                <button 
+                <button
                   key={format}
                   className={`export-pill ${selectedFormat === format ? 'active' : ''}`}
                   onClick={() => setSelectedFormat(format)}
@@ -95,12 +118,11 @@ const AdminExportPage = () => {
             </div>
           </div>
 
-          {/* Section 2: Date Range */}
           <div className="export-section">
             <h3>Date Range</h3>
             <div className="date-range-container">
               {['Last 7 days', 'Last 30 days', 'Last 3 months', 'This year', 'All time'].map(date => (
-                <button 
+                <button
                   key={date}
                   className={`date-row ${selectedDate === date ? 'active' : ''}`}
                   onClick={() => setSelectedDate(date)}
@@ -111,12 +133,11 @@ const AdminExportPage = () => {
             </div>
           </div>
 
-          {/* Section 3: Data to Export */}
           <div className="export-section">
             <h3>Data to Export</h3>
             <div className="pills-container">
-              {['Donations', 'Users', 'Statistics', 'Reports'].map(data => (
-                <button 
+              {dataOptions.map(data => (
+                <button
                   key={data}
                   className={`export-pill ${selectedData === data ? 'active' : ''}`}
                   onClick={() => setSelectedData(data)}
@@ -127,9 +148,16 @@ const AdminExportPage = () => {
             </div>
           </div>
 
-          {/* Download Button */}
-          <button className="download-btn-large" onClick={handleDownload}>
-            DOWNLOAD EXPORT
+          {error   && <p style={{ color: '#E07A5F', marginBottom: '8px' }}>{error}</p>}
+          {success && <p style={{ color: '#588157', marginBottom: '8px' }}>{success}</p>}
+
+          <button
+            className="download-btn-large"
+            onClick={handleDownload}
+            disabled={isLoading}
+            style={{ opacity: isLoading ? 0.6 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
+          >
+            {isLoading ? 'Exporting...' : 'DOWNLOAD EXPORT'}
           </button>
 
         </div>
@@ -137,5 +165,5 @@ const AdminExportPage = () => {
     </div>
   );
 };
- 
+
 export default AdminExportPage;

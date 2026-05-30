@@ -18,7 +18,15 @@ function LoginPage({ onNavigateToReset }) {
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    if (token) navigate('/admin/statistics', { replace: true });
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (token && user) {
+        if (user.role === 'localauthority') {
+          navigate('/authority/statistics', { replace: true });
+        } else if (user.role === 'admin') {
+          navigate('/admin/statistics', { replace: true });
+        }
+      }
+    
   }, [navigate]);
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
@@ -40,7 +48,12 @@ function LoginPage({ onNavigateToReset }) {
       localStorage.setItem('access_token', data.access);
       localStorage.setItem('refresh_token', data.refresh);
       localStorage.setItem('user', JSON.stringify(profile));
-      navigate('/admin/statistics', { replace: true });
+      if (profile.role === 'localauthority') {
+        navigate('/authority/statistics', { replace: true });
+      } else {
+        navigate('/admin/statistics', { replace: true });
+      }
+    
     } catch (err) {
       setError(err.message);
     } finally {

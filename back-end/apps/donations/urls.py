@@ -1,11 +1,10 @@
 from django.urls import path
-
+from .export import AdminExportView
 from .views import (
     CreateDonationView,
     EditDonationView,
     DeleteDonationView,
     MyDonationsView,
-    ReservationByConversationView,
     ReserveDonationView,
     ConfirmReservationView,
     RejectReservationView,
@@ -47,11 +46,8 @@ urlpatterns = [
   # ── Admin ──────────────────────────────────────────
     path('admin/all/', AdminAllDonationsView.as_view(), name='admin_all_donations'),
     path('admin/statistics/', AdminStatisticsView.as_view(), name='admin_statistics'),
-         
+    path('admin/export/', AdminExportView.as_view(), name='admin-export'),     
 path('reservations/<int:reservation_id>/rate/', RateReservationView.as_view(), name='rate-reservation'),
-path(
-    'donations/reservations/by-conversation/<int:conversation_id>/',
-    ReservationByConversationView.as_view()
-),
+
 
 ]

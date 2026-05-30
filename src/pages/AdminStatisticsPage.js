@@ -2,16 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/AdminUsersPage.css';
 import '../styles/AdminStatisticsPage.css';
-import { fetchAdminStatistics } from '../services/api';
-
-import {
-  FiPieChart, FiFileText, FiUsers, FiDownload, FiLogOut, FiChevronLeft, FiChevronRight
-} from 'react-icons/fi';
+import { fetchAdminStatistics,logoutUser } from '../services/api';
+import { FiPieChart, FiFileText, FiUsers, FiDownload, FiLogOut, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { FaHandHoldingHeart } from 'react-icons/fa';
 
 const AdminStatisticsPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const adminName = user.username || 'Admin';
 
   const [stats, setStats] = useState({
     totalDonations: 0,
@@ -26,20 +25,20 @@ const AdminStatisticsPage = () => {
 
   const [donationsData, setDonationsData] = useState([]);
   const [foodSavedData, setFoodSavedData] = useState([]);
+  const [co2Data,       setCo2Data]       = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError]         = useState(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setIsLoading(true);
         setError(null);
-
         const data = await fetchAdminStatistics();
-
         setStats(data.generalStats);
         setDonationsData(data.charts.donations);
         setFoodSavedData(data.charts.foodSaved);
+        setCo2Data(data.charts.co2 || []);
       } catch (err) {
         console.error('Error fetching statistics:', err);
         setError('Failed to load statistics. Please try again.');
@@ -47,60 +46,69 @@ const AdminStatisticsPage = () => {
         setIsLoading(false);
       }
     };
-
     fetchDashboardData();
   }, []);
 
-  const maxDonation = Math.max(...donationsData.map(d => d.value), 0);
-  const maxFood = Math.max(...foodSavedData.map(d => d.value), 0);
-  const chartMaxValue = Math.max(maxDonation, maxFood) * 1.1 || 100;
+  const allValues      = [
+    ...donationsData.map(d => d.value),
+    ...foodSavedData.map(d => d.value),
+  ];
+  const chartMaxValue  = Math.max(...allValues, 0) * 1.1 || 100;
+  const co2MaxValue    = Math.max(...co2Data.map(d => d.value), 0) * 1.1 || 100;
 
   const currentMonthLabel = new Date().toLocaleString('default', {
     month: 'long', year: 'numeric'
   });
 
+  // Relatable CO2 equivalents
+  const carKm      = Math.round(stats.totalCo2Avoided * 6.5);
+  const treesNeeded = Math.round(stats.totalCo2Avoided / 21);
+
   return (
     <div className="admin-dashboard">
-      <aside className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
-        <div className="sidebar-header">
-          {isSidebarOpen && <h2 className="logo-text">ZER0<br />WASTE</h2>}
-          <button className="toggle-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-            {isSidebarOpen ? <FiChevronLeft /> : <FiChevronRight />}
-          </button>
+
+      {/* ── Sidebar ── */}
+    <aside className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
+      <div className="sidebar-header">
+        {isSidebarOpen && <h2 className="logo-text">ZER0<br />WASTE</h2>}
+        <button className="toggle-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+          {isSidebarOpen ? <FiChevronLeft /> : <FiChevronRight />}
+        </button>
+      </div>
+
+      <nav className="sidebar-menu">
+        <div className="menu-item active" style={{ cursor: 'pointer' }}>
+          <span className="admin-icon"><FiPieChart /></span>
+          {isSidebarOpen && <span className="menu-text">Statistics</span>}
         </div>
-
-        <nav className="sidebar-menu">
-          <div className="menu-item active">
-            <span className="admin-icon"><FiPieChart /></span>
-            {isSidebarOpen && <span className="menu-text">Statistics</span>}
-          </div>
-          <div className="menu-item" onClick={() => navigate('/admin/reports')} style={{ cursor: 'pointer' }}>
-            <span className="admin-icon"><FiFileText /></span>
-            {isSidebarOpen && <span className="menu-text">Reports</span>}
-          </div>
-          <div className="menu-item" onClick={() => navigate('/admin/users')} style={{ cursor: 'pointer' }}>
-            <span className="admin-icon"><FiUsers /></span>
-            {isSidebarOpen && <span className="menu-text">Users</span>}
-          </div>
-          <div className="menu-item" onClick={() => navigate('/admin/donations')} style={{ cursor: 'pointer' }}>
-            <span className="admin-icon"><FaHandHoldingHeart /></span>
-            {isSidebarOpen && <span className="menu-text">Donations</span>}
-          </div>
-          <div className="menu-item" onClick={() => navigate('/admin/export')} style={{ cursor: 'pointer' }}>
-            <span className="admin-icon"><FiDownload /></span>
-            {isSidebarOpen && <span className="menu-text">Export data</span>}
-          </div>
-        </nav>
-
-        <div className="sidebar-footer">
-          <div className="admin-profile">
-            <div className="avatar">👩‍💼</div>
-            {isSidebarOpen && <span className="admin-name">Admin Name</span>}
-          </div>
-          <FiLogOut className="logout-icon" onClick={() => navigate('/')} style={{ cursor: 'pointer' }} />
+        <div className="menu-item" onClick={() => navigate('/admin/reports')} style={{ cursor: 'pointer' }}>
+          <span className="admin-icon"><FiFileText /></span>
+          {isSidebarOpen && <span className="menu-text">Reports</span>}
         </div>
-      </aside>
+        <div className="menu-item" onClick={() => navigate('/admin/users')} style={{ cursor: 'pointer' }}>
+          <span className="admin-icon"><FiUsers /></span>
+          {isSidebarOpen && <span className="menu-text">Users</span>}
+        </div>
+        <div className="menu-item" onClick={() => navigate('/admin/donations')} style={{ cursor: 'pointer' }}>
+          <span className="admin-icon"><FaHandHoldingHeart /></span>
+          {isSidebarOpen && <span className="menu-text">Donations</span>}
+        </div>
+        <div className="menu-item" onClick={() => navigate('/admin/export')} style={{ cursor: 'pointer' }}>
+          <span className="admin-icon"><FiDownload /></span>
+          {isSidebarOpen && <span className="menu-text">Export data</span>}
+        </div>
+      </nav>
 
+      <div className="sidebar-footer">
+        <div className="admin-profile">
+          <div className="avatar">👩‍💼</div>
+          {isSidebarOpen && <span className="admin-name">{adminName}</span>}
+        </div>
+        <FiLogOut className="logout-icon" style={{ cursor: 'pointer' }} onClick={async () => { await logoutUser(); navigate('/login'); }} />
+      </div>
+    </aside>
+
+      {/* ── Main ── */}
       <main className="main-content stat-scroll">
         {isLoading ? (
           <div style={{ padding: '2rem', textAlign: 'center', fontSize: '1.2rem' }}>
@@ -112,7 +120,9 @@ const AdminStatisticsPage = () => {
           </div>
         ) : (
           <>
+            {/* ── Stat Cards ── */}
             <div className="stats-container">
+
               <div className="stat-card">
                 <div className="stat-title">🎁 Total Donations</div>
                 <div className="stat-value">
@@ -120,20 +130,28 @@ const AdminStatisticsPage = () => {
                   <span className="stat-subtitle">+{stats.donationsAddedThisMonth} this month</span>
                 </div>
               </div>
+
               <div className="stat-card">
                 <div className="stat-title">🥗 Food Saved</div>
-                <div className="stat-value">≈ {stats.totalFoodSaved}kg</div>
+                <div className="stat-value">≈ {stats.totalFoodSaved} kg</div>
+                <div className="stat-subtitle">normalized across all units</div>
               </div>
+
               <div className="stat-card">
-                <div className="stat-title">🌿 CO2 avoided</div>
-                <div className="stat-value">≈ {stats.totalCo2Avoided}kg</div>
+                <div className="stat-title">🌿 CO₂ Avoided</div>
+                <div className="stat-value">≈ {stats.totalCo2Avoided} kg</div>
+                <div className="stat-subtitle">🚗 {carKm} km of driving · 🌳 {treesNeeded} trees/year</div>
               </div>
+
               <div className="stat-card">
-                <div className="stat-title">👥 Active users</div>
+                <div className="stat-title">👥 Active Users</div>
                 <div className="stat-value">{stats.activeUsers}</div>
+                <div className="stat-subtitle">last 30 days</div>
               </div>
+
             </div>
 
+            {/* ── This Month ── */}
             <div className="month-summary-section">
               <h3 className="section-title">This month — {currentMonthLabel}</h3>
               <div className="month-cards-container">
@@ -143,16 +161,19 @@ const AdminStatisticsPage = () => {
                 </div>
                 <div className="month-card">
                   <span className="month-card-title">Food Saved</span>
-                  <span className="month-card-value orange-text">{stats.thisMonthFoodSaved}kg</span>
+                  <span className="month-card-value orange-text">{stats.thisMonthFoodSaved} kg</span>
                 </div>
                 <div className="month-card">
-                  <span className="month-card-title">CO2 avoided</span>
-                  <span className="month-card-value green-text">{stats.thisMonthCo2}kg</span>
+                  <span className="month-card-title">CO₂ Avoided</span>
+                  <span className="month-card-value green-text">{stats.thisMonthCo2} kg</span>
                 </div>
               </div>
             </div>
 
+            {/* ── Charts ── */}
             <div className="charts-section">
+
+              {/* Donations chart */}
               <div className="chart-box">
                 <h3 className="section-title">Monthly Donations</h3>
                 <div className="bars-container">
@@ -162,13 +183,14 @@ const AdminStatisticsPage = () => {
                       <div
                         className={`bar ${index === donationsData.length - 1 ? 'bar-dark-green' : 'bar-light-green'}`}
                         style={{ height: `${(data.value / chartMaxValue) * 100}%` }}
-                      ></div>
+                      />
                       <span className="bar-label">{data.month}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
+              {/* Food saved chart */}
               <div className="chart-box">
                 <h3 className="section-title">Food Saved (kg)</h3>
                 <div className="bars-container">
@@ -178,12 +200,30 @@ const AdminStatisticsPage = () => {
                       <div
                         className={`bar ${index === foodSavedData.length - 1 ? 'bar-orange' : 'bar-yellow'}`}
                         style={{ height: `${(data.value / chartMaxValue) * 100}%` }}
-                      ></div>
+                      />
                       <span className="bar-label">{data.month}</span>
                     </div>
                   ))}
                 </div>
-          </div>
+              </div>
+
+              {/* CO2 chart — new */}
+              <div className="chart-box">
+                <h3 className="section-title">CO₂ Avoided (kg)</h3>
+                <div className="bars-container">
+                  {co2Data.map((data, index) => (
+                    <div className="bar-wrapper" key={index}>
+                      <span className="bar-value">{data.value}</span>
+                      <div
+                        className={`bar ${index === co2Data.length - 1 ? 'bar-dark-green' : 'bar-light-green'}`}
+                        style={{ height: `${(data.value / co2MaxValue) * 100}%` }}
+                      />
+                      <span className="bar-label">{data.month}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
             </div>
           </>
         )}

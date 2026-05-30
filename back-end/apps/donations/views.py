@@ -1031,9 +1031,12 @@ class NotInterestedView(APIView):
 # ─────────────────────────────────────────────
 
 class AdminAllDonationsView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        user = request.user
+        if not hasattr(user, 'role') or user.role not in ['admin', 'localauthority']:
+            return Response({'error': 'Access denied.'}, status=status.HTTP_403_FORBIDDEN)
 
         donations = Donation.objects.all().order_by('-created_at')
 
@@ -1060,20 +1063,31 @@ class AdminAllDonationsView(APIView):
 
 
 class AdminStatisticsView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        user = request.user
+        if not hasattr(user, 'role') or user.role not in ['admin', 'localauthority']:
+            return Response({'error': 'Access denied.'}, status=status.HTTP_403_FORBIDDEN)
 
         today = now()
 
         first_of_month = today.replace(
-            day=1,
-            hour=0,
-            minute=0,
-            second=0,
-            microsecond=0
+            day=1, hour=0, minute=0, second=0, microsecond=0
         )
 
+        seven_months_ago = (
+            today.replace(day=1) - timedelta(days=6 * 30)
+        ).replace(day=1)
+
+        thirty_days_ago = today - timedelta(days=30)
+
+        MONTH_ABBR = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ]
+
+        # ── Total donations ──────────────────────────────────────
         total_donations = Donation.objects.exclude(
             status='deleted'
         ).count()
@@ -1084,48 +1098,41 @@ class AdminStatisticsView(APIView):
             created_at__gte=first_of_month
         ).count()
 
-        food_saved_qs = Donation.objects.filter(
-            status='donated'
-        ).aggregate(total=Sum('quantity'))
+        # ── Food saved (unit-normalized to kg) ───────────────────
+        donated_all = Donation.objects.filter(status='donated')
+        total_food_saved = round(
+            sum(d.quantity_in_kg() for d in donated_all), 1
+        )
 
-        total_food_saved = food_saved_qs['total'] or 0
+        # ── CO2 avoided (category-weighted) ─────────────────────
+        total_co2_avoided = round(
+            sum(d.co2_avoided_kg() for d in donated_all), 1
+        )
 
-        total_co2_avoided = round(total_food_saved * 2.5)
-
+        # ── Active users ─────────────────────────────────────────
         from django.contrib.auth import get_user_model
-
         User = get_user_model()
-
-        thirty_days_ago = today - timedelta(days=30)
 
         active_users = User.objects.filter(
             is_active=True
         ).filter(
-            models.Q(
-                donations__created_at__gte=thirty_days_ago
-            ) |
-            models.Q(
-                reservations__created_at__gte=thirty_days_ago
-            )
+            models.Q(donations__created_at__gte=thirty_days_ago) |
+            models.Q(reservations__created_at__gte=thirty_days_ago)
         ).distinct().count()
 
-        this_month_food_saved_qs = Donation.objects.filter(
+        # ── This month ───────────────────────────────────────────
+        donated_this_month = Donation.objects.filter(
             status='donated',
             updated_at__gte=first_of_month
-        ).aggregate(total=Sum('quantity'))
-
-        this_month_food_saved = (
-            this_month_food_saved_qs['total'] or 0
         )
-
+        this_month_food_saved = round(
+            sum(d.quantity_in_kg() for d in donated_this_month), 1
+        )
         this_month_co2 = round(
-            this_month_food_saved * 2.5
+            sum(d.co2_avoided_kg() for d in donated_this_month), 1
         )
 
-        seven_months_ago = (
-            today.replace(day=1) - timedelta(days=6 * 30)
-        ).replace(day=1)
-
+        # ── Donations chart (by month) ───────────────────────────
         donations_by_month = (
             Donation.objects
             .exclude(status='deleted')
@@ -1136,52 +1143,69 @@ class AdminStatisticsView(APIView):
             .order_by('month')
         )
 
-        food_by_month = (
-            Donation.objects
-            .filter(
-                status='donated',
-                updated_at__gte=seven_months_ago
-            )
-            .annotate(month=TruncMonth('updated_at'))
-            .values('month')
-            .annotate(value=Sum('quantity'))
-            .order_by('month')
-        )
-
-        MONTH_ABBR = [
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        donations_chart = [
+            {
+                'month': MONTH_ABBR[entry['month'].month - 1],
+                'value': entry['value'] or 0
+            }
+            for entry in donations_by_month
         ]
 
-        def format_chart(qs):
-            return [
-                {
-                    'month': MONTH_ABBR[
-                        entry['month'].month - 1
-                    ],
-                    'value': entry['value'] or 0
-                }
-                for entry in qs
-            ]
+        # ── Food saved chart (unit-normalized, by month) ─────────
+        from collections import defaultdict
 
+        food_month_raw = Donation.objects.filter(
+            status='donated',
+            updated_at__gte=seven_months_ago
+        ).values('updated_at__year', 'updated_at__month', 'quantity', 'unit', 'category')
+
+        month_food = defaultdict(float)
+        month_co2  = defaultdict(float)
+
+        for d in food_month_raw:
+            key     = (d['updated_at__year'], d['updated_at__month'])
+            unit    = (d['unit'] or '').lower().strip()
+            factor  = Donation.UNIT_TO_KG.get(unit, 0.3)
+            kg      = d['quantity'] * factor
+            co2_f   = Donation.CATEGORY_CO2_FACTOR.get(d['category'], 2.5)
+
+            month_food[key] += kg
+            month_co2[key]  += kg * co2_f
+
+        food_chart = [
+            {
+                'month': MONTH_ABBR[month - 1],
+                'value': round(val, 1)
+            }
+            for (year, month), val in sorted(month_food.items())
+        ]
+
+        co2_chart = [
+            {
+                'month': MONTH_ABBR[month - 1],
+                'value': round(val, 1)
+            }
+            for (year, month), val in sorted(month_co2.items())
+        ]
+
+        # ── Response ─────────────────────────────────────────────
         return Response({
             'generalStats': {
-                'totalDonations': total_donations,
+                'totalDonations':         total_donations,
                 'donationsAddedThisMonth': donations_this_month,
-                'totalFoodSaved': total_food_saved,
-                'totalCo2Avoided': total_co2_avoided,
-                'activeUsers': active_users,
-                'thisMonthDonations': donations_this_month,
-                'thisMonthFoodSaved': this_month_food_saved,
-                'thisMonthCo2': this_month_co2,
+                'totalFoodSaved':         total_food_saved,
+                'totalCo2Avoided':        total_co2_avoided,
+                'activeUsers':            active_users,
+                'thisMonthDonations':     donations_this_month,
+                'thisMonthFoodSaved':     this_month_food_saved,
+                'thisMonthCo2':           this_month_co2,
             },
             'charts': {
-                'donations': format_chart(donations_by_month),
-                'foodSaved': format_chart(food_by_month),
+                'donations': donations_chart,
+                'foodSaved': food_chart,
+                'co2':       co2_chart,
             }
         })
-
-
 # ─────────────────────────────────────────────
 # RATINGS
 # ─────────────────────────────────────────────
