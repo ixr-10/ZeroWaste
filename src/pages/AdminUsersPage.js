@@ -206,23 +206,23 @@ const AdminUsersPage = () => {
         </div>
 
         <nav className="sidebar-menu">
-          <div className="menu-item" onClick={() => navigate('/admin/statistics')}>
+          <div className="menu-item" onClick={() => navigate('/admin/statistics')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FiPieChart /></span>
             {isSidebarOpen && <span className="menu-text">Statistics</span>}
           </div>
-          <div className="menu-item" onClick={() => navigate('/admin/reports')}>
+          <div className="menu-item" onClick={() => navigate('/admin/reports')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FiFileText /></span>
             {isSidebarOpen && <span className="menu-text">Reports</span>}
           </div>
-          <div className="menu-item active">
+          <div className="menu-item active" style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FiUsers /></span>
             {isSidebarOpen && <span className="menu-text">Users</span>}
           </div>
-          <div className="menu-item" onClick={() => navigate('/admin/donations')}>
+          <div className="menu-item" onClick={() => navigate('/admin/donations')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FaHandHoldingHeart /></span>
             {isSidebarOpen && <span className="menu-text">Donations</span>}
           </div>
-          <div className="menu-item" onClick={() => navigate('/admin/export')}>
+          <div className="menu-item" onClick={() => navigate('/admin/export')} style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FiDownload /></span>
             {isSidebarOpen && <span className="menu-text">Export data</span>}
           </div>
@@ -233,10 +233,9 @@ const AdminUsersPage = () => {
             <div className="avatar">👩‍💼</div>
             {isSidebarOpen && <span className="admin-name">{adminName}</span>}
           </div>
-          <FiLogOut className="logout-icon" onClick={handleLogout} />
+          <FiLogOut className="logout-icon" style={{ cursor: 'pointer' }} onClick={async () => { await logoutUser(); navigate('/login'); }} />
         </div>
       </aside>
-
       {/* ===== MAIN CONTENT ===== */}
       <main className="main-content admin-users-page">
 

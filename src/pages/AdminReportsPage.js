@@ -18,42 +18,37 @@ import {
 } from 'react-icons/fi';
 import { FaHandHoldingHeart } from 'react-icons/fa';
 
-// API  calling
-import { fetchAdminReports, processReportAction } from '../services/api';
+import { fetchAdminReports, logoutUser, processReportAction } from '../services/api';
 
 const AdminReportsPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [statusTab, setStatusTab] = useState('Pending');
   const [categoryTab, setCategoryTab] = useState('All');
-  
   const [selectedReport, setSelectedReport] = useState(null);
   const [reports, setReports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const adminName = user.username || 'Admin';
 
   const getBadgeStyle = (actionType) => {
     if (!actionType) return { backgroundColor: '#f2f4f4', color: '#bdc3c7' };
     const lowerAction = actionType.toLowerCase();
-    
     if (lowerAction.includes('delete') || lowerAction.includes('deactivate')) {
-      return { backgroundColor: '#fadbd8', color: '#e74c3c' }; 
+      return { backgroundColor: '#fadbd8', color: '#e74c3c' };
     } else if (lowerAction.includes('warning')) {
-      return { backgroundColor: '#fdebd0', color: '#e67e22' }; 
+      return { backgroundColor: '#fdebd0', color: '#e67e22' };
     } else if (lowerAction.includes('ignore') || lowerAction.includes('dismiss')) {
-      return { backgroundColor: '#e5e7e9', color: '#7f8c8d' }; 
+      return { backgroundColor: '#e5e7e9', color: '#7f8c8d' };
     }
     return { backgroundColor: '#f2f4f4', color: '#bdc3c7' };
   };
 
-  // ====================================================
-  // BACKEND (FETCH DATA)
-  // ====================================================
   useEffect(() => {
     const loadReports = async () => {
       setIsLoading(true);
       try {
-        const backendData = await fetchAdminReports(); 
-        
+        const backendData = await fetchAdminReports();
         const formattedReports = backendData.map(r => {
           const isPost = r.reported_donation !== null;
           return {
@@ -65,10 +60,8 @@ const AdminReportsPage = () => {
             userScore: !isPost ? r.reported_user_score : '0.0',
             reason: r.reason,
             postDesc: r.description,
-            
-            
-            additionalDetails: r.additional_details || r.details, 
-            screenshotFile: r.screenshot_file || r.screenshot, // link te3 screenshot
+            additionalDetails: r.additional_details || r.details,
+            screenshotFile: r.screenshot,
             author: r.reporter_username,
             date: new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
             imgUrl: isPost ? r.donation_image : null,
@@ -79,7 +72,6 @@ const AdminReportsPage = () => {
             actionDate: r.treated_at ? new Date(r.treated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
           };
         });
-
         setReports(formattedReports);
         setIsLoading(false);
       } catch (error) {
@@ -87,7 +79,6 @@ const AdminReportsPage = () => {
         setIsLoading(false);
       }
     };
-
     loadReports();
   }, []);
 
@@ -98,19 +89,17 @@ const AdminReportsPage = () => {
 
     try {
       await processReportAction(selectedReport.id, actionType);
-
       const todayDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       let formattedAction = '';
-      switch(actionType) {
+      switch (actionType) {
         case 'delete_post': formattedAction = 'Post deleted'; break;
         case 'delete_account': formattedAction = 'Account deactivated'; break;
         case 'send_warning': formattedAction = 'Warning sent'; break;
         case 'ignore_report': formattedAction = 'Ignored'; break;
         default: formattedAction = actionType;
       }
-
-      setReports((prevReports) => 
-        prevReports.map((r) => 
+      setReports((prevReports) =>
+        prevReports.map((r) =>
           r.id === selectedReport.id ? { ...r, status: 'Treated', action: formattedAction, actionDate: todayDate } : r
         )
       );
@@ -144,7 +133,7 @@ const AdminReportsPage = () => {
             <span className="admin-icon"><FiPieChart /></span>
             {isSidebarOpen && <span className="menu-text">Statistics</span>}
           </div>
-          <div className="menu-item active">
+          <div className="menu-item active" style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FiFileText /></span>
             {isSidebarOpen && <span className="menu-text">Reports</span>}
           </div>
@@ -165,23 +154,22 @@ const AdminReportsPage = () => {
         <div className="sidebar-footer">
           <div className="admin-profile">
             <div className="avatar">👩‍💼</div>
-            {isSidebarOpen && <span className="admin-name">Admin Name</span>}
+            {isSidebarOpen && <span className="admin-name">{adminName}</span>}
           </div>
-          <FiLogOut className="logout-icon" onClick={() => navigate('/')} style={{ cursor: 'pointer' }} />
+          <FiLogOut className="logout-icon" style={{ cursor: 'pointer' }} onClick={async () => { await logoutUser(); navigate('/login'); }} />
         </div>
       </aside>
 
       {/* ===== MAIN CONTENT ===== */}
       <SimpleBar className="main-content" style={{ height: '100vh' }}>
         <div className="reports-layout-wrapper">
-          
-          {/* ===== 1. REPORTS LIST ===== */}
+
+          {/* ===== REPORTS LIST ===== */}
           <div className={`reports-left-column ${!selectedReport ? 'full-width' : ''}`}>
             <div className="status-tabs">
               <button className={`pill-btn status-btn ${statusTab === 'Pending' ? 'active-sage' : ''}`} onClick={() => { setStatusTab('Pending'); setSelectedReport(null); }}>Pending</button>
               <button className={`pill-btn status-btn ${statusTab === 'Treated' ? 'active-sage' : ''}`} onClick={() => { setStatusTab('Treated'); setSelectedReport(null); }}>Treated</button>
             </div>
-
             <div className="filter-tabs">
               <button className={`pill-btn filter-btn ${categoryTab === 'All' ? 'active-sage' : ''}`} onClick={() => setCategoryTab('All')}>All</button>
               <button className={`pill-btn filter-btn ${categoryTab === 'Posts' ? 'active-sage' : ''}`} onClick={() => setCategoryTab('Posts')}>Posts</button>
@@ -195,18 +183,16 @@ const AdminReportsPage = () => {
                 <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>No reports found.</div>
               ) : (
                 filteredReports.map((report) => (
-                  <div 
-                    className={`report-card ${selectedReport?.id === report.id ? 'active-report-card' : ''}`} 
+                  <div
+                    className={`report-card ${selectedReport?.id === report.id ? 'active-report-card' : ''}`}
                     key={report.id}
                     onClick={() => setSelectedReport(report)}
                     style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                   >
                     <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                       <div className="report-image-placeholder">
-                        {report.type === 'post' && report.imgUrl ? (
-                          <img src={`http://192.168.1.34:8000${report.imgUrl}`} alt={report.title} className="card-mini-img" />
-                        ) : report.type === 'user' && report.userImg ? (
-                          <img src={`http://192.168.1.34:8000${report.userImg}`} alt={report.title} className="card-mini-img" />
+                        {report.type === 'user' && report.userImg ? (
+                          <img src={report.userImg} alt={report.title} className="card-mini-img" />
                         ) : (
                           report.imageEmoji
                         )}
@@ -214,10 +200,9 @@ const AdminReportsPage = () => {
                       <div className="report-details-info">
                         <h4 className="report-title">{report.title}</h4>
                         <p className="report-reason">{report.reason}</p>
-                        <p className="report-meta">By {report.author} . {report.date}</p>
+                        <p className="report-meta">By {report.author} · {report.date}</p>
                       </div>
                     </div>
-
                     {report.status === 'Treated' && report.action && (
                       <div className="report-action-badge" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px', paddingRight: '15px' }}>
                         <span style={{ ...getBadgeStyle(report.action), padding: '5px 15px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>{report.action}</span>
@@ -230,33 +215,33 @@ const AdminReportsPage = () => {
             </div>
           </div>
 
-          {/* ===== 2. REPORT DETAILS PANEL ===== */}
+          {/* ===== REPORT DETAILS PANEL ===== */}
           {selectedReport && (
             <div className="reports-right-column">
               <div className="report-details-panel">
-                
+
                 <div className="details-header">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 className="details-title">Report #{selectedReport.id}</h3>
-                    <span onClick={() => setSelectedReport(null)} style={{cursor: 'pointer', color: '#888', fontWeight: 'bold', fontSize: '1.2rem'}}>X</span>
+                    <span onClick={() => setSelectedReport(null)} style={{ cursor: 'pointer', color: '#888', fontWeight: 'bold', fontSize: '1.2rem' }}>X</span>
                   </div>
-                  <span className="details-meta">By {selectedReport.author} . {selectedReport.date}</span>
+                  <span className="details-meta">By {selectedReport.author} · {selectedReport.date}</span>
                 </div>
 
                 <div className="details-section">
                   <h4 className="section-title">{selectedReport.type === 'user' ? 'Reported account' : 'Reported post'}</h4>
-                  
+
                   {selectedReport.type === 'user' ? (
                     <div className="reported-user-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <div className="user-avatar-large">
                           {selectedReport.userImg ? (
-                            <img src={`http://192.168.1.34:8000${selectedReport.userImg}`} alt="avatar" style={{width: '100%', height: '100%', borderRadius: '10px', objectFit: 'cover'}} />
-                          ) : selectedReport.imageEmoji}
+                            <img src={selectedReport.userImg} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: '10px', objectFit: 'cover' }} />
+                          ) : '👤'}
                         </div>
                         <div className="user-header">
                           <p className="user-name" style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600' }}>{selectedReport.title}</p>
-                          <p className="user-email" style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#666' }}>{selectedReport.email || 'no-email@waste.com'}</p>
+                          <p className="user-email" style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#666' }}>{selectedReport.email || 'No email available'}</p>
                         </div>
                       </div>
                       <div className="user-stats" style={{ display: 'flex', gap: '40px', marginTop: '4px' }}>
@@ -272,11 +257,11 @@ const AdminReportsPage = () => {
                     </div>
                   ) : (
                     <div className="reported-post-card">
-                      {selectedReport.imgUrl ? (
-                        <img src={`http://192.168.1.34:8000${selectedReport.imgUrl}`} alt="post" className="post-cover-image" />
-                      ) : <div className="post-cover-placeholder">{selectedReport.imageEmoji}</div>}
+                      <div className="post-cover-placeholder">📦</div>
                       <div className="post-card-body">
-                        <div className="post-card-header"><h5 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600' }}>{selectedReport.title}</h5></div>
+                        <div className="post-card-header">
+                          <h5 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600' }}>{selectedReport.title}</h5>
+                        </div>
                         <p className="post-desc" style={{ marginTop: '8px', fontSize: '0.9rem', color: '#444' }}>{selectedReport.postDesc}</p>
                       </div>
                     </div>
@@ -288,7 +273,6 @@ const AdminReportsPage = () => {
                   <div className="readonly-box">{selectedReport.reason}</div>
                 </div>
 
-                {/* additional detials*/}
                 <div className="details-section">
                   <h4 className="section-title">Additional Details</h4>
                   <div className="readonly-box large-box">
@@ -296,26 +280,24 @@ const AdminReportsPage = () => {
                   </div>
                 </div>
 
-                {/* 2. screenshot*/}
                 <div className="details-section">
                   <h4 className="section-title">Attached screenshot</h4>
                   {selectedReport.screenshotFile ? (
                     <div className="screenshot-container" style={{ marginTop: '10px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e0e0e0', maxWidth: '100%' }}>
-                      <img 
-                        src={`http://192.168.1.34:8000${selectedReport.screenshotFile}`} 
-                        alt="Evidence screenshot" 
-                        style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '350px', objectFit: 'contain', backgroundColor: '#f9f9f9' }} 
+                      <img
+                        src={selectedReport.screenshotFile}
+                        alt="Evidence screenshot"
+                        style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '350px', objectFit: 'contain', backgroundColor: '#f9f9f9' }}
                       />
                     </div>
                   ) : (
                     <div className="readonly-box screenshot-box" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>🖼️</span> 
+                      <span>🖼️</span>
                       <span style={{ color: '#888' }}>No screenshot attached</span>
                     </div>
                   )}
                 </div>
 
-                {/* ===== ADMIN ACTIONS ===== */}
                 {selectedReport.status === 'Pending' && (
                   <div className="details-section actions-section">
                     <h4 className="section-title">Admin actions</h4>

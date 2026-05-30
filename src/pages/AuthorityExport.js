@@ -1,38 +1,40 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../styles/AdminExportPage.css'; 
+import '../styles/AdminExportPage.css';
+import { exportAdminData, logoutUser } from '../services/api';
 import { FiPieChart, FiDownload, FiLogOut, FiChevronLeft, FiChevronRight, FiLayers } from 'react-icons/fi';
 
 const AuthorityExport = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
-  
-  const [selectedFormat, setSelectedFormat] = useState('.CSV');
-  const [selectedDate, setSelectedDate] = useState('Last 30 days');
-  const [selectedData, setSelectedData] = useState('Donations');
-  const [isExporting, setIsExporting] = useState(false);
 
-  const handleExport = async () => {
-    setIsExporting(true);
+  const user     = JSON.parse(localStorage.getItem('user') || '{}');
+  const adminName = user.username || 'local_authority';
+
+  const [selectedFormat, setSelectedFormat] = useState('.CSV');
+  const [selectedDate,   setSelectedDate]   = useState('Last 30 days');
+  const [selectedData,   setSelectedData]   = useState('Donations');
+  const [isLoading,      setIsLoading]      = useState(false);
+  const [error,          setError]          = useState('');
+  const [success,        setSuccess]        = useState('');
+
+  const handleDownload = async () => {
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
     try {
-      console.log(`Requesting export: ${selectedData} in ${selectedFormat} for ${selectedDate}`);
-      
-      // await axios.post('/api/export', { format: selectedFormat, range: selectedDate, type: selectedData });
-      
-      setTimeout(() => {
-        alert("Export successful! Your download will start shortly.");
-        setIsExporting(false);
-      }, 1500);
-    } catch (error) {
-      alert("Export failed. Please try again.");
-      setIsExporting(false);
+      await exportAdminData(selectedFormat, selectedDate, selectedData);
+      setSuccess(`✅ ${selectedData} exported as ${selectedFormat} successfully!`);
+    } catch (err) {
+      setError('❌ ' + err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="admin-dashboard">
       <aside className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
-       
         <div className="sidebar-header">
           {isSidebarOpen && <h2 className="logo-text">ZER0<br />WASTE</h2>}
           <button className="toggle-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
@@ -45,7 +47,7 @@ const AuthorityExport = () => {
             <span className="admin-icon"><FiPieChart /></span>
             {isSidebarOpen && <span className="menu-text">Statistics</span>}
           </div>
-          <div className="menu-item active">
+          <div className="menu-item active" style={{ cursor: 'pointer' }}>
             <span className="admin-icon"><FiDownload /></span>
             {isSidebarOpen && <span className="menu-text">Export data</span>}
           </div>
@@ -54,9 +56,10 @@ const AuthorityExport = () => {
         <div className="sidebar-footer">
           <div className="admin-profile">
             <div className="avatar">👩‍💼</div>
-            {isSidebarOpen && <span className="admin-name">local_authority</span>}
+            {isSidebarOpen && <span className="admin-name">{adminName}</span>}
           </div>
-          <FiLogOut className="logout-icon" onClick={() => navigate('/')} style={{ cursor: 'pointer' }} />
+          <FiLogOut className="logout-icon" style={{ cursor: 'pointer' }}
+            onClick={async () => { await logoutUser(); navigate('/login'); }} />
         </div>
       </aside>
 
@@ -71,7 +74,11 @@ const AuthorityExport = () => {
             <h3>File Format</h3>
             <div className="pills-container">
               {['.CSV', '.JSON', '.XLSX'].map(format => (
-                <button key={format} className={`export-pill ${selectedFormat === format ? 'active' : ''}`} onClick={() => setSelectedFormat(format)}>{format}</button>
+                <button key={format}
+                  className={`export-pill ${selectedFormat === format ? 'active' : ''}`}
+                  onClick={() => setSelectedFormat(format)}>
+                  {format}
+                </button>
               ))}
             </div>
           </div>
@@ -80,7 +87,11 @@ const AuthorityExport = () => {
             <h3>Date Range</h3>
             <div className="date-range-container">
               {['Last 7 days', 'Last 30 days', 'Last 3 months', 'This year', 'All time'].map(date => (
-                <button key={date} className={`date-row ${selectedDate === date ? 'active' : ''}`} onClick={() => setSelectedDate(date)}>{date}</button>
+                <button key={date}
+                  className={`date-row ${selectedDate === date ? 'active' : ''}`}
+                  onClick={() => setSelectedDate(date)}>
+                  {date}
+                </button>
               ))}
             </div>
           </div>
@@ -89,17 +100,21 @@ const AuthorityExport = () => {
             <h3>Data to Export</h3>
             <div className="pills-container">
               {['Donations', 'Statistics'].map(data => (
-                <button key={data} className={`export-pill ${selectedData === data ? 'active' : ''}`} onClick={() => setSelectedData(data)}>{data}</button>
+                <button key={data}
+                  className={`export-pill ${selectedData === data ? 'active' : ''}`}
+                  onClick={() => setSelectedData(data)}>
+                  {data}
+                </button>
               ))}
             </div>
           </div>
 
-          <button 
-            className="download-btn-large" 
-            onClick={handleExport}
-            disabled={isExporting}
-          >
-            {isExporting ? "PROCESSING..." : "DOWNLOAD EXPORT"}
+          {error   && <p style={{ color: '#E07A5F', marginBottom: '8px' }}>{error}</p>}
+          {success && <p style={{ color: '#588157', marginBottom: '8px' }}>{success}</p>}
+
+          <button className="download-btn-large" onClick={handleDownload} disabled={isLoading}
+            style={{ opacity: isLoading ? 0.6 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}>
+            {isLoading ? 'Exporting...' : 'DOWNLOAD EXPORT'}
           </button>
         </div>
       </main>

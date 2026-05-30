@@ -31,14 +31,12 @@ const AdminDonationPage = () => {
   const adminName = user.username || 'Admin Name';
 
   // Map backend status values to display labels used in tabs
-  const STATUS_MAP = {
-    available: 'Active',
-    reserved: 'Active',
-    completed: 'Donated',
-    expired: 'Expired',
-     deleted: 'Deleted',
-  };
-
+const STATUS_MAP = {
+  active: 'Active',
+  donated: 'Donated',
+  expired: 'Expired',
+  deleted: 'Deleted',
+};
   // Map backend urgency values to color strings used in filter
   const URGENCY_COLOR_MAP = {
     green: 'green',
@@ -58,7 +56,9 @@ const AdminDonationPage = () => {
         prod: d.title,
         user: d.donor_username,
         date: new Date(d.created_at).toLocaleDateString('fr-FR'),
-        qty: `${d.available_quantity} ${d.unit}`,
+        qty: d.status === 'active'
+          ? `${d.available_quantity} ${d.unit}`
+          : `${d.quantity} ${d.unit}`,
         status: STATUS_MAP[d.status] || d.status,
         coords: `${d.latitude}, ${d.longitude}`,
         category: d.category,
@@ -170,7 +170,7 @@ const getEmergencyColor = (color) => {
     <div className="admin-layout-container">
       
       {/* ================= SIDEBAR COMPONENT ================= */}
-      <aside className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
+        <aside className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
           {isSidebarOpen && <h2 className="logo-text">ZER0<br />WASTE</h2>}
           <button className="toggle-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
@@ -206,11 +206,7 @@ const getEmergencyColor = (color) => {
             <div className="avatar">👩‍💼</div>
             {isSidebarOpen && <span className="admin-name">{adminName}</span>}
           </div>
-          <FiLogOut className="logout-icon" onClick={async () => {
-              await logoutUser();
-              navigate('/login');
-            }} 
-            />
+          <FiLogOut className="logout-icon" style={{ cursor: 'pointer' }} onClick={async () => { await logoutUser(); navigate('/login'); }} />
         </div>
       </aside>
 
@@ -219,7 +215,7 @@ const getEmergencyColor = (color) => {
         
         {/* Status Pills Tabs */}
         <div className="status-tabs">
-          {['All', 'Active', 'Donated', 'Expired'].map(tab => (
+          {['All', 'Active', 'Donated', 'Expired', 'Deleted'].map(tab => (
             <button 
               key={tab} 
               className={`status-pill ${activeTab === tab ? 'active' : ''}`}

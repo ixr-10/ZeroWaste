@@ -1,5 +1,5 @@
 
-const BASE_URL = 'http://192.168.1.38:8000/api';
+const BASE_URL = 'http://localhost:8000/api';
 
 
 // ── Token helpers ──
@@ -216,9 +216,10 @@ export const adminPromoteOrDemoteFoodSaver = async (userId, isFoodSaver) => {
 export const fetchAdminDonations = async ({ status, category, urgency } = {}) => {
   const params = new URLSearchParams();
   if (status && status !== 'All') {
-    if (status === 'Active') params.append('status', 'available');
-    else if (status === 'Donated') params.append('status', 'completed');
-    else if (status === 'Expired') params.append('status', 'expired');
+    if (status === 'Active')  params.append('status', 'active');
+    if (status === 'Donated') params.append('status', 'donated');
+    if (status === 'Expired') params.append('status', 'expired');
+    if (status === 'Deleted') params.append('status', 'deleted');
   }
   if (category) params.append('category', category);
   if (urgency) params.append('urgency', urgency);
@@ -267,4 +268,47 @@ export const updatePromotionCriteria = async ({ min_score }) => {
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || 'Failed to update criteria.');
   return data;
+};
+
+// ── Export ──
+export const exportAdminData = async (format, dateRange, dataType) => {
+  const DATE_MAP = {
+    'Last 7 days':   'last_7',
+    'Last 30 days':  'last_30',
+    'Last 3 months': 'last_3m',
+    'This year':     'this_year',
+    'All time':      'all',
+  };
+
+  const FORMAT_MAP = {
+    '.CSV':  'csv',
+    '.JSON': 'json',
+    '.XLSX': 'xlsx',
+  };
+
+  const fmt       = FORMAT_MAP[format] || 'csv';
+  const dateParam = DATE_MAP[dateRange] || 'all';
+  const typeParam = dataType.toLowerCase();
+
+  const url = `${BASE_URL}/donations/admin/export/?file_format=${fmt}&date_range=${dateParam}&data_type=${typeParam}`;
+
+  const token = localStorage.getItem('access_token');
+  const res   = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Export failed.');
+  }
+
+  const blob        = await res.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const a           = document.createElement('a');
+  a.href            = downloadUrl;
+  a.download        = `zerowaste_${typeParam}_${dateParam}${format.toLowerCase()}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(downloadUrl);
 };
