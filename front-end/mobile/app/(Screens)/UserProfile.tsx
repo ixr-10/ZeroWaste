@@ -246,7 +246,7 @@ export default function UserProfile() {
             <View style={styles.certifiedBanner}>
               <Ionicons name="shield-checkmark" size={14} color="#B8860B" />
               <Text style={styles.certifiedText}>
-                Certified Food Saver - Trusted by the community
+                Certified Food Saver-Trusted by the community fo
               </Text>
             </View>
           )}

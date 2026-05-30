@@ -1264,4 +1264,44 @@ class RateReservationView(APIView):
             )
         })
     
+    # ─────────────────────────────────────────────
+# RESERVATION BY CONVERSATION
+# ─────────────────────────────────────────────
+
+class ReservationByConversationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, conversation_id):
+        from apps.chat.models import Conversation
+
+        try:
+            conversation = Conversation.objects.get(id=conversation_id)
+        except Conversation.DoesNotExist:
+            return Response(
+                {'error': 'Conversation not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Conversation stores donation + beneficiary, so match on both
+        reservation = Reservation.objects.filter(
+            donation=conversation.donation,
+            beneficiary=conversation.beneficiary,
+        ).order_by('-created_at').first()
+
+        if not reservation:
+            return Response(
+                {'error': 'No reservation linked to this conversation.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Make sure the requester is part of this reservation
+        user = request.user
+        if user not in [reservation.beneficiary, reservation.donation.donor]:
+            return Response(
+                {'error': 'Forbidden.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        return Response({'id': reservation.id})
+    
     

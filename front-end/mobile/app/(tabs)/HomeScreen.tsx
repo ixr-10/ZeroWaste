@@ -38,6 +38,13 @@ const urgencyWeight = (urgency?: string | null): number => {
   return 3;
 };
 
+const isExpired = (item: any): boolean => {
+  if (!item.expiry_date) return false;
+  const expiry = new Date(item.expiry_date);
+  expiry.setHours(23, 59, 59, 999); // treat expiry_date as end-of-day
+  return expiry < new Date();
+};
+
 export default function HomeScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
@@ -59,7 +66,6 @@ export default function HomeScreen() {
       setLoading(true);
       let params: Record<string, number> = {};
 
-      // Try location with a 3s timeout, but don't block the fetch
       const locationPromise = (async () => {
         try {
           const enabled = await Location.hasServicesEnabledAsync();
@@ -81,29 +87,31 @@ export default function HomeScreen() {
         }
       })();
 
-      // Wait max 3 seconds for location, then proceed anyway
       await Promise.race([
         locationPromise,
         new Promise((resolve) => setTimeout(resolve, 3000)),
       ]);
 
       const donRes = await api.get('donations/available/', { params });
-      let newDonations = donRes.data;
+      let newDonations: any[] = donRes.data;
 
+      // FIX 1: If person A just reserved some quantity, optimistically update
+      // the remaining quantity in the list instead of hiding the item entirely.
       if (reservedRef.current) {
         const { id, quantity } = reservedRef.current;
-        const stillExists = newDonations.find((d: any) => String(d.id) === id);
-        if (!stillExists) {
-          const prevItem = donations.find((d) => String(d.id) === id);
-          if (prevItem) {
-            const remainingQty = prevItem.available_quantity - quantity;
-            if (remainingQty > 0) {
-              newDonations = [...newDonations, { ...prevItem, available_quantity: remainingQty }];
-            }
-          }
-        }
         reservedRef.current = null;
+
+        newDonations = newDonations.map((d: any) => {
+          if (String(d.id) !== id) return d;
+          const remaining = d.available_quantity - quantity;
+          // Only hide if nothing left; otherwise show updated count
+          return remaining > 0 ? { ...d, available_quantity: remaining } : null;
+        }).filter(Boolean);
       }
+
+      // FIX 2: Drop expired items on the client side as a safety net in case
+      // the backend still returns them.
+      newDonations = newDonations.filter((d: any) => !isExpired(d));
 
       setDonations(newDonations);
     } catch (err) {
@@ -115,6 +123,9 @@ export default function HomeScreen() {
 
   const filteredDonations = useMemo(() => {
     const filtered = donations.filter((item) => {
+      // Extra guard: skip expired items that may have slipped in via state
+      if (isExpired(item)) return false;
+
       if (
         searchQuery &&
         !item.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&

@@ -11,7 +11,7 @@ const CATEGORIES = [
   { id: "produits_laitiers", label: "Milk Products", image: require("../../assets/images/milk.png"), imageStyle: { width: 20, height: 20 } },
   { id: "meat", label: "Meat & Fish", image: require("../../assets/images/meat.png"), imageStyle: { width: 20, height: 20 } },
   { id: "conserves", label: "Preserved Food", image: require("../../assets/images/preserved food.png"), imageStyle: { width: 20, height: 20 } },
-  { id: "autre", label: "Cooked Meals", image: require("../../assets/images/cooked meals.png"), imageStyle: { width: 22, height: 22 } },
+  { id: "Cooked Meals", label: "Cooked Meals", image: require("../../assets/images/cooked meals.png"), imageStyle: { width: 22, height: 22 } },
   { id: "drinks", label: "Drinks", image: require("../../assets/images/drinks.png"), imageStyle: { width: 20, height: 20 } },
   { id: "other", label: "Other (specify)", image: require("../../assets/images/other.png"), imageStyle: { width: 20, height: 20 } },
 ];

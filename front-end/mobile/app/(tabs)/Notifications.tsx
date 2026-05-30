@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,14 +10,12 @@ import {
   Modal,
   Pressable,
 } from "react-native";
-import * as Notifications from "expo-notifications";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SPACING, BORDER_RADIUS } from "../../constants/theme";
 import { fetchNotifications as fetchNotificationsApi } from "../../constants/axios";
 import api from "../../constants/axios";
-import { registerPushNotifications } from "../utils/registerPushNotifications";
 
 type Notification = {
   id: string;
@@ -46,26 +44,8 @@ export default function NotificationsScreen() {
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
 
-  const notifListener = useRef<ReturnType<typeof Notifications.addNotificationReceivedListener> | null>(null);
-  const responseListener = useRef<ReturnType<typeof Notifications.addNotificationResponseReceivedListener> | null>(null);
-
   useEffect(() => {
-    registerPushNotifications();
-
-    notifListener.current = Notifications.addNotificationReceivedListener(() => {
-      fetchNotificationsHandler();
-    });
-
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(() => {
-      fetchNotificationsHandler();
-    });
-
     fetchNotificationsHandler();
-
-    return () => {
-      if (notifListener.current) notifListener.current.remove();
-      if (responseListener.current) responseListener.current.remove();
-    };
   }, []);
 
   const fetchNotificationsHandler = async () => {
@@ -75,7 +55,6 @@ export default function NotificationsScreen() {
       const data = res.data.notifications || [];
 
       const formatted: Notification[] = data
-        // Only exclude message notifications, keep everything else
         .filter((n: any) => n.notification_type !== "new_message")
         .map((n: any) => ({
           id: n.id.toString(),
@@ -89,7 +68,7 @@ export default function NotificationsScreen() {
               ? "confirmed"
               : n.notification_type === "reservation_rejected"
               ? "rejected"
-              : "info", // nearby_user and anything else
+              : "info",
           notification_type: n.notification_type,
           related_object_id: n.related_object_id,
           is_read: n.is_read,
@@ -104,7 +83,6 @@ export default function NotificationsScreen() {
     }
   };
 
-  // Same logic as profile page
   const handleReservationAction = async (
     notifId: string,
     reservationId: number | undefined,
@@ -192,7 +170,6 @@ export default function NotificationsScreen() {
                 <Text style={styles.time}>{item.time}</Text>
               </View>
 
-              {/* Only reservation requests get the confirm/reject menu */}
               {item.type === "request" && (
                 <View style={styles.menuWrapper}>
                   <TouchableOpacity
