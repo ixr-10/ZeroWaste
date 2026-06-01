@@ -67,45 +67,52 @@ export default function ChatList() {
   }, []);
 
   const getOtherUser = (conv: any) => {
-    if (!currentUserId) return { id: "", username: "User" };
+    if (!currentUserId) return { id: "", username: "User", isVerified: false };
     const myId = String(currentUserId);
     const donorId = String(conv.donor);
     const beneficiaryId = String(conv.beneficiary);
+
     if (donorId === myId) {
-      return { id: beneficiaryId, username: conv.beneficiary_username || "User" };
+      return { 
+        id: beneficiaryId, 
+        username: conv.beneficiary_username || "User",
+        isVerified: conv.beneficiary_is_verified || false 
+      };
     }
-    return { id: donorId, username: conv.donor_username || "User" };
+    return { 
+      id: donorId, 
+      username: conv.donor_username || "User",
+      isVerified: conv.donor_is_verified || false 
+    };
   };
 
-  // ✅ Fetch the reservation linked to this conversation
- const getReservationInfo = async (conv: any) => {
-  try {
-    const donationId = conv.donation;
-    if (!donationId) return null;
+  const getReservationInfo = async (conv: any) => {
+    try {
+      const donationId = conv.donation;
+      if (!donationId) return null;
 
-    const res = await axios.get(`/donations/${donationId}/reservations/`);
-    
-    // ✅ Fix: response is { reservations: [...] } not an array directly
-    const reservations = res.data.reservations;
+      const res = await axios.get(`/donations/${donationId}/reservations/`);
+      const reservations = res.data.reservations || [];
 
-    if (!reservations || reservations.length === 0) return null;
+      if (reservations.length === 0) return null;
 
-    const myId = String(currentUserId);
-    const myReservation = reservations.find(
-      (r: any) => String(r.beneficiary) === myId || String(r.donor) === myId
-    );
+      const myId = String(currentUserId);
+      const myReservation = reservations.find(
+        (r: any) => String(r.beneficiary) === myId || String(r.donor) === myId
+      );
 
-    if (!myReservation) return null;
+      if (!myReservation) return null;
 
-    return {
-      reservationId: String(myReservation.id),
-      reservationStatus: myReservation.status,
-    };
-  } catch (e: any) {
-    console.log('getReservationInfo error:', e.response?.status, e.message);
-    return null;
-  }
-};
+      return {
+        reservationId: String(myReservation.id),
+        reservationStatus: myReservation.status,
+      };
+    } catch (e: any) {
+      console.log('getReservationInfo error:', e.response?.status, e.message);
+      return null;
+    }
+  };
+
   const filteredConversations = conversations.filter((c) => {
     const other = getOtherUser(c);
     return other.username.toLowerCase().includes(search.toLowerCase());
@@ -148,19 +155,16 @@ export default function ChatList() {
                 <TouchableOpacity
                   style={styles.chatCard}
                   onPress={async () => {
-                    // Optimistically clear unread count
                     setConversations((prev) =>
                       prev.map((c) => c.id === item.id ? { ...c, unread_count: 0 } : c)
                     );
 
-                    // Mark as read
                     try {
                       await markConversationAsRead(item.id);
                     } catch (err) {
                       console.log("Failed to mark as read:", err);
                     }
 
-                    // ✅ Fetch reservation info before navigating
                     const reservationInfo = await getReservationInfo(item);
 
                     router.push({
@@ -169,7 +173,7 @@ export default function ChatList() {
                         conversationId: item.id.toString(),
                         otherUsername: otherUser.username,
                         otherUserId: otherUser.id.toString(),
-                        // ✅ Pass reservation info — banner shows if status is 'completed'
+                        otherUserIsVerified: String(otherUser.isVerified),   // ← Fixed
                         reservationId: reservationInfo?.reservationId ?? '',
                         reservationStatus: reservationInfo?.reservationStatus ?? '',
                       },
@@ -182,7 +186,6 @@ export default function ChatList() {
                       style={{ width: 46, height: 46 }}
                       source={require("../../assets/images/avatar.png")}
                     />
-                    {/* ✅ Show green dot only if reservation is completed (ready to rate) */}
                     <View style={[
                       styles.onlineDot,
                       item.reservation_status === 'completed' && { backgroundColor: '#E8B84B' }
@@ -200,9 +203,7 @@ export default function ChatList() {
                     </View>
                     <View style={styles.chatBottom}>
                       <Text style={styles.chatLastMessage} numberOfLines={1}>
-                        {lastMsg
-                          ? lastMsg.content
-                          : item.donation_title || "New conversation"}
+                        {lastMsg ? lastMsg.content : item.donation_title || "New conversation"}
                       </Text>
                       {item.unread_count > 0 && (
                         <View style={styles.unreadBadge}>
@@ -224,7 +225,6 @@ export default function ChatList() {
 export const markConversationAsRead = (conversationId: string | number) => {
   return axios.post(`/chat/${conversationId}/read/`);
 };
-
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "white" },
   green: {

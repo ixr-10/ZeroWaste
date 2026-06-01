@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../constants/axios';
 
 const COLORS = {
@@ -42,40 +44,98 @@ const RATING_LABELS: Record<number, { label: string; color: string }> = {
 export default function RateExperienceScreen() {
   const router = useRouter();
   const {
-    reservationId,
+    reservationId: initialReservationId,
+    conversationId,
     donorName,
     donorAvatar,
   } = useLocalSearchParams<{
-    reservationId: string;
-    donorName: string;
+    reservationId?: string;
+    conversationId?: string;
+    donorName?: string;
     donorAvatar?: string;
   }>();
 
+  const [reservationId, setReservationId] = useState<string | null>(initialReservationId || null);
   const [selectedStar, setSelectedStar] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [fetching, setFetching] = useState(!initialReservationId && !!conversationId);
+
+  // Fetch reservationId if only conversationId is passed
+  useEffect(() => {
+    const fetchReservation = async () => {
+      if (initialReservationId || !conversationId) {
+        setFetching(false);
+        return;
+      }
+
+      try {
+        const res = await api.get(`donations/reservations/by-conversation/${conversationId}/`);
+        setReservationId(String(res.data.id));
+      } catch (err: any) {
+        setError("No reservation found for this conversation yet.");
+      } finally {
+        setFetching(false);
+      }
+    };
+
+    fetchReservation();
+  }, [conversationId, initialReservationId]);
+
+  const markAsRated = async () => {
+    if (reservationId) {
+      await AsyncStorage.setItem(`rated_reservation_${reservationId}`, 'true');
+    }
+  };
 
   const handleSubmit = async () => {
     if (selectedStar === 0) {
       setError('Please select a rating.');
       return;
     }
+    if (!reservationId) {
+      setError('Reservation ID is missing. Please try again later.');
+      return;
+    }
+
     setError('');
     setLoading(true);
+
     try {
       await api.post(`/donations/reservations/${reservationId}/rate/`, {
         score: selectedStar,
       });
+
+      await markAsRated();
       setSuccess(true);
       setTimeout(() => router.back(), 1500);
     } catch (err: any) {
       const msg = err.response?.data?.error || 'Failed to submit rating. Please try again.';
+
+      if (msg.includes('already rated') || msg === 'You have already rated this reservation.') {
+        await markAsRated();
+        setSuccess(true);
+        setTimeout(() => router.back(), 1500);
+        return;
+      }
+
       setError(msg);
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetching) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={{ marginTop: 12, color: COLORS.textMuted }}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -105,9 +165,8 @@ export default function RateExperienceScreen() {
 
           {/* Rating card */}
           <View style={styles.ratingCard}>
-            <Text style={styles.ratingQuestion}>How was your experience ?</Text>
+            <Text style={styles.ratingQuestion}>How was your experience?</Text>
 
-            {/* Stars */}
             <View style={styles.starsRow}>
               {[1, 2, 3, 4, 5].map((star) => (
                 <TouchableOpacity
@@ -125,7 +184,6 @@ export default function RateExperienceScreen() {
               ))}
             </View>
 
-            {/* Label */}
             {selectedStar > 0 && (
               <Text style={[styles.ratingLabel, { color: RATING_LABELS[selectedStar].color }]}>
                 {RATING_LABELS[selectedStar].label}
@@ -134,10 +192,8 @@ export default function RateExperienceScreen() {
           </View>
         </View>
 
-        {/* Error */}
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        {/* Success */}
         {success ? (
           <View style={styles.successRow}>
             <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
@@ -145,7 +201,6 @@ export default function RateExperienceScreen() {
           </View>
         ) : null}
 
-        {/* Submit button */}
         <TouchableOpacity
           style={[
             styles.submitBtn,
@@ -190,7 +245,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 
-  // User card
   userCard: {
     backgroundColor: COLORS.cardBg,
     borderRadius: 16,
@@ -213,7 +267,6 @@ const styles = StyleSheet.create({
   avatarImage: { width: '100%', height: '100%' },
   userName: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
 
-  // Rating card
   ratingCard: {
     backgroundColor: COLORS.cardBg,
     borderRadius: 16,

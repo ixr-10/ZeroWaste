@@ -1,12 +1,14 @@
 import React, { useState, useRef } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet, FlatList,
-  TextInput, KeyboardAvoidingView, Platform, Image
+  TextInput, KeyboardAvoidingView, Platform, Image, Alert, ActivityIndicator
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, Stack } from "expo-router";
+import { useRouter, Stack, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SPACING, BORDER_RADIUS } from "../../constants/theme";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../../constants/axios";
 
 type Message = {
   id: string;
@@ -16,16 +18,41 @@ type Message = {
 
 export default function VerificationChat() {
   const router = useRouter();
+  const { otherUserId, otherUsername } = useLocalSearchParams<{
+    otherUserId: string;
+    otherUsername: string;
+    conversationId: string;
+  }>();
+
   const flatListRef = useRef<FlatList>(null);
   const [message, setMessage] = useState("");
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verificationDone, setVerificationDone] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { id: "1", text: "", mine: false }, // Placeholder for empty bubbles in UI mock
+    { id: "1", text: "", mine: false },
     { id: "2", text: "", mine: true },
     { id: "3", text: "", mine: false },
     { id: "4", text: "", mine: true },
     { id: "5", text: "", mine: true },
     { id: "6", text: "", mine: false },
   ]);
+
+  const handleValidate = async () => {
+    if (verifyLoading || !otherUserId) return;
+    setVerifyLoading(true);
+    try {
+      const res = await api.post(`users/verify/${otherUserId}/`);
+      await AsyncStorage.setItem(`verified_user_${otherUserId}`, "true");
+      setVerificationDone(true);
+      Alert.alert("✅ Success", res.data.message || "User verified successfully!", [
+        { text: "OK", onPress: () => router.back() }
+      ]);
+    } catch (err: any) {
+      Alert.alert("❌ Failed", err.response?.data?.error || "Verification failed.");
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
 
   const sendMessage = () => {
     if (!message.trim()) return;
@@ -54,7 +81,7 @@ export default function VerificationChat() {
           source={require('../../assets/images/avatar.png')}
         />
 
-        <Text style={styles.headerName}>Username</Text>
+        <Text style={styles.headerName}>{otherUsername || "Username"}</Text>
 
         <TouchableOpacity style={styles.menuBtn}>
           <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textPrimary} />
@@ -63,17 +90,38 @@ export default function VerificationChat() {
 
       <View style={styles.container}>
         {/* VERIFICATION BANNER */}
-        <View style={styles.banner}>
-          <Text style={styles.bannerText}>New member — ready to verify their account?</Text>
-          <View style={styles.bannerButtons}>
-            <TouchableOpacity style={styles.bannerBtn}>
-              <Text style={styles.bannerBtnText}>Validate</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.bannerBtn}>
-              <Text style={styles.bannerBtnText}>Reject</Text>
-            </TouchableOpacity>
+        {!verificationDone ? (
+          <View style={styles.banner}>
+            <Text style={styles.bannerText}>
+              New member — ready to verify their account?
+            </Text>
+            <View style={styles.bannerButtons}>
+              <TouchableOpacity
+                style={styles.validateBtn}
+                onPress={handleValidate}
+                disabled={verifyLoading}
+              >
+                {verifyLoading
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={styles.validateBtnText}>Validate</Text>
+                }
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.rejectBtn}
+                onPress={() => router.back()}
+              >
+                <Text style={styles.rejectBtnText}>Reject</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        ) : (
+          <View style={[styles.banner, styles.bannerSuccess]}>
+            <Ionicons name="checkmark-circle" size={18} color="#4A6741" />
+            <Text style={[styles.bannerText, { marginLeft: 8 }]}>
+              ✅ {otherUsername} has been verified!
+            </Text>
+          </View>
+        )}
 
         {/* MESSAGES */}
         <FlatList
@@ -84,13 +132,13 @@ export default function VerificationChat() {
           renderItem={({ item }) => (
             <View style={[styles.messageRow, item.mine ? styles.messageRowMine : styles.messageRowOther]}>
               {!item.mine && (
-                <Image 
-                  style={styles.avatarSmall} 
-                  source={require('../../assets/images/avatar.png')} 
+                <Image
+                  style={styles.avatarSmall}
+                  source={require('../../assets/images/avatar.png')}
                 />
               )}
               <View style={[
-                styles.bubble, 
+                styles.bubble,
                 item.mine ? styles.bubbleMine : styles.bubbleOther,
                 !item.text ? styles.emptyBubble : null
               ]}>
@@ -105,7 +153,7 @@ export default function VerificationChat() {
         />
 
         {/* INPUT */}
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
         >
@@ -117,12 +165,12 @@ export default function VerificationChat() {
               <TouchableOpacity style={styles.inputIcon}>
                 <Ionicons name="mic-outline" size={24} color={COLORS.primary} />
               </TouchableOpacity>
-              
+
               <TextInput
                 style={styles.input}
                 value={message}
                 onChangeText={setMessage}
-                placeholder=""
+                placeholder="Type a message..."
                 placeholderTextColor={COLORS.textMuted}
               />
 
@@ -140,12 +188,12 @@ export default function VerificationChat() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: COLORS.cardBg, // Using the light green card bg for the whole screen
+    backgroundColor: COLORS.cardBg,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: '#DDE3D4', // Closer to the light green in image
+    backgroundColor: '#DDE3D4',
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.md,
     gap: SPACING.sm,
@@ -184,6 +232,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 5,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#D5DED0',
+  },
+  bannerSuccess: {
+    borderColor: '#4A6741',
+    backgroundColor: '#F0F5EE',
   },
   bannerText: {
     flex: 1,
@@ -195,17 +249,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: SPACING.xs,
   },
-  bannerBtn: {
+  validateBtn: {
+    backgroundColor: '#4A6741',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    minWidth: 70,
+    alignItems: 'center',
+  },
+  validateBtnText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: "600",
+  },
+  rejectBtn: {
     backgroundColor: '#F0F0F0',
-    paddingVertical: 4,
-    paddingHorizontal: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
-  bannerBtnText: {
+  rejectBtnText: {
     fontSize: 12,
-    color: COLORS.textPrimary,
+    color: '#c0392b',
     fontWeight: "600",
   },
   messagesList: {
@@ -233,12 +300,12 @@ const styles = StyleSheet.create({
   bubble: {
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.lg,
-    borderRadius: 18, // Uniform rounding for all corners
+    borderRadius: 18,
     minWidth: 80,
   },
   bubbleOther: {
     backgroundColor: COLORS.white,
-    borderTopLeftRadius: 4, // Subtle characteristic
+    borderTopLeftRadius: 4,
   },
   bubbleMine: {
     backgroundColor: '#588157',

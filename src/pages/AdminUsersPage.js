@@ -68,6 +68,7 @@ const AdminUsersPage = () => {
   // ── filters ──
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
 
   // ── tooltip ──
   const [tooltip, setTooltip] = useState({ text: '', x: 0, y: 0, visible: false });
@@ -189,7 +190,9 @@ const AdminUsersPage = () => {
       statusFilter === 'all' ||
       (statusFilter === 'Active' && u.is_active) ||
       (statusFilter === 'Inactive' && !u.is_active);
-    return matchesSearch && matchesStatus;
+    const matchesRole =
+      roleFilter === 'all' || u.role === roleFilter;
+    return matchesSearch && matchesStatus && matchesRole;
   });
 
   // ── render ───────────────────────────────────────────────────────────────
@@ -233,9 +236,10 @@ const AdminUsersPage = () => {
             <div className="avatar">👩‍💼</div>
             {isSidebarOpen && <span className="admin-name">{adminName}</span>}
           </div>
-          <FiLogOut className="logout-icon" style={{ cursor: 'pointer' }} onClick={async () => { await logoutUser(); navigate('/login'); }} />
+          <FiLogOut className="logout-icon" style={{ cursor: 'pointer' }} onClick={handleLogout} />
         </div>
       </aside>
+
       {/* ===== MAIN CONTENT ===== */}
       <main className="main-content admin-users-page">
 
@@ -251,8 +255,8 @@ const AdminUsersPage = () => {
         {/* STATS CARDS */}
         <div className="stats-container">
           <div
-            className={`stat-card ${statusFilter === 'all' ? 'stat-card-active' : ''}`}
-            onClick={() => setStatusFilter('all')}
+            className={`stat-card ${statusFilter === 'all' && roleFilter === 'all' ? 'stat-card-active' : ''}`}
+            onClick={() => { setStatusFilter('all'); setRoleFilter('all'); }}
           >
             <div className="stat-title">👥 Total Users</div>
             <div className="stat-content">
@@ -270,7 +274,7 @@ const AdminUsersPage = () => {
 
           <div
             className={`stat-card ${statusFilter === 'Active' ? 'stat-card-active' : ''}`}
-            onClick={() => setStatusFilter('Active')}
+            onClick={() => { setStatusFilter('Active'); setRoleFilter('all'); }}
           >
             <div className="stat-title">👤 Active</div>
             <div className="stat-content">
@@ -280,7 +284,7 @@ const AdminUsersPage = () => {
 
           <div
             className={`stat-card ${statusFilter === 'Inactive' ? 'stat-card-active' : ''}`}
-            onClick={() => setStatusFilter('Inactive')}
+            onClick={() => { setStatusFilter('Inactive'); setRoleFilter('all'); }}
           >
             <div className="stat-title">⏸️ Inactive</div>
             <div className="stat-content">
@@ -288,7 +292,10 @@ const AdminUsersPage = () => {
             </div>
           </div>
 
-          <div className="stat-card">
+          <div
+            className={`stat-card ${roleFilter === 'food_saver' ? 'stat-card-active' : ''}`}
+            onClick={() => { setRoleFilter(prev => prev === 'food_saver' ? 'all' : 'food_saver'); setStatusFilter('all'); }}
+          >
             <div className="stat-title">👑 Food Savers</div>
             <div className="stat-content">
               <div className="stat-value">{isLoading ? '...' : stats.food_savers}</div>

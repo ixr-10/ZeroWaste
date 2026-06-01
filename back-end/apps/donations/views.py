@@ -1,7 +1,7 @@
 from django.utils import timezone
 from datetime import timedelta
 from django.db import transaction, models
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Avg
 from django.db.models.functions import TruncMonth
 
 from rest_framework import status
@@ -14,6 +14,46 @@ from .models import Donation, Reservation, NotInterested, Rating
 from .serializers import DonationSerializer, ReservationSerializer
 
 from django.utils.timezone import now
+
+
+# ─────────────────────────────────────────────
+# HELPER: unified reputation recalculation
+# ─────────────────────────────────────────────
+
+def recalculate_reputation(user):
+    """
+    Single source of truth for reputation_score.
+
+    Formula:
+        score = round(avg_rating × 20) + activity_bonus
+
+    activity_bonus:
+        +10 per reservation the user confirmed (as donor)
+        +10 per donation the user marked as donated (completed)
+
+    If the user has no ratings yet, the rating part is 0,
+    so activity bonuses still accumulate correctly.
+    """
+    avg_result = Rating.objects.filter(
+        rated_user=user
+    ).aggregate(avg=Avg('score'))['avg']
+
+    rating_component = round((avg_result or 0) * 20)
+
+    confirmed_count = Reservation.objects.filter(
+        donation__donor=user,
+        status__in=['confirmed', 'completed']
+    ).count()
+
+    completed_donations_count = Donation.objects.filter(
+        donor=user,
+        status='donated'
+    ).count()
+
+    activity_bonus = (confirmed_count + completed_donations_count) * 10
+
+    user.reputation_score = rating_component + activity_bonus
+    user.save(update_fields=['reputation_score'])
 
 
 # ─────────────────────────────────────────────
@@ -52,7 +92,6 @@ class CreateDonationView(APIView):
         if serializer.is_valid():
             donation = serializer.save(donor=request.user)
 
-            # ✅ Notify only once
             try:
                 from apps.notifications.utils import (
                     notify_nearby_users_new_donation,
@@ -112,7 +151,6 @@ class EditDonationView(APIView):
             if k in allowed_fields
         }
 
-        # ✅ Correct quantity editing logic
         if 'quantity' in data:
             new_quantity = int(data['quantity'])
 
@@ -240,7 +278,6 @@ class CompleteDonationView(APIView):
         if not donation.reservations.filter(
             status='confirmed'
         ).exists():
-
             return Response(
                 {
                     'error': (
@@ -258,11 +295,11 @@ class CompleteDonationView(APIView):
             status='confirmed'
         ).update(status='completed')
 
-        request.user.reputation_score += 10
-        request.user.save(update_fields=['reputation_score'])
+        # ✅ Unified recalculation — accounts for rating avg + all activity bonuses
+        recalculate_reputation(request.user)
 
         return Response({
-            'message': 'Donation marked as donated. +10 reputation!'
+            'message': 'Donation marked as donated. Reputation updated!'
         })
 
 
@@ -277,7 +314,6 @@ class MyDonationsView(APIView):
             status='deleted'
         ).order_by('-created_at')
 
-        # ✅ FIXED STATUS FILTERS
         active = donations.filter(status='active')
         expired = donations.filter(status='expired')
         donated = donations.filter(status='donated')
@@ -315,13 +351,11 @@ class MyDonationsView(APIView):
 
         for donation in donations:
 
-            # Expired
             if donation.is_expired():
 
                 donation.status = 'expired'
                 donation.save(update_fields=['status'])
 
-                # cancel all pending reservations
                 pending = donation.reservations.filter(
                     status='pending'
                 )
@@ -336,7 +370,6 @@ class MyDonationsView(APIView):
 
                 continue
 
-            # Expire pending reservations
             pending_reservations = donation.reservations.filter(
                 status='pending'
             )
@@ -369,28 +402,12 @@ class AvailableDonationsView(APIView):
 
     def get(self, request):
 
-        # ✅ FIXED:
-        # Donation stays visible if:
-        # - active
-        # - available_quantity > 0
-        # - not deleted
-        # - not expired
-        # - not own donation
-
         donations = Donation.objects.filter(
             status='active',
             available_quantity__gt=0
         ).exclude(
             donor=request.user
         )
-
-        # ❌ REMOVED:
-        # donations.exclude(status='deleted')
-        # redundant because already status='active'
-
-        # ❌ IMPORTANT FIX:
-        # DO NOT hide donations with pending reservations by others
-        # Only exclude donations reserved BY CURRENT USER
 
         reserved_ids = Reservation.objects.filter(
             beneficiary=request.user,
@@ -405,22 +422,18 @@ class AvailableDonationsView(APIView):
 
         donations = donations.exclude(id__in=ignored_ids)
 
-        # donor filter
         donor_id = request.query_params.get('donor')
         if donor_id:
             donations = donations.filter(donor_id=donor_id)
 
-        # category filter
         category = request.query_params.get('category')
         if category:
             donations = donations.filter(category=category)
 
-        # urgency filter
         urgency = request.query_params.get('urgency')
         if urgency:
             donations = donations.filter(urgency=urgency)
 
-        # expiring soon
         expiring_soon = request.query_params.get('expiring_soon')
 
         if expiring_soon:
@@ -432,7 +445,6 @@ class AvailableDonationsView(APIView):
                 expiry_date__lte=soon
             )
 
-        # distance filter
         lat = request.query_params.get('lat')
         lng = request.query_params.get('lng')
         max_km = request.query_params.get('max_km')
@@ -595,7 +607,6 @@ class ReserveDonationView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # ✅ Prevent duplicate active reservation
         already_reserved = Reservation.objects.filter(
             donation=donation,
             beneficiary=request.user,
@@ -626,13 +637,10 @@ class ReserveDonationView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # ✅ Deduct immediately
         donation.available_quantity -= quantity_requested
 
         donation.save(update_fields=['available_quantity'])
 
-        # IMPORTANT:
-        # Keep donation ACTIVE while quantity > 0
         donation.recalculate_status()
 
         reservation = Reservation.objects.create(
@@ -735,13 +743,10 @@ class ConfirmReservationView(APIView):
         reservation.status = 'confirmed'
         reservation.save(update_fields=['status'])
 
-        donor = reservation.donation.donor
-
-        donor.reputation_score += 10
-
-        donor.save(update_fields=['reputation_score'])
-
         reservation.donation.recalculate_status()
+
+        # ✅ Unified recalculation — rating avg + all activity bonuses
+        recalculate_reputation(request.user)
 
         create_notification(
             recipient=reservation.beneficiary,
@@ -787,7 +792,6 @@ class RejectReservationView(APIView):
 
         donation = reservation.donation
 
-        # ✅ Restore quantity
         donation.available_quantity += (
             reservation.quantity_confirmed
         )
@@ -846,10 +850,6 @@ class CancelReservationView(APIView):
             )
 
         donation = reservation.donation
-
-        # ✅ FIXED:
-        # Quantity was deducted at reservation time
-        # for BOTH pending and confirmed reservations
 
         if reservation.status in ['pending', 'confirmed']:
 
@@ -1087,7 +1087,6 @@ class AdminStatisticsView(APIView):
             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
         ]
 
-        # ── Total donations ──────────────────────────────────────
         total_donations = Donation.objects.exclude(
             status='deleted'
         ).count()
@@ -1098,18 +1097,15 @@ class AdminStatisticsView(APIView):
             created_at__gte=first_of_month
         ).count()
 
-        # ── Food saved (unit-normalized to kg) ───────────────────
         donated_all = Donation.objects.filter(status='donated')
         total_food_saved = round(
             sum(d.quantity_in_kg() for d in donated_all), 1
         )
 
-        # ── CO2 avoided (category-weighted) ─────────────────────
         total_co2_avoided = round(
             sum(d.co2_avoided_kg() for d in donated_all), 1
         )
 
-        # ── Active users ─────────────────────────────────────────
         from django.contrib.auth import get_user_model
         User = get_user_model()
 
@@ -1120,7 +1116,6 @@ class AdminStatisticsView(APIView):
             models.Q(reservations__created_at__gte=thirty_days_ago)
         ).distinct().count()
 
-        # ── This month ───────────────────────────────────────────
         donated_this_month = Donation.objects.filter(
             status='donated',
             updated_at__gte=first_of_month
@@ -1132,7 +1127,6 @@ class AdminStatisticsView(APIView):
             sum(d.co2_avoided_kg() for d in donated_this_month), 1
         )
 
-        # ── Donations chart (by month) ───────────────────────────
         donations_by_month = (
             Donation.objects
             .exclude(status='deleted')
@@ -1151,7 +1145,6 @@ class AdminStatisticsView(APIView):
             for entry in donations_by_month
         ]
 
-        # ── Food saved chart (unit-normalized, by month) ─────────
         from collections import defaultdict
 
         food_month_raw = Donation.objects.filter(
@@ -1188,7 +1181,6 @@ class AdminStatisticsView(APIView):
             for (year, month), val in sorted(month_co2.items())
         ]
 
-        # ── Response ─────────────────────────────────────────────
         return Response({
             'generalStats': {
                 'totalDonations':         total_donations,
@@ -1206,6 +1198,8 @@ class AdminStatisticsView(APIView):
                 'co2':       co2_chart,
             }
         })
+
+
 # ─────────────────────────────────────────────
 # RATINGS
 # ─────────────────────────────────────────────
@@ -1272,14 +1266,12 @@ class RateReservationView(APIView):
             score=score,
         )
 
+        # ✅ Unified recalculation — rating avg + all activity bonuses
+        recalculate_reputation(rated_user)
+
         avg = Rating.objects.filter(
             rated_user=rated_user
-        ).aggregate(
-            avg=models.Avg('score')
-        )['avg'] or 0
-
-        rated_user.reputation_score = round(avg * 20)
-        rated_user.save(update_fields=['reputation_score'])
+        ).aggregate(avg=Avg('score'))['avg'] or 0
 
         return Response({
             'message': (
@@ -1287,8 +1279,9 @@ class RateReservationView(APIView):
                 f'{rated_user.username} now has a score of {round(avg, 1)}/5.'
             )
         })
-    
-    # ─────────────────────────────────────────────
+
+
+# ─────────────────────────────────────────────
 # RESERVATION BY CONVERSATION
 # ─────────────────────────────────────────────
 
@@ -1306,7 +1299,6 @@ class ReservationByConversationView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Conversation stores donation + beneficiary, so match on both
         reservation = Reservation.objects.filter(
             donation=conversation.donation,
             beneficiary=conversation.beneficiary,
@@ -1318,7 +1310,6 @@ class ReservationByConversationView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Make sure the requester is part of this reservation
         user = request.user
         if user not in [reservation.beneficiary, reservation.donation.donor]:
             return Response(
@@ -1327,5 +1318,3 @@ class ReservationByConversationView(APIView):
             )
 
         return Response({'id': reservation.id})
-    
-    

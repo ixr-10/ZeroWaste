@@ -17,14 +17,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, Stack, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SPACING, BORDER_RADIUS } from "../../constants/theme";
-import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api, { markMessagesRead } from "../../constants/axios";
 
 type Message = {
   id: string;
   text?: string;
-  image?: string;
   mine: boolean;
   time: string;
 };
@@ -35,13 +33,11 @@ export default function ChatConversation() {
     conversationId,
     otherUsername,
     otherUserId,
-    reservationId,
     otherUserIsVerified = "false",
   } = useLocalSearchParams<{
     conversationId: string;
     otherUsername: string;
     otherUserId: string;
-    reservationId?: string;
     otherUserIsVerified?: string;
   }>();
 
@@ -59,11 +55,6 @@ export default function ChatConversation() {
   const [verificationDone, setVerificationDone] = useState(false);
   const [verifyLoading, setVerifyLoading] = useState(false);
 
-  const [showRatingPopup, setShowRatingPopup] = useState(false);
-  const [resolvedReservationId, setResolvedReservationId] = useState<string | undefined>(
-    reservationId
-  );
-
   // ─── Load user role ───────────────────────────────────────────────────────────
   useEffect(() => {
     const loadRole = async () => {
@@ -73,35 +64,7 @@ export default function ChatConversation() {
     loadRole();
   }, []);
 
-  // ─── Rating: fetch reservation if not passed, show popup if not yet rated ─────
-  useEffect(() => {
-    const checkRating = async () => {
-      let rid = reservationId;
-
-      // If no reservationId passed (e.g. food_saver), fetch it from the API
-      if (!rid && conversationId) {
-        try {
-          const res = await api.get(
-            `donations/reservations/by-conversation/${conversationId}/`
-          );
-          rid = String(res.data.id);
-          setResolvedReservationId(rid);
-        } catch {
-          // No reservation linked to this conversation — skip popup
-          return;
-        }
-      }
-
-      if (!rid) return;
-
-      const rated = await AsyncStorage.getItem(`rated_reservation_${rid}`);
-      if (!rated) setShowRatingPopup(true);
-    };
-
-    checkRating();
-  }, [reservationId, conversationId]);
-
-  // ─── Verification: check AsyncStorage for persisted verified state ────────────
+  // ─── Verification persistence ────────────────────────────────────────────────
   useEffect(() => {
     const checkVerification = async () => {
       if (!otherUserId) return;
@@ -111,15 +74,12 @@ export default function ChatConversation() {
     checkVerification();
   }, [otherUserId]);
 
-  // ─── Block: load from cache immediately, then confirm with API ────────────────
+  // ─── Block Status ─────────────────────────────────────────────────────────────
   const checkBlockStatus = useCallback(async () => {
     if (!otherUserId) return;
-
-    // Load from cache first so UI is instant
     const cached = await AsyncStorage.getItem(`blocked_user_${otherUserId}`);
     if (cached !== null) setIsBlocked(cached === "true");
 
-    // Confirm with server in background
     setIsBlockLoading(true);
     try {
       const res = await api.get("users/blocked/");
@@ -148,13 +108,12 @@ export default function ChatConversation() {
       if (conversationId) await markMessagesRead(Number(conversationId));
 
       const ws = new WebSocket(
-        `ws://192.168.1.38:8000/ws/chat/${conversationId}/?token=${token}`
+        `ws://10.81.26.147:8000/ws/chat/${conversationId}/?token=${token}`
       );
       wsRef.current = ws;
 
       ws.onmessage = (e) => {
         const data = JSON.parse(e.data);
-
         if (data.type === "history") {
           setMessages(
             data.messages.map((m: any) => ({
@@ -168,7 +127,6 @@ export default function ChatConversation() {
             }))
           );
         }
-
         if (data.type === "message") {
           const m = data.message;
           const id = `server-${m.id}-${m.created_at}`;
@@ -188,22 +146,20 @@ export default function ChatConversation() {
             ];
           });
         }
-
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
       };
     };
-
     connect();
+
     return () => wsRef.current?.close();
   }, [conversationId]);
 
-  // ─── Verification banner condition ────────────────────────────────────────────
+  // ─── Derived flags ────────────────────────────────────────────────────────────
+  const isFoodSaver = currentUserRole === "food_saver";
   const showVerificationBanner =
-    currentUserRole === "food_saver" &&
-    otherUserIsVerified !== "true" &&
-    !verificationDone;
+    isFoodSaver && otherUserIsVerified !== "true" && !verificationDone;
 
-  // ─── Validate: persist so banner stays gone ───────────────────────────────────
+  // ─── Handlers ─────────────────────────────────────────────────────────────────
   const handleValidate = async () => {
     if (verifyLoading || !otherUserId) return;
     setVerifyLoading(true);
@@ -219,21 +175,6 @@ export default function ChatConversation() {
     }
   };
 
-  // ─── Rating handlers ──────────────────────────────────────────────────────────
-  const handleRateYes = async () => {
-    if (resolvedReservationId) {
-      await AsyncStorage.setItem(`rated_reservation_${resolvedReservationId}`, "true");
-    }
-    setShowRatingPopup(false);
-    router.push({
-      pathname: "/(Screens)/Rateexperiencescreen" as any,
-      params: { reservationId: resolvedReservationId, donorName: otherUsername },
-    });
-  };
-
-  const handleRateNotNow = () => setShowRatingPopup(false);
-
-  // ─── Block / Unblock ─────────────────────────────────────────────────────────
   const handleBlock = async () => {
     setIsBlocked(true);
     await AsyncStorage.setItem(`blocked_user_${otherUserId}`, "true");
@@ -268,30 +209,33 @@ export default function ChatConversation() {
     });
   };
 
+  const handleVerifyFromMenu = async () => {
+    setMenuVisible(false);
+    await handleValidate();
+  };
+
+  const handleRateFromMenu = () => {
+    setMenuVisible(false);
+    router.push({
+      pathname: "/(Screens)/Rateexperiencescreen" as any,
+      params: { 
+        conversationId, 
+        donorName: otherUsername 
+      },
+    });
+  };
+
   const sendMessage = () => {
     if (!message.trim() || isBlocked) return;
     wsRef.current?.send(JSON.stringify({ type: "message", content: message.trim() }));
     setMessage("");
   };
 
-  const pickImage = async () => {
-    const res = await ImagePicker.launchImageLibraryAsync({});
-    if (!res.canceled) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `local-${Date.now()}`,
-          image: res.assets[0].uri,
-          mine: true,
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
-    }
-  };
-
+  // ─── Menu options ─────────────────────────────────────────────────────────────
   const menuOptions = [
     {
       label: "View Profile",
+      danger: false,
       action: () => {
         setMenuVisible(false);
         router.push({
@@ -300,60 +244,30 @@ export default function ChatConversation() {
         });
       },
     },
+    ...(isFoodSaver && otherUserIsVerified !== "true" && !verificationDone
+      ? [{ label: "Verify User", danger: false, action: handleVerifyFromMenu }]
+      : []),
+    {
+      label: "Rate Experience",
+      danger: false,
+      action: handleRateFromMenu,
+    },
     isBlocked
-      ? { label: "Unblock", action: handleUnblock }
-      : { label: "Block", action: handleBlock },
-    { label: "Report", action: handleReport },
+      ? { label: "Unblock", danger: false, action: () => { setMenuVisible(false); handleUnblock(); } }
+      : { label: "Block", danger: true, action: () => { setMenuVisible(false); handleBlock(); } },
+    { label: "Report", danger: true, action: handleReport },
   ];
 
   return (
     <SafeAreaView style={styles.safe}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* ── RATING POPUP ──────────────────────────────────────────────────────── */}
-      <Modal
-        visible={showRatingPopup}
-        transparent
-        animationType="fade"
-        onRequestClose={handleRateNotNow}
-      >
-        <View style={styles.popupOverlay}>
-          <View style={styles.popupCard}>
-            <View style={styles.popupIconWrapper}>
-              <Ionicons name="star" size={30} color="#4A6741" />
-            </View>
-            <Text style={styles.popupTitle}>Rate this experience</Text>
-            <Text style={styles.popupSubtitle}>
-              How was your interaction with{" "}
-              <Text style={styles.popupUsername}>{otherUsername}</Text>?
-            </Text>
-            <View style={styles.popupButtons}>
-              <TouchableOpacity onPress={handleRateNotNow} style={styles.popupNotNowBtn}>
-                <Text style={styles.popupNotNowText}>Not Now</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleRateYes} style={styles.popupYesBtn}>
-                <Ionicons
-                  name="star-outline"
-                  size={15}
-                  color="#fff"
-                  style={{ marginRight: 5 }}
-                />
-                <Text style={styles.popupYesText}>Rate Now</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ── HEADER ───────────────────────────────────────────────────────────── */}
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Image
-          style={styles.avatar}
-          source={require("../../assets/images/avatar.png")}
-        />
+        <Image style={styles.avatar} source={require("../../assets/images/avatar.png")} />
         <Text style={styles.headerName}>{otherUsername || "Chat"}</Text>
 
         <TouchableOpacity
@@ -378,24 +292,30 @@ export default function ChatConversation() {
               {isBlockLoading ? (
                 <ActivityIndicator style={{ padding: SPACING.md }} color={COLORS.primary} />
               ) : (
-                menuOptions.map((opt) => (
+                menuOptions.map((opt, index) => (
                   <TouchableOpacity
                     key={opt.label}
                     style={[
                       styles.menuItem,
-                      (opt.label === "Block" || opt.label === "Unblock") &&
-                        styles.menuItemDanger,
+                      index < menuOptions.length - 1 && styles.menuItemBorder,
+                      opt.label === "Verify User" && verifyLoading && { opacity: 0.6 },
                     ]}
-                    onPress={() => { setMenuVisible(false); opt.action(); }}
+                    onPress={opt.action}
+                    disabled={opt.label === "Verify User" && verifyLoading}
                   >
-                    <Text
-                      style={[
-                        styles.menuText,
-                        opt.label === "Block" && styles.menuTextDanger,
-                      ]}
-                    >
-                      {opt.label}
-                    </Text>
+                    {opt.label === "Verify User" && verifyLoading ? (
+                      <ActivityIndicator size="small" color={COLORS.primary} />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.menuText,
+                          opt.danger && styles.menuTextDanger,
+                          opt.label === "Verify User" && styles.menuTextPrimary,
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 ))
               )}
@@ -404,7 +324,7 @@ export default function ChatConversation() {
         </Modal>
       </View>
 
-      {/* ── VERIFICATION BANNER ──────────────────────────────────────────────── */}
+      {/* VERIFICATION BANNER */}
       {showVerificationBanner && (
         <View style={styles.verificationBanner}>
           <Text style={styles.verificationBannerText}>
@@ -432,7 +352,7 @@ export default function ChatConversation() {
         </View>
       )}
 
-      {/* ── BLOCKED BANNER ───────────────────────────────────────────────────── */}
+      {/* BLOCKED BANNER */}
       {isBlocked && (
         <View style={styles.blockedBanner}>
           <Ionicons name="ban-outline" size={16} color="#fff" />
@@ -442,7 +362,7 @@ export default function ChatConversation() {
         </View>
       )}
 
-      {/* ── MESSAGES + INPUT ─────────────────────────────────────────────────── */}
+      {/* MESSAGES + INPUT */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -461,20 +381,11 @@ export default function ChatConversation() {
                 />
               )}
               <View style={{ alignItems: item.mine ? "flex-end" : "flex-start", maxWidth: "85%" }}>
-                {item.image ? (
-                  <Image source={{ uri: item.image }} style={styles.imageBubble} />
-                ) : (
-                  <View
-                    style={[
-                      styles.bubble,
-                      item.mine ? styles.bubbleMine : styles.bubbleOther,
-                    ]}
-                  >
-                    <Text style={[styles.bubbleText, item.mine && styles.bubbleTextMine]}>
-                      {item.text}
-                    </Text>
-                  </View>
-                )}
+                <View style={[styles.bubble, item.mine ? styles.bubbleMine : styles.bubbleOther]}>
+                  <Text style={[styles.bubbleText, item.mine && styles.bubbleTextMine]}>
+                    {item.text}
+                  </Text>
+                </View>
                 <Text style={styles.timeText}>{item.time}</Text>
               </View>
             </View>
@@ -492,14 +403,9 @@ export default function ChatConversation() {
             editable={!isBlocked}
           />
           {!isBlocked && (
-            <>
-              <TouchableOpacity onPress={pickImage}>
-                <Ionicons name="image-outline" size={22} color={COLORS.textPrimary} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={sendMessage}>
-                <Ionicons name="send" size={20} color={COLORS.primary} />
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity onPress={sendMessage}>
+              <Ionicons name="send" size={20} color={COLORS.primary} />
+            </TouchableOpacity>
           )}
         </View>
       </KeyboardAvoidingView>
@@ -510,78 +416,6 @@ export default function ChatConversation() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "white" },
 
-  // Rating popup
-  popupOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 32,
-  },
-  popupCard: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    paddingVertical: 28,
-    paddingHorizontal: 24,
-    alignItems: "center",
-    width: "100%",
-    elevation: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-  },
-  popupIconWrapper: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: "#EEF3EC",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  popupTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  popupSubtitle: {
-    fontSize: 13.5,
-    color: "#555",
-    textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 22,
-  },
-  popupUsername: { fontWeight: "700", color: "#4A6741" },
-  popupButtons: {
-    flexDirection: "row",
-    gap: 12,
-    width: "100%",
-    justifyContent: "center",
-  },
-  popupNotNowBtn: {
-    flex: 1,
-    paddingVertical: 11,
-    borderRadius: 25,
-    borderWidth: 1.5,
-    borderColor: "#D5DED0",
-    alignItems: "center",
-  },
-  popupNotNowText: { fontSize: 14, color: "#666", fontWeight: "600" },
-  popupYesBtn: {
-    flex: 1,
-    flexDirection: "row",
-    paddingVertical: 11,
-    borderRadius: 25,
-    backgroundColor: "#4A6741",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  popupYesText: { fontSize: 14, color: "#fff", fontWeight: "600" },
-
-  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -599,7 +433,6 @@ const styles = StyleSheet.create({
   },
   headerName: { flex: 1, fontSize: 15, fontWeight: "700", color: COLORS.textPrimary },
 
-  // Menu
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.3)",
@@ -617,11 +450,11 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   menuItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
-  menuItemDanger: { borderTopWidth: 1, borderTopColor: "#f0e0e0" },
+  menuItemBorder: { borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
   menuText: { fontSize: 14, color: COLORS.textPrimary, textAlign: "center" },
+  menuTextPrimary: { color: COLORS.primary, fontWeight: "700" },
   menuTextDanger: { color: "#c0392b" },
 
-  // Verification banner
   verificationBanner: {
     backgroundColor: COLORS.white,
     marginHorizontal: SPACING.md,
@@ -659,7 +492,6 @@ const styles = StyleSheet.create({
   },
   rejectBtnText: { fontSize: 13, color: "#c0392b", fontWeight: "600" },
 
-  // Blocked banner
   blockedBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -670,7 +502,6 @@ const styles = StyleSheet.create({
   },
   blockedBannerText: { color: "#fff", fontSize: 12, flex: 1 },
 
-  // Messages
   messagesList: { padding: SPACING.lg, gap: SPACING.md },
   messageRow: { flexDirection: "row", alignItems: "flex-end", gap: SPACING.sm },
   messageRowMine: { justifyContent: "flex-end" },
@@ -686,7 +517,6 @@ const styles = StyleSheet.create({
   bubbleText: {
     fontSize: 14,
     lineHeight: 20,
-    flexWrap: "wrap",
     color: COLORS.textPrimary,
   },
   bubbleTextMine: { color: COLORS.white },
@@ -696,9 +526,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginHorizontal: SPACING.xs,
   },
-  imageBubble: { width: 200, height: 150, borderRadius: BORDER_RADIUS.md },
 
-  // Input
   inputRow: {
     flexDirection: "row",
     alignItems: "center",

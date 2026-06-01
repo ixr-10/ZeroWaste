@@ -28,11 +28,33 @@ export default function UserProfile() {
   const [user, setUser] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [error, setError] = useState(false);
+  const [verificationDone, setVerificationDone] = useState(false);
+  const [verifyLoading, setVerifyLoading] = useState(false);
 
   const isFoodSaver = user?.role === "food_saver";
   const isCurrentUserFoodSaver = currentUser?.role === "food_saver";
   const canPromote = Boolean(profileUserId && isCurrentUserFoodSaver && !isFoodSaver);
 
+  // ── Load currentUser eagerly on mount (separate from profile load) ────────────
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      const cachedUser = await AsyncStorage.getItem("user");
+      if (cachedUser) setCurrentUser(JSON.parse(cachedUser));
+    };
+    loadCurrentUser();
+  }, []);
+
+  // ── Restore persisted verification state ──────────────────────────────────────
+  useEffect(() => {
+    const checkVerification = async () => {
+      if (!profileUserId) return;
+      const verified = await AsyncStorage.getItem(`verified_user_${profileUserId}`);
+      if (verified === "true") setVerificationDone(true);
+    };
+    checkVerification();
+  }, [profileUserId]);
+
+  // ── Load profile ──────────────────────────────────────────────────────────────
   useEffect(() => {
     loadProfile();
   }, [profileUserId]);
@@ -40,12 +62,7 @@ export default function UserProfile() {
   const loadProfile = async () => {
     setLoading(true);
     setError(false);
-
     try {
-      const cachedUser = await AsyncStorage.getItem("user");
-      const parsedCurrentUser = cachedUser ? JSON.parse(cachedUser) : null;
-      setCurrentUser(parsedCurrentUser);
-
       if (profileUserId) {
         const [profileRes, donationsRes] = await Promise.all([
           api.get(`/users/users/${profileUserId}/`),
@@ -54,6 +71,8 @@ export default function UserProfile() {
         setUser(profileRes.data);
         setDonations(normalizeDonations(donationsRes.data));
       } else {
+        const cachedUser = await AsyncStorage.getItem("user");
+        const parsedCurrentUser = cachedUser ? JSON.parse(cachedUser) : null;
         setUser(parsedCurrentUser);
         const donationsRes = await api.get("/donations/my-donations/");
         setDonations(normalizeDonations(donationsRes.data));
@@ -76,12 +95,45 @@ export default function UserProfile() {
     ];
   };
 
+  // ── Menu options ──────────────────────────────────────────────────────────────
   const menuOptions = useMemo(() => {
-    const options = ["Block", "Report"];
-    if (profileUserId) options.unshift("Send Message");
-    if (canPromote) options.unshift("Promote to Food Saver");
+    const options: string[] = [];
+
+    // 1. Verify User — food saver only, target not yet verified, not already done
+    if (profileUserId && isCurrentUserFoodSaver && !user?.is_verified && !verificationDone) {
+      options.push("Verify User");
+    }
+
+    // 2. Promote to Food Saver
+    if (canPromote) options.push("Promote to Food Saver");
+
+    // 3. Send Message
+    if (profileUserId) options.push("Send Message");
+
+    // 4. Block / Report always last
+    options.push("Block");
+    options.push("Report");
+
     return options;
-  }, [canPromote, profileUserId]);
+  }, [canPromote, profileUserId, isCurrentUserFoodSaver, user?.is_verified, verificationDone]);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────────
+  const handleVerify = async () => {
+    if (verifyLoading || !profileUserId) return;
+    setVerifyLoading(true);
+    try {
+      const res = await api.post(`users/verify/${profileUserId}/`);
+      await AsyncStorage.setItem(`verified_user_${profileUserId}`, "true");
+      setVerificationDone(true);
+      Alert.alert("✅ Success", res.data.message || "User verified successfully!");
+      const updated = await api.get(`/users/users/${profileUserId}/`);
+      setUser(updated.data);
+    } catch (err: any) {
+      Alert.alert("❌ Failed", err.response?.data?.error || "Verification failed.");
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
 
   const handlePromote = async () => {
     if (!profileUserId) return;
@@ -119,11 +171,13 @@ export default function UserProfile() {
 
   const handleMenuOption = (option: string) => {
     setMenuVisible(false);
+    if (option === "Verify User") handleVerify();
     if (option === "Promote to Food Saver") handlePromote();
     if (option === "Send Message") handleMessage();
     if (option === "Report") handleReport();
   };
 
+  // ── Status helpers ────────────────────────────────────────────────────────────
   const getStatusColor = (status: string) => {
     switch (status) {
       case "available": return COLORS.primary;
@@ -144,6 +198,7 @@ export default function UserProfile() {
     }
   };
 
+  // ── Loading / error states ────────────────────────────────────────────────────
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -174,7 +229,7 @@ export default function UserProfile() {
 
       <ScrollView contentContainerStyle={styles.content}>
 
-        {/* ── PROFILE CARD ─────────────────────────────────────────────────────── */}
+        {/* ── PROFILE CARD ──────────────────────────────────────────────────── */}
         <View style={[styles.card, isFoodSaver && styles.cardFoodSaver]}>
           <View style={styles.topRow}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -196,17 +251,24 @@ export default function UserProfile() {
                         index < menuOptions.length - 1 && styles.menuItemBorder,
                       ]}
                       onPress={() => handleMenuOption(option)}
+                      disabled={option === "Verify User" && verifyLoading}
                     >
-                      <Text
-                        style={[
-                          styles.menuText,
-                          option === "Report" && { color: COLORS.emergencyRed },
-                          (option === "Promote to Food Saver" || option === "Send Message") &&
-                            styles.menuTextPrimary,
-                        ]}
-                      >
-                        {option}
-                      </Text>
+                      {option === "Verify User" && verifyLoading ? (
+                        <ActivityIndicator size="small" color={COLORS.primary} />
+                      ) : (
+                        <Text
+                          style={[
+                            styles.menuText,
+                            option === "Report" && styles.menuTextDanger,
+                            (option === "Verify User" ||
+                              option === "Promote to Food Saver" ||
+                              option === "Send Message") &&
+                              styles.menuTextPrimary,
+                          ]}
+                        >
+                          {option}
+                        </Text>
+                      )}
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -246,7 +308,7 @@ export default function UserProfile() {
             <View style={styles.certifiedBanner}>
               <Ionicons name="shield-checkmark" size={14} color="#B8860B" />
               <Text style={styles.certifiedText}>
-                Certified Food Saver-Trusted by the community fo
+                Certified Food Saver — Trusted by the community
               </Text>
             </View>
           )}
@@ -275,7 +337,7 @@ export default function UserProfile() {
           </View>
         </View>
 
-        {/* ── POSTS SECTION ────────────────────────────────────────────────────── */}
+        {/* ── POSTS SECTION ─────────────────────────────────────────────────── */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, isFoodSaver && styles.sectionTitleFoodSaver]}>
             Posts
@@ -358,12 +420,13 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     elevation: 6,
     zIndex: 999,
-    minWidth: 150,
+    minWidth: 160,
   },
   menuItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
   menuItemBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
   menuText: { fontSize: 14, color: COLORS.textPrimary, textAlign: "center" },
   menuTextPrimary: { color: COLORS.primary, fontWeight: "700" },
+  menuTextDanger: { color: COLORS.emergencyRed },
 
   // Avatar
   avatarWrapper: { alignItems: "center", marginBottom: SPACING.md, position: "relative" },
@@ -432,11 +495,7 @@ const styles = StyleSheet.create({
 
   // Posts section
   sectionHeader: { paddingHorizontal: SPACING.xs },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
-  },
+  sectionTitle: { fontSize: 16, fontWeight: "700", color: COLORS.textPrimary },
   sectionTitleFoodSaver: { color: "#B8860B" },
 
   postsCard: {
