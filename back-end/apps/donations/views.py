@@ -295,7 +295,6 @@ class CompleteDonationView(APIView):
             status='confirmed'
         ).update(status='completed')
 
-        # ✅ Unified recalculation — accounts for rating avg + all activity bonuses
         recalculate_reputation(request.user)
 
         return Response({
@@ -401,7 +400,6 @@ class AvailableDonationsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-
         donations = Donation.objects.filter(
             status='active',
             available_quantity__gt=0
@@ -409,12 +407,20 @@ class AvailableDonationsView(APIView):
             donor=request.user
         )
 
-        reserved_ids = Reservation.objects.filter(
-            beneficiary=request.user,
-            status__in=['pending', 'confirmed']
-        ).values_list('donation_id', flat=True)
-
-        donations = donations.exclude(id__in=reserved_ids)
+        # FIX: Previously ALL donations the user had reserved were excluded,
+        # which meant the beneficiary could never see the updated remaining
+        # quantity for a donation they partially reserved.
+        #
+        # New behaviour:
+        #   • If the user has a PENDING or CONFIRMED reservation for a donation,
+        #     include it in the response so they can see the remaining quantity —
+        #     but annotate it so the frontend knows they've already reserved it.
+        #   • Only hide a donation from the feed if available_quantity has
+        #     dropped to 0 (already handled by the filter above).
+        #
+        # We expose `user_reservation_status` on each serialised item so the
+        # frontend can show "You already reserved X of these" instead of the
+        # Reserve button.
 
         ignored_ids = NotInterested.objects.filter(
             user=request.user
@@ -422,28 +428,44 @@ class AvailableDonationsView(APIView):
 
         donations = donations.exclude(id__in=ignored_ids)
 
+        # Collect the user's active reservation data keyed by donation id.
+        user_active_reservations = {
+            str(r.donation_id): r
+            for r in Reservation.objects.filter(
+                beneficiary=request.user,
+                status__in=['pending', 'confirmed']
+            ).select_related('donation')
+        }
+
         donor_id = request.query_params.get('donor')
         if donor_id:
             donations = donations.filter(donor_id=donor_id)
 
+        # FIX: category filter — use exact match against backend category choices.
         category = request.query_params.get('category')
         if category:
             donations = donations.filter(category=category)
 
+        # FIX: urgency filter — backend stores 'red' | 'orange' | 'green' | null.
+        # Passing urgency=emergency from the frontend was never a valid value.
+        # The frontend should send the actual urgency level, or use the
+        # has_urgency=true shorthand handled below.
         urgency = request.query_params.get('urgency')
         if urgency:
             donations = donations.filter(urgency=urgency)
 
-        expiring_soon = request.query_params.get('expiring_soon')
+        # Shorthand: ?has_urgency=true returns all items that have any urgency set.
+        has_urgency = request.query_params.get('has_urgency')
+        if has_urgency and has_urgency.lower() == 'true':
+            donations = donations.filter(
+                urgency__in=['red', 'orange', 'green']
+            )
 
+        expiring_soon = request.query_params.get('expiring_soon')
         if expiring_soon:
             from datetime import date
-
             soon = date.today() + timedelta(days=2)
-
-            donations = donations.filter(
-                expiry_date__lte=soon
-            )
+            donations = donations.filter(expiry_date__lte=soon)
 
         lat = request.query_params.get('lat')
         lng = request.query_params.get('lng')
@@ -452,11 +474,7 @@ class AvailableDonationsView(APIView):
         if lat and lng and max_km:
             from geopy.distance import geodesic
 
-            coords = donations.values(
-                'id',
-                'latitude',
-                'longitude'
-            )
+            coords = donations.values('id', 'latitude', 'longitude')
 
             filtered_ids = [
                 d['id']
@@ -475,7 +493,23 @@ class AvailableDonationsView(APIView):
             context={'request': request}
         )
 
-        return Response(serializer.data)
+        data = serializer.data
+
+        # Annotate each donation with the user's own reservation info so the
+        # frontend can render the correct state (e.g. "Already reserved 2").
+        for item in data:
+            donation_id = str(item.get('id'))
+            reservation = user_active_reservations.get(donation_id)
+            if reservation:
+                item['user_reservation'] = {
+                    'id': reservation.id,
+                    'status': reservation.status,
+                    'quantity': reservation.quantity_confirmed,
+                }
+            else:
+                item['user_reservation'] = None
+
+        return Response(data)
 
 
 class PublicDonationDetailView(APIView):
@@ -550,6 +584,8 @@ class DonationReservationsView(APIView):
         return Response({
             'donation': donation.title,
             'total_quantity': donation.quantity,
+            # FIX: Always return the live available_quantity so the beneficiary
+            # (who is also part of this conversation) sees the correct remainder.
             'available_quantity': donation.available_quantity,
             'reservations': serializer.data,
         })
@@ -745,7 +781,6 @@ class ConfirmReservationView(APIView):
 
         reservation.donation.recalculate_status()
 
-        # ✅ Unified recalculation — rating avg + all activity bonuses
         recalculate_reputation(request.user)
 
         create_notification(
@@ -1207,12 +1242,8 @@ class AdminStatisticsView(APIView):
 class RateReservationView(APIView):
     """
     POST /donations/reservations/<reservation_id>/rate/
-    Body:
-    {
-        "score": 4
-    }
+    Body: { "score": 4 }
     """
-
     permission_classes = [IsAuthenticated]
 
     def post(self, request, reservation_id):
@@ -1234,7 +1265,10 @@ class RateReservationView(APIView):
             )
 
         try:
-            reservation = Reservation.objects.get(id=reservation_id)
+            reservation = Reservation.objects.select_related(
+                'donation__donor',
+                'beneficiary',
+            ).get(id=reservation_id)
         except Reservation.DoesNotExist:
             return Response(
                 {'error': 'Reservation not found.'},
@@ -1243,14 +1277,21 @@ class RateReservationView(APIView):
 
         user = request.user
 
-        if user == reservation.beneficiary:
+        if user.id == reservation.beneficiary_id:
             rated_user = reservation.donation.donor
-        elif user == reservation.donation.donor:
+        elif user.id == reservation.donation.donor_id:
             rated_user = reservation.beneficiary
         else:
             return Response(
                 {'error': 'You are not part of this reservation.'},
                 status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Safety net: if rated_user is somehow still None, reject early
+        if rated_user is None:
+            return Response(
+                {'error': 'Could not determine the user to rate.'},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         if Rating.objects.filter(reservation=reservation, rater=user).exists():
@@ -1266,7 +1307,6 @@ class RateReservationView(APIView):
             score=score,
         )
 
-        # ✅ Unified recalculation — rating avg + all activity bonuses
         recalculate_reputation(rated_user)
 
         avg = Rating.objects.filter(
@@ -1279,11 +1319,6 @@ class RateReservationView(APIView):
                 f'{rated_user.username} now has a score of {round(avg, 1)}/5.'
             )
         })
-
-
-# ─────────────────────────────────────────────
-# RESERVATION BY CONVERSATION
-# ─────────────────────────────────────────────
 
 class ReservationByConversationView(APIView):
     permission_classes = [IsAuthenticated]

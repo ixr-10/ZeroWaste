@@ -9,14 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { CATEGORIES, DISTANCE_OPTIONS } from '../constants/data';
-const CATEGORY_LABELS: Record<string, string> = {
-  fruits: 'Fruits',
-  legumes: 'Légumes',
-  pain: 'Pain',
-  conserves: 'Conserves',
-  produits_laitiers: 'Produits Laitiers',
-  autre: 'Autre',
-};
+
 export type FilterType = 'Category' | 'Emergency' | 'Distance' | 'Filter By';
 
 interface FilterButtonProps {
@@ -47,16 +40,25 @@ export const FilterButton: React.FC<FilterButtonProps> = ({
     return `< ${distance / 1000} km`;
   };
 
-  const getLabel = (): string => {
-    if (subMenu === 'Category') return 'Category';
-    if (subMenu === 'Distance') return 'Distance';
-    if (emergencyOnly) return 'Emergency';
-    if (selectedCategory) {
-      return selectedCategory.length > 10 ? 'Category' : selectedCategory;
-    }
-    if (selectedDistance !== null) return getDistanceLabel(selectedDistance);
-    return activeFilter;
-  };
+ const getLabel = (): string => {
+  if (subMenu === 'Category') return 'Category';
+  if (subMenu === 'Distance') return 'Distance';
+  if (emergencyOnly) return 'Emergency';
+
+  if (selectedCategory) {
+    const category = CATEGORIES.find(
+      (c) => c.value === selectedCategory
+    );
+
+    return category?.label ?? 'Category';
+  }
+
+  if (selectedDistance !== null) {
+    return getDistanceLabel(selectedDistance);
+  }
+
+  return activeFilter;
+};
 
   const isActive =
     selectedCategory !== null || selectedDistance !== null || emergencyOnly;
@@ -130,39 +132,36 @@ export const FilterButton: React.FC<FilterButtonProps> = ({
 
       {/* Category sub-menu */}
       {subMenu === 'Category' && (
-        <View style={[styles.dropdown, styles.categoryGrid]}>
-          {CATEGORIES.reduce<string[][]>((rows, cat, i) => {
-            if (i % 2 === 0) rows.push([cat]);
-            else rows[rows.length - 1].push(cat);
-            return rows;
-          }, []).map((row, ri) => (
-            <View key={ri} style={styles.categoryRow}>
-              {row.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.categoryItem,
-                    selectedCategory === cat && styles.categoryItemActive,
-                  ]}
-                  onPress={() => handleCategorySelect(cat)}
-                >
-                  <Text
-                    style={[
-                      styles.categoryText,
-                      selectedCategory === cat && styles.categoryTextActive,
-                    ]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                  >
-                    {CATEGORY_LABELS[cat] ?? cat}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-              {row.length === 1 && <View style={[styles.categoryItem, { backgroundColor: 'transparent', borderWidth: 0 }]} />}
-            </View>
-          ))}
-        </View>
-      )}
+  <View style={[styles.dropdown, styles.categoryDropdown]}>
+    <View style={styles.categoryGrid}>
+      {CATEGORIES.map((cat) => (
+        <TouchableOpacity
+          key={cat.value}
+          style={[
+            styles.categoryCard,
+            selectedCategory === cat.value &&
+              styles.categoryCardSelected,
+          ]}
+          onPress={() => handleCategorySelect(cat.value)}
+        >
+          <Text style={styles.categoryEmoji}>
+            {cat.icon}
+          </Text>
+
+          <Text
+            style={[
+              styles.categoryLabel,
+              selectedCategory === cat.value &&
+                styles.categoryLabelSelected,
+            ]}
+          >
+            {cat.label}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  </View>
+)}
 
       {/* Distance sub-menu */}
       {subMenu === 'Distance' && (
@@ -238,33 +237,51 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-  categoryGrid: {
-    minWidth: 260,
-  },
-  categoryRow: {
-    flexDirection: 'row',
-  },
-  categoryItem: {
-    flex: 1,
-    paddingVertical: SPACING.sm + 2,
-    paddingHorizontal: SPACING.sm,
-    borderWidth: 0.5,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  categoryItemActive: {
-    backgroundColor: COLORS.primaryLight,
-  },
-  categoryText: {
-    fontSize: 12,
-    color: COLORS.textPrimary,
-    textAlign: 'center',
-  },
-  categoryTextActive: {
-    color: COLORS.primary,
-    fontWeight: '700',
-  },
+categoryDropdown: {
+  width: 340,
+  padding: 12,
+},
+
+categoryGrid: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  justifyContent: 'space-between',
+},
+
+categoryCard: {
+  width: '48%',
+  backgroundColor: COLORS.white,
+  borderRadius: 20,
+  borderWidth: 1,
+  borderColor: COLORS.border,
+  paddingVertical: 16,
+  paddingHorizontal: 12,
+  marginBottom: 12,
+
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+
+categoryCardSelected: {
+  backgroundColor: COLORS.primaryLight,
+  borderColor: COLORS.primary,
+},
+
+categoryEmoji: {
+  fontSize: 20,
+  marginRight: 8,
+},
+
+categoryLabel: {
+  flex: 1,
+  fontSize: 13,
+  fontWeight: '600',
+  color: COLORS.textPrimary,
+},
+
+categoryLabelSelected: {
+  color: COLORS.primary,
+},
   dropdownItem: {
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.lg,

@@ -184,7 +184,7 @@ function MapContent({ coords, listings }: { coords: Coords; listings: Listing[] 
 
       <View style={overlay.legend}>
         {[
-          { color: COLORS.green, label: 'Urgent' },
+          { color: COLORS.green, label: 'Not urgent' },
           { color: COLORS.orange, label: 'High Priority' },
           { color: COLORS.red, label: 'Critical' },
         ].map((item) => (

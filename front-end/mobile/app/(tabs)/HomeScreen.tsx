@@ -31,6 +31,18 @@ const COLORS = {
   tagBg: '#E8EEE5',
 };
 
+// Matches backend CATEGORY_CHOICES exactly
+export const DONATION_CATEGORIES = [
+  { value: 'Fruit', label: 'Fruit & Vegetables' },
+  { value: 'Pastries', label: 'Pastries' },
+  { value: 'Milk', label: 'Milk Products' },
+  { value: 'Meat', label: 'Meat & Fish' },
+  { value: 'Preserved', label: 'Preserved Food' },
+  { value: 'Cooked', label: 'Cooked Meals' },
+  { value: 'Drinks', label: 'Drinks' },
+  { value: 'Other', label: 'Other (specify)' },
+] as const;
+
 const urgencyWeight = (urgency?: string | null): number => {
   if (urgency === 'red') return 0;
   if (urgency === 'orange') return 1;
@@ -41,7 +53,7 @@ const urgencyWeight = (urgency?: string | null): number => {
 const isExpired = (item: any): boolean => {
   if (!item.expiry_date) return false;
   const expiry = new Date(item.expiry_date);
-  expiry.setHours(23, 59, 59, 999); // treat expiry_date as end-of-day
+  expiry.setHours(23, 59, 59, 999);
   return expiry < new Date();
 };
 
@@ -51,20 +63,37 @@ export default function HomeScreen() {
   const reservedRef = useRef<{ id: string; quantity: number } | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // ← string | null, no union type
   const [selectedDistance, setSelectedDistance] = useState<number | null>(null);
   const [emergencyOnly, setEmergencyOnly] = useState(false);
   const [donations, setDonations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isFocused) fetchDonations();
-  }, [isFocused]);
-
+  if (isFocused) {
+    fetchDonations();
+  }
+}, [
+  isFocused,
+  selectedCategory,
+  selectedDistance,
+  emergencyOnly,
+]);
   const fetchDonations = async () => {
     try {
       setLoading(true);
-      let params: Record<string, number> = {};
+      let params: Record<string, any> = {};
+      if (selectedCategory) {
+  params.category = selectedCategory;
+}
+
+if (selectedDistance !== null) {
+  params.distance = selectedDistance;
+}
+
+if (emergencyOnly) {
+  params.emergency = true;
+}
 
       const locationPromise = (async () => {
         try {
@@ -77,7 +106,9 @@ export default function HomeScreen() {
           const loc = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.Balanced,
           });
-          params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+          params.lat = loc.coords.latitude;
+          params.lng = loc.coords.longitude;
+
           api.put('users/profile/', {
             latitude: loc.coords.latitude,
             longitude: loc.coords.longitude,
@@ -95,22 +126,19 @@ export default function HomeScreen() {
       const donRes = await api.get('donations/available/', { params });
       let newDonations: any[] = donRes.data;
 
-      // FIX 1: If person A just reserved some quantity, optimistically update
-      // the remaining quantity in the list instead of hiding the item entirely.
       if (reservedRef.current) {
         const { id, quantity } = reservedRef.current;
         reservedRef.current = null;
 
-        newDonations = newDonations.map((d: any) => {
-          if (String(d.id) !== id) return d;
-          const remaining = d.available_quantity - quantity;
-          // Only hide if nothing left; otherwise show updated count
-          return remaining > 0 ? { ...d, available_quantity: remaining } : null;
-        }).filter(Boolean);
+        newDonations = newDonations
+          .map((d: any) => {
+            if (String(d.id) !== id) return d;
+            const remaining = d.available_quantity - quantity;
+            return remaining > 0 ? { ...d, available_quantity: remaining } : null;
+          })
+          .filter(Boolean);
       }
 
-      // FIX 2: Drop expired items on the client side as a safety net in case
-      // the backend still returns them.
       newDonations = newDonations.filter((d: any) => !isExpired(d));
 
       setDonations(newDonations);
@@ -123,7 +151,6 @@ export default function HomeScreen() {
 
   const filteredDonations = useMemo(() => {
     const filtered = donations.filter((item) => {
-      // Extra guard: skip expired items that may have slipped in via state
       if (isExpired(item)) return false;
 
       if (
@@ -198,6 +225,11 @@ export default function HomeScreen() {
     });
   };
 
+  // Resolve human-readable label for the active category chip
+  const activeCategoryLabel = selectedCategory
+    ? DONATION_CATEGORIES.find((c) => c.value === selectedCategory)?.label ?? selectedCategory
+    : null;
+
   const hasActiveFilter = selectedCategory || selectedDistance !== null || emergencyOnly;
 
   return (
@@ -227,9 +259,9 @@ export default function HomeScreen() {
 
       {hasActiveFilter && (
         <View style={styles.activeFilterRow}>
-          {selectedCategory && (
+          {activeCategoryLabel && (
             <View style={styles.activeFilterTag}>
-              <Text style={styles.activeFilterText}>{selectedCategory}</Text>
+              <Text style={styles.activeFilterText}>{activeCategoryLabel}</Text>
             </View>
           )}
           {selectedDistance !== null && (

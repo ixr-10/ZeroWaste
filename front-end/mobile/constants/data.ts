@@ -14,12 +14,46 @@ export interface FoodListing {
   isEmergency?: boolean;
 }
 export const CATEGORIES = [
-  'fruits',
-  'legumes', 
-  'pain',
-  'conserves',
-  'produits_laitiers',
-  'autre',
+  {
+    value: 'Fruit',
+    icon: '🥦',
+    label: 'Fruit & Vegetables',
+  },
+  {
+    value: 'Pastries',
+    icon: '🥖',
+    label: 'Pastries',
+  },
+  {
+    value: 'Milk',
+    icon: '🥛',
+    label: 'Milk Products',
+  },
+  {
+    value: 'Meat',
+    icon: '🥩',
+    label: 'Meat & Fish',
+  },
+  {
+    value: 'Preserved',
+    icon: '🥫',
+    label: 'Preserved Food',
+  },
+  {
+    value: 'Cooked',
+    icon: '🍲',
+    label: 'Cooked Meals',
+  },
+  {
+    value: 'Drinks',
+    icon: '🥤',
+    label: 'Drinks',
+  },
+  {
+    value: 'Other',
+    icon: '📦',
+    label: 'Other',
+  },
 ];
 
 
